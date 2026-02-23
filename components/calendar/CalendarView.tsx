@@ -93,6 +93,9 @@ export default function CalendarView({
           status: appt.status,
           staff_color: staffColor,
           lab_order_status: appt.lab_order?.status || null,
+          is_vip: appt.patient?.is_vip || false,
+          caution_level: appt.patient?.caution_level || 0,
+          is_infection_alert: appt.patient?.is_infection_alert || false,
         },
       }
     })

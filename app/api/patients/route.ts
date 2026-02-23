@@ -84,7 +84,11 @@ export async function PUT(request: NextRequest) {
     const supabase = createServerClient()
     const body = await request.json()
 
-    const { id, chart_number, name, name_kana, phone, email, reminder_sms, reminder_email } = body
+    const {
+      id, chart_number, name, name_kana, phone, email,
+      reminder_sms, reminder_email,
+      is_vip, caution_level, is_infection_alert,
+    } = body
 
     if (!id) {
       return NextResponse.json({ error: 'IDは必須です' }, { status: 400 })
@@ -95,18 +99,26 @@ export async function PUT(request: NextRequest) {
     if (!name?.trim()) {
       return NextResponse.json({ error: '氏名は必須です' }, { status: 400 })
     }
+    if (caution_level !== undefined && (caution_level < 0 || caution_level > 3)) {
+      return NextResponse.json({ error: '注意レベルは0〜3で指定してください' }, { status: 400 })
+    }
+
+    const updateData: Record<string, unknown> = {
+      chart_number: chart_number.trim(),
+      name: name.trim(),
+      name_kana: name_kana?.trim() || null,
+      phone: phone?.trim() || null,
+      email: email?.trim() || null,
+      reminder_sms: reminder_sms ?? false,
+      reminder_email: reminder_email ?? false,
+    }
+    if (is_vip !== undefined) updateData.is_vip = is_vip
+    if (caution_level !== undefined) updateData.caution_level = caution_level
+    if (is_infection_alert !== undefined) updateData.is_infection_alert = is_infection_alert
 
     const { data, error } = await supabase
       .from('patients')
-      .update({
-        chart_number: chart_number.trim(),
-        name: name.trim(),
-        name_kana: name_kana?.trim() || null,
-        phone: phone?.trim() || null,
-        email: email?.trim() || null,
-        reminder_sms: reminder_sms ?? false,
-        reminder_email: reminder_email ?? false,
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single()

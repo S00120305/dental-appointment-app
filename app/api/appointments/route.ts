@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
     const selectQuery = `
       *,
-      patient:patients!patient_id(id, chart_number, name, name_kana),
+      patient:patients!patient_id(id, chart_number, name, name_kana, is_vip, caution_level, is_infection_alert),
       staff:users!staff_id(id, name),
       lab_order:lab_orders!left(id, status, item_type, tooth_info, due_date, set_date, lab:labs!left(id, name))
     `
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
 // POST/PUT 用の SELECT クエリ（lab_order JOIN 付き）
 const selectQueryPost = `
   *,
-  patient:patients!patient_id(id, chart_number, name, name_kana),
+  patient:patients!patient_id(id, chart_number, name, name_kana, is_vip, caution_level, is_infection_alert),
   staff:users!staff_id(id, name),
   lab_order:lab_orders!left(id, status, item_type, tooth_info, due_date, set_date, lab:labs!left(id, name))
 `

@@ -10,6 +10,9 @@ export type Patient = {
   email: string | null
   reminder_sms: boolean
   reminder_email: boolean
+  is_vip: boolean
+  caution_level: number // 0=なし, 1=注意①, 2=注意②, 3=注意③
+  is_infection_alert: boolean
   is_active: boolean
   created_at: string
   updated_at: string
@@ -66,7 +69,7 @@ export type LabOrderWithLab = LabOrder & {
 
 // JOIN済みの予約データ（API レスポンス用）
 export type AppointmentWithRelations = Appointment & {
-  patient: Pick<Patient, 'id' | 'chart_number' | 'name' | 'name_kana'> | null
+  patient: Pick<Patient, 'id' | 'chart_number' | 'name' | 'name_kana' | 'is_vip' | 'caution_level' | 'is_infection_alert'> | null
   staff: { id: string; name: string } | null
   lab_order?: {
     id: string

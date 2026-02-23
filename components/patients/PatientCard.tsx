@@ -1,6 +1,7 @@
 'use client'
 
 import type { Patient } from '@/lib/supabase/types'
+import { getPatientTagIcons } from '@/lib/constants/patient-tags'
 
 type PatientCardProps = {
   patient: Patient
@@ -8,6 +9,8 @@ type PatientCardProps = {
 }
 
 export default function PatientCard({ patient, onClick }: PatientCardProps) {
+  const tags = getPatientTagIcons(patient)
+
   return (
     <button
       onClick={onClick}
@@ -20,6 +23,20 @@ export default function PatientCard({ patient, onClick }: PatientCardProps) {
               {patient.chart_number}
             </span>
             <span className="truncate text-base font-medium text-gray-900">{patient.name}</span>
+            {tags.length > 0 && (
+              <span className="flex items-center gap-0.5 flex-shrink-0">
+                {tags.map((tag, i) => (
+                  <span
+                    key={i}
+                    title={tag.label}
+                    style={{ color: tag.color }}
+                    className={`text-sm ${tag.label === '\u611F\u67D3\u6CE8\u610F' ? 'rounded bg-purple-100 px-1' : ''}`}
+                  >
+                    {tag.icon}
+                  </span>
+                ))}
+              </span>
+            )}
           </div>
           {patient.name_kana && (
             <p className="mt-1 text-sm text-gray-500">{patient.name_kana}</p>

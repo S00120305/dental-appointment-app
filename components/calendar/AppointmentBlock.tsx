@@ -2,6 +2,7 @@
 
 import type { EventContentArg } from '@fullcalendar/core'
 import { STATUS_BG, STATUS_TEXT } from '@/lib/constants/appointment'
+import { getPatientTagIconString } from '@/lib/constants/patient-tags'
 import LabOrderBadge from './LabOrderBadge'
 
 // デフォルトのスタッフカラーパレット
@@ -44,6 +45,13 @@ export default function AppointmentBlock({ eventInfo }: { eventInfo: EventConten
   const status = extendedProps.status || '予約済み'
   const staffColor = extendedProps.staff_color || '#3b82f6'
   const labOrderStatus = extendedProps.lab_order_status as string | undefined
+  const isInfectionAlert = extendedProps.is_infection_alert as boolean | undefined
+
+  const tagIcons = getPatientTagIconString({
+    is_vip: extendedProps.is_vip as boolean | undefined,
+    caution_level: extendedProps.caution_level as number | undefined,
+    is_infection_alert: isInfectionAlert,
+  })
 
   const style = getEventStyle(status, staffColor)
 
@@ -52,6 +60,19 @@ export default function AppointmentBlock({ eventInfo }: { eventInfo: EventConten
       <div className="truncate text-xs font-bold leading-tight">
         {labOrderStatus && <span className="mr-0.5">{'\uD83E\uDDB7'}</span>}
         {patientName}
+        {tagIcons && (
+          <>
+            {' '}
+            {isInfectionAlert ? (
+              <span className="text-[10px]">
+                {tagIcons.replace('\u266A', '')}
+                <span className="rounded bg-purple-200 px-0.5 text-purple-700">{'\u266A'}</span>
+              </span>
+            ) : (
+              <span className="text-[10px]">{tagIcons}</span>
+            )}
+          </>
+        )}
       </div>
       <div className="truncate text-[10px] leading-tight opacity-80">
         {appointmentType}

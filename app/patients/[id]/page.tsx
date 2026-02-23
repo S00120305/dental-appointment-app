@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, use } from 'react'
 import AppLayout from '@/components/layout/AppLayout'
 import StatusBadge from '@/components/calendar/StatusBadge'
 import LabOrderBadge from '@/components/calendar/LabOrderBadge'
+import { getPatientTagIcons } from '@/lib/constants/patient-tags'
 import type { Patient, AppointmentWithRelations, LabOrderWithLab } from '@/lib/supabase/types'
 
 export default function PatientDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -91,6 +92,16 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                 {patient.chart_number}
               </span>
               <h1 className="text-xl font-bold text-gray-900">{patient.name}</h1>
+              {getPatientTagIcons(patient).map((tag, i) => (
+                <span
+                  key={i}
+                  title={tag.label}
+                  style={{ color: tag.color }}
+                  className={`text-base ${tag.label === '\u611F\u67D3\u6CE8\u610F' ? 'rounded bg-purple-100 px-1' : ''}`}
+                >
+                  {tag.icon}
+                </span>
+              ))}
             </div>
             {patient.name_kana && (
               <p className="text-sm text-gray-500">{patient.name_kana}</p>
@@ -130,6 +141,16 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
               <InfoRow label="メール" value={patient.email || '—'} />
               <InfoRow label="SMS通知" value={patient.reminder_sms ? 'ON' : 'OFF'} />
               <InfoRow label="メール通知" value={patient.reminder_email ? 'ON' : 'OFF'} />
+              <InfoRow label="VIP" value={patient.is_vip ? '\u2B50 VIP' : '\u2014'} />
+              <InfoRow
+                label="注意レベル"
+                value={
+                  patient.caution_level === 1 ? '\u26A0 \u6CE8\u610F\u2460' :
+                  patient.caution_level === 2 ? '\u26A0\u26A0 \u6CE8\u610F\u2461' :
+                  patient.caution_level === 3 ? '\u26A0\u26A0\u26A0 \u6CE8\u610F\u2462' : '\u2014'
+                }
+              />
+              <InfoRow label="感染注意" value={patient.is_infection_alert ? '\u266A \u611F\u67D3\u6CE8\u610F' : '\u2014'} />
             </div>
           </div>
         )}

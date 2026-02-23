@@ -22,6 +22,9 @@ type FormData = {
   email: string
   reminder_sms: boolean
   reminder_email: boolean
+  is_vip: boolean
+  caution_level: number
+  is_infection_alert: boolean
 }
 
 const initialFormData: FormData = {
@@ -32,6 +35,9 @@ const initialFormData: FormData = {
   email: '',
   reminder_sms: false,
   reminder_email: false,
+  is_vip: false,
+  caution_level: 0,
+  is_infection_alert: false,
 }
 
 export default function PatientForm({ isOpen, onClose, onSaved, patient }: PatientFormProps) {
@@ -53,6 +59,9 @@ export default function PatientForm({ isOpen, onClose, onSaved, patient }: Patie
         email: patient.email || '',
         reminder_sms: patient.reminder_sms,
         reminder_email: patient.reminder_email,
+        is_vip: patient.is_vip ?? false,
+        caution_level: patient.caution_level ?? 0,
+        is_infection_alert: patient.is_infection_alert ?? false,
       })
     } else {
       setForm(initialFormData)
@@ -242,6 +251,88 @@ export default function PatientForm({ isOpen, onClose, onSaved, patient }: Patie
                 }`}
               />
             </button>
+          </div>
+
+          {/* 患者タグ */}
+          <div className="rounded-lg border border-gray-200 p-3 space-y-3">
+            <h3 className="text-sm font-medium text-gray-700">患者タグ</h3>
+
+            {/* VIP */}
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-700">{'\u2B50'} VIP</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={form.is_vip}
+                onClick={() => setForm({ ...form, is_vip: !form.is_vip })}
+                className={`relative inline-flex h-7 w-12 min-w-[48px] items-center rounded-full transition-colors ${
+                  form.is_vip ? 'bg-amber-500' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                    form.is_vip ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* 注意レベル */}
+            <div>
+              <span className="mb-1.5 block text-sm text-gray-700">注意レベル</span>
+              <div className="flex gap-1.5">
+                {([
+                  { value: 0, label: 'なし', color: 'border-gray-300 text-gray-600' },
+                  { value: 1, label: '\u26A0 \u2460', color: 'border-orange-400 text-orange-600' },
+                  { value: 2, label: '\u26A0 \u2461', color: 'border-red-400 text-red-600' },
+                  { value: 3, label: '\u26A0 \u2462', color: 'border-red-600 text-red-700' },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setForm({ ...form, caution_level: opt.value })}
+                    className={`flex-1 min-h-[44px] rounded-md border-2 text-sm font-medium transition-colors ${
+                      form.caution_level === opt.value
+                        ? `${opt.color} bg-opacity-10 ring-2 ring-offset-1 ${
+                            opt.value === 0 ? 'ring-gray-400 bg-gray-50' :
+                            opt.value === 1 ? 'ring-orange-400 bg-orange-50' :
+                            opt.value === 2 ? 'ring-red-400 bg-red-50' :
+                            'ring-red-600 bg-red-50'
+                          }`
+                        : 'border-gray-200 text-gray-500'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 感染注意 */}
+            <div className={`flex items-center justify-between rounded-md px-2 py-1 ${
+              form.is_infection_alert ? 'bg-purple-50' : ''
+            }`}>
+              <span className="text-sm text-gray-700">
+                <span className={form.is_infection_alert ? 'text-purple-600 font-medium' : ''}>
+                  {'\u266A'} 感染注意
+                </span>
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={form.is_infection_alert}
+                onClick={() => setForm({ ...form, is_infection_alert: !form.is_infection_alert })}
+                className={`relative inline-flex h-7 w-12 min-w-[48px] items-center rounded-full transition-colors ${
+                  form.is_infection_alert ? 'bg-purple-600' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                    form.is_infection_alert ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
           </div>
 
           {/* 送信ボタン */}
