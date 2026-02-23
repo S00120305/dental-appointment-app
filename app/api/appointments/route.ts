@@ -167,15 +167,16 @@ export async function PUT(request: NextRequest) {
 
     if (!id) return NextResponse.json({ error: 'IDは必須です' }, { status: 400 })
 
-    // 競合検出: current_updated_at が指定されている場合、DB の updated_at と比較
-    if (current_updated_at) {
-      const { data: existing } = await supabase
-        .from('appointments')
-        .select('updated_at')
-        .eq('id', id)
-        .single()
+    // 更新前の予約を取得（競合検出 + start_time 変更検知に使用）
+    const { data: existing } = await supabase
+      .from('appointments')
+      .select('updated_at, start_time, lab_order_id')
+      .eq('id', id)
+      .single()
 
-      if (existing && existing.updated_at !== current_updated_at) {
+    // 競合検出: current_updated_at が指定されている場合、DB の updated_at と比較
+    if (current_updated_at && existing) {
+      if (existing.updated_at !== current_updated_at) {
         return NextResponse.json(
           { error: '他の端末で更新されました。最新データを再取得します。', conflict: true },
           { status: 409 }
@@ -224,18 +225,24 @@ export async function PUT(request: NextRequest) {
     }
 
     // 予約日変更時: 紐付く lab_orders.set_date を同期更新
-    if (start_time && data) {
-      const effectiveLabOrderId = lab_order_id !== undefined ? lab_order_id : data.lab_order_id
-      if (effectiveLabOrderId) {
-        const newSetDate = new Date(start_time).toISOString().split('T')[0]
-        try {
-          await supabase
-            .from('lab_orders')
-            .update({ set_date: newSetDate, updated_at: new Date().toISOString() })
-            .eq('id', effectiveLabOrderId)
-        } catch {
-          // set_date 更新失敗でも予約変更自体は成功させる
-          console.error('Failed to update lab_order set_date')
+    // start_time が実際に変わった場合のみ（ステータス変更等では更新しない）
+    if (start_time && existing && data) {
+      const oldDate = existing.start_time ? new Date(existing.start_time).toISOString().split('T')[0] : null
+      const newDate = new Date(start_time).toISOString().split('T')[0]
+      const startTimeChanged = oldDate !== newDate
+
+      if (startTimeChanged) {
+        const effectiveLabOrderId = lab_order_id !== undefined ? (lab_order_id || null) : existing.lab_order_id
+        if (effectiveLabOrderId) {
+          try {
+            await supabase
+              .from('lab_orders')
+              .update({ set_date: newDate, updated_at: new Date().toISOString() })
+              .eq('id', effectiveLabOrderId)
+          } catch {
+            // set_date 更新失敗でも予約変更自体は成功させる
+            console.error('Failed to update lab_order set_date')
+          }
         }
       }
     }
