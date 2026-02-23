@@ -7,20 +7,24 @@ export async function GET(request: NextRequest) {
     const supabase = createServerClient()
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id') // 単一予約取得
+    const patientId = searchParams.get('patient_id') // 患者ID（UUID）
     const date = searchParams.get('date') // YYYY-MM-DD
     const startDate = searchParams.get('start_date') // YYYY-MM-DD
     const endDate = searchParams.get('end_date') // YYYY-MM-DD
     const unitNumber = searchParams.get('unit_number')
 
+    const selectQuery = `
+      *,
+      patient:patients!patient_id(id, chart_number, name, name_kana),
+      staff:users!staff_id(id, name),
+      lab_order:lab_orders!left(id, status, item_type, tooth_info, due_date, set_date, lab:labs!lab_id(id, name))
+    `
+
     // 単一予約取得（Realtime INSERT 後の詳細取得用）
     if (id) {
       const { data, error } = await supabase
         .from('appointments')
-        .select(`
-          *,
-          patient:patients!patient_id(id, chart_number, name, name_kana),
-          staff:users!staff_id(id, name)
-        `)
+        .select(selectQuery)
         .eq('id', id)
         .eq('is_deleted', false)
         .single()
@@ -33,11 +37,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('appointments')
-      .select(`
-        *,
-        patient:patients!patient_id(id, chart_number, name, name_kana),
-        staff:users!staff_id(id, name)
-      `)
+      .select(selectQuery)
       .eq('is_deleted', false)
       .order('start_time', { ascending: true })
 
@@ -53,6 +53,11 @@ export async function GET(request: NextRequest) {
       const rangeStart = `${startDate}T00:00:00+09:00`
       const rangeEnd = `${endDate}T23:59:59+09:00`
       query = query.gte('start_time', rangeStart).lte('start_time', rangeEnd)
+    }
+
+    // 患者フィルター
+    if (patientId) {
+      query = query.eq('patient_id', patientId)
     }
 
     // ユニットフィルター
@@ -72,6 +77,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// POST/PUT 用の SELECT クエリ（lab_order JOIN 付き）
+const selectQueryPost = `
+  *,
+  patient:patients!patient_id(id, chart_number, name, name_kana),
+  staff:users!staff_id(id, name),
+  lab_order:lab_orders!left(id, status, item_type, tooth_info, due_date, set_date, lab:labs!lab_id(id, name))
+`
+
 // POST: 新規予約作成
 export async function POST(request: NextRequest) {
   try {
@@ -86,6 +99,7 @@ export async function POST(request: NextRequest) {
       duration_minutes,
       appointment_type,
       memo,
+      lab_order_id,
     } = body
 
     // バリデーション
@@ -115,13 +129,10 @@ export async function POST(request: NextRequest) {
         duration_minutes,
         appointment_type,
         memo: memo || null,
+        lab_order_id: lab_order_id || null,
         status: '予約済み',
       })
-      .select(`
-        *,
-        patient:patients!patient_id(id, chart_number, name, name_kana),
-        staff:users!staff_id(id, name)
-      `)
+      .select(selectQueryPost)
       .single()
 
     if (error) {
@@ -150,6 +161,7 @@ export async function PUT(request: NextRequest) {
       appointment_type,
       status,
       memo,
+      lab_order_id,
       current_updated_at,
     } = body
 
@@ -198,16 +210,13 @@ export async function PUT(request: NextRequest) {
     if (appointment_type !== undefined) updateData.appointment_type = appointment_type
     if (status !== undefined) updateData.status = status
     if (memo !== undefined) updateData.memo = memo || null
+    if (lab_order_id !== undefined) updateData.lab_order_id = lab_order_id || null
 
     const { data, error } = await supabase
       .from('appointments')
       .update(updateData)
       .eq('id', id)
-      .select(`
-        *,
-        patient:patients!patient_id(id, chart_number, name, name_kana),
-        staff:users!staff_id(id, name)
-      `)
+      .select(selectQueryPost)
       .single()
 
     if (error) {

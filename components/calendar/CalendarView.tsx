@@ -87,6 +87,7 @@ export default function CalendarView({
           staff_id: appt.staff_id,
           status: appt.status,
           staff_color: staffColor,
+          lab_order_status: appt.lab_order?.status || null,
         },
       }
     })

@@ -2,6 +2,7 @@
 
 import type { EventContentArg } from '@fullcalendar/core'
 import { STATUS_BG, STATUS_TEXT } from '@/lib/constants/appointment'
+import LabOrderBadge from './LabOrderBadge'
 
 // デフォルトのスタッフカラーパレット
 const DEFAULT_STAFF_COLORS = [
@@ -42,16 +43,25 @@ export default function AppointmentBlock({ eventInfo }: { eventInfo: EventConten
   const staffName = extendedProps.staff_name || ''
   const status = extendedProps.status || '予約済み'
   const staffColor = extendedProps.staff_color || '#3b82f6'
+  const labOrderStatus = extendedProps.lab_order_status as string | undefined
 
   const style = getEventStyle(status, staffColor)
 
   return (
     <div style={style} className="rounded-md">
-      <div className="truncate text-xs font-bold leading-tight">{patientName}</div>
+      <div className="truncate text-xs font-bold leading-tight">
+        {labOrderStatus && <span className="mr-0.5">{'\uD83E\uDDB7'}</span>}
+        {patientName}
+      </div>
       <div className="truncate text-[10px] leading-tight opacity-80">
         {appointmentType}
         {staffName && ` / ${staffName}`}
       </div>
+      {labOrderStatus && (
+        <div className="truncate">
+          <LabOrderBadge labOrderStatus={labOrderStatus} size="sm" />
+        </div>
+      )}
     </div>
   )
 }

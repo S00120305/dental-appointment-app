@@ -5,9 +5,10 @@ import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import StatusBadge from '@/components/calendar/StatusBadge'
+import LabOrderBadge from '@/components/calendar/LabOrderBadge'
 import { useToast } from '@/components/ui/Toast'
-import { getNextStatus, getPrevStatus, STATUS_BG, STATUS_TEXT } from '@/lib/constants/appointment'
-import type { AppointmentStatus, AppointmentWithRelations, Patient, Staff } from '@/lib/supabase/types'
+import { getNextStatus, getPrevStatus, STATUS_TEXT } from '@/lib/constants/appointment'
+import type { AppointmentStatus, AppointmentWithRelations, LabOrderWithLab, Patient, Staff } from '@/lib/supabase/types'
 
 type AppointmentModalProps = {
   isOpen: boolean
@@ -30,6 +31,7 @@ type FormData = {
   duration_minutes: number
   appointment_type: string
   memo: string
+  lab_order_id: string
 }
 
 const DURATION_OPTIONS = [10, 15, 20, 30, 45, 60, 90, 120]
@@ -78,6 +80,11 @@ export default function AppointmentModal({
   const [showPatientDropdown, setShowPatientDropdown] = useState(false)
   const patientDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Lab order
+  const [labOrderEnabled, setLabOrderEnabled] = useState(false)
+  const [labOrders, setLabOrders] = useState<LabOrderWithLab[]>([])
+  const [labOrdersLoading, setLabOrdersLoading] = useState(false)
+
   // Form
   const [form, setForm] = useState<FormData>({
     patient_id: '',
@@ -88,6 +95,7 @@ export default function AppointmentModal({
     duration_minutes: 30,
     appointment_type: '',
     memo: '',
+    lab_order_id: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
@@ -109,6 +117,7 @@ export default function AppointmentModal({
     setPatientQuery('')
     setPatientResults([])
     setShowPatientDropdown(false)
+    setLabOrders([])
 
     if (appointment) {
       const startDate = new Date(appointment.start_time)
@@ -121,8 +130,14 @@ export default function AppointmentModal({
         duration_minutes: appointment.duration_minutes,
         appointment_type: appointment.appointment_type,
         memo: appointment.memo || '',
+        lab_order_id: appointment.lab_order_id || '',
       })
       setSelectedPatient(appointment.patient)
+      setLabOrderEnabled(!!appointment.lab_order_id)
+      // 技工物紐付け済みの場合、技工物リストを取得
+      if (appointment.lab_order_id && appointment.patient?.chart_number) {
+        fetchLabOrders(appointment.patient.chart_number)
+      }
     } else {
       const today = defaultDate || formatDateLocal(new Date())
       setForm({
@@ -134,8 +149,10 @@ export default function AppointmentModal({
         duration_minutes: 30,
         appointment_type: '',
         memo: '',
+        lab_order_id: '',
       })
       setSelectedPatient(null)
+      setLabOrderEnabled(false)
     }
   }, [isOpen, appointment, defaultDate, defaultUnitNumber, defaultStartTime])
 
@@ -145,6 +162,15 @@ export default function AppointmentModal({
       setForm((prev) => ({ ...prev, appointment_type: appointmentTypes[0] }))
     }
   }, [appointmentTypes, form.appointment_type, appointment])
+
+  // Fetch lab orders when patient changes and toggle is ON
+  useEffect(() => {
+    if (labOrderEnabled && selectedPatient?.chart_number) {
+      fetchLabOrders(selectedPatient.chart_number)
+    } else {
+      setLabOrders([])
+    }
+  }, [labOrderEnabled, selectedPatient])
 
   async function fetchSettings() {
     try {
@@ -174,6 +200,16 @@ export default function AppointmentModal({
     } catch { /* ignore */ }
   }
 
+  async function fetchLabOrders(chartNumber: string) {
+    setLabOrdersLoading(true)
+    try {
+      const res = await fetch(`/api/lab-orders?patient_id=${encodeURIComponent(chartNumber)}&for_appointment=true`)
+      const data = await res.json()
+      if (res.ok) setLabOrders(data.lab_orders || [])
+    } catch { /* ignore */ }
+    finally { setLabOrdersLoading(false) }
+  }
+
   // Patient search with debounce
   const searchPatients = useCallback(async (query: string) => {
     if (!query.trim()) {
@@ -196,7 +232,7 @@ export default function AppointmentModal({
 
   function handleSelectPatient(patient: Patient) {
     setSelectedPatient(patient)
-    setForm((prev) => ({ ...prev, patient_id: patient.id }))
+    setForm((prev) => ({ ...prev, patient_id: patient.id, lab_order_id: '' }))
     setPatientQuery(`${patient.chart_number} ${patient.name}`)
     setShowPatientDropdown(false)
     setPatientResults([])
@@ -204,8 +240,10 @@ export default function AppointmentModal({
 
   function handleClearPatient() {
     setSelectedPatient(null)
-    setForm((prev) => ({ ...prev, patient_id: '' }))
+    setForm((prev) => ({ ...prev, patient_id: '', lab_order_id: '' }))
     setPatientQuery('')
+    setLabOrderEnabled(false)
+    setLabOrders([])
   }
 
   function validate(): boolean {
@@ -239,6 +277,7 @@ export default function AppointmentModal({
             duration_minutes: form.duration_minutes,
             appointment_type: form.appointment_type,
             memo: form.memo,
+            lab_order_id: labOrderEnabled ? form.lab_order_id || null : null,
           }
         : {
             patient_id: form.patient_id,
@@ -248,6 +287,7 @@ export default function AppointmentModal({
             duration_minutes: form.duration_minutes,
             appointment_type: form.appointment_type,
             memo: form.memo,
+            lab_order_id: labOrderEnabled ? form.lab_order_id || null : null,
           }
 
       const res = await fetch('/api/appointments', {
@@ -329,7 +369,6 @@ export default function AppointmentModal({
           {isEdit && appointment && onStatusChange && currentStatus !== 'キャンセル' && (
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
               <div className="flex items-center justify-between gap-2">
-                {/* 戻すボタン */}
                 <button
                   type="button"
                   disabled={!prevStatus || statusChanging}
@@ -338,11 +377,7 @@ export default function AppointmentModal({
                 >
                   ◀ 戻す
                 </button>
-
-                {/* 現在のステータス */}
                 <StatusBadge status={currentStatus!} size="lg" />
-
-                {/* 進めるボタン */}
                 <button
                   type="button"
                   disabled={!nextStatus || statusChanging}
@@ -355,8 +390,6 @@ export default function AppointmentModal({
                   {nextStatus ? `${nextStatus}にする ▶` : '完了'}
                 </button>
               </div>
-
-              {/* キャンセルにするボタン（予約済みの時のみ） */}
               {currentStatus === '予約済み' && (
                 <button
                   type="button"
@@ -574,6 +607,86 @@ export default function AppointmentModal({
               <p className="mt-1 text-sm text-red-500">{errors.appointment_type}</p>
             )}
           </div>
+
+          {/* 技工物セット */}
+          {selectedPatient && (
+            <div className="rounded-lg border border-gray-200 p-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700">
+                  {'\uD83E\uDDB7'} 技工物セット
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLabOrderEnabled(!labOrderEnabled)
+                    if (labOrderEnabled) {
+                      setForm(prev => ({ ...prev, lab_order_id: '' }))
+                    }
+                  }}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors min-h-[44px] min-w-[44px] ${
+                    labOrderEnabled ? 'bg-blue-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      labOrderEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {labOrderEnabled && (
+                <div className="mt-3">
+                  {labOrdersLoading ? (
+                    <p className="text-sm text-gray-400">技工物を取得中...</p>
+                  ) : labOrders.length === 0 ? (
+                    <p className="text-sm text-gray-500">紐付け可能な技工物がありません</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {labOrders.map((lo) => (
+                        <label
+                          key={lo.id}
+                          className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer min-h-[44px] ${
+                            form.lab_order_id === lo.id
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-200 hover:bg-gray-50'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="lab_order_id"
+                            value={lo.id}
+                            checked={form.lab_order_id === lo.id}
+                            onChange={() => setForm(prev => ({ ...prev, lab_order_id: lo.id }))}
+                            className="mt-1"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">{lo.item_type || '技工物'}</span>
+                              {lo.tooth_info && (
+                                <span className="text-xs text-gray-500">({lo.tooth_info})</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <LabOrderBadge labOrderStatus={lo.status} size="md" />
+                              {lo.lab && (
+                                <span className="text-xs text-gray-400">{lo.lab.name}</span>
+                              )}
+                            </div>
+                            {lo.due_date && (
+                              <div className="text-xs text-gray-400 mt-0.5">
+                                納期: {lo.due_date}
+                              </div>
+                            )}
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* 備考 */}
           <div>

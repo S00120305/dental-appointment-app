@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useOptimisticUpdate } from './useOptimisticUpdate'
-import { subscribeToAppointments, unsubscribeFromAppointments } from '@/lib/supabase/realtime'
+import { subscribeToChanges, unsubscribe } from '@/lib/supabase/realtime'
 import { useToast } from '@/components/ui/Toast'
-import type { AppointmentStatus, AppointmentWithRelations } from '@/lib/supabase/types'
+import type { AppointmentStatus, AppointmentWithRelations, LabOrderStatus } from '@/lib/supabase/types'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
 export function useAppointments() {
@@ -60,55 +60,78 @@ export function useAppointments() {
 
   // Realtime サブスクリプション
   useEffect(() => {
-    channelRef.current = subscribeToAppointments({
-      onInsert: (payload) => {
-        const newRecord = payload.new as Record<string, unknown>
-        const id = newRecord?.id as string
-        if (!id || isPending(id)) return
-        // JOINデータが必要なのでAPI経由で取得
-        fetchAndAddAppointment(id)
-      },
-      onUpdate: (payload) => {
-        const updated = payload.new as Record<string, unknown>
-        const id = updated?.id as string
-        if (!id || isPending(id)) return
+    channelRef.current = subscribeToChanges({
+      appointments: {
+        onInsert: (payload) => {
+          const newRecord = payload.new as Record<string, unknown>
+          const id = newRecord?.id as string
+          if (!id || isPending(id)) return
+          fetchAndAddAppointment(id)
+        },
+        onUpdate: (payload) => {
+          const updated = payload.new as Record<string, unknown>
+          const id = updated?.id as string
+          if (!id || isPending(id)) return
 
-        // is_deleted が true になった場合は除去
-        if (updated.is_deleted) {
-          setAppointments(prev => prev.filter(a => a.id !== id))
-          return
-        }
+          if (updated.is_deleted) {
+            setAppointments(prev => prev.filter(a => a.id !== id))
+            return
+          }
 
-        // ローカルstateの該当予約を更新（JOINフィールド以外）
-        setAppointments(prev =>
-          prev.map(a => {
-            if (a.id !== id) return a
-            return {
-              ...a,
-              unit_number: (updated.unit_number as number) ?? a.unit_number,
-              staff_id: (updated.staff_id as string) ?? a.staff_id,
-              start_time: (updated.start_time as string) ?? a.start_time,
-              duration_minutes: (updated.duration_minutes as number) ?? a.duration_minutes,
-              appointment_type: (updated.appointment_type as string) ?? a.appointment_type,
-              status: (updated.status as AppointmentStatus) ?? a.status,
-              memo: (updated.memo as string | null) ?? a.memo,
-              updated_at: (updated.updated_at as string) ?? a.updated_at,
-            }
-          })
-        )
+          setAppointments(prev =>
+            prev.map(a => {
+              if (a.id !== id) return a
+              return {
+                ...a,
+                unit_number: (updated.unit_number as number) ?? a.unit_number,
+                staff_id: (updated.staff_id as string) ?? a.staff_id,
+                start_time: (updated.start_time as string) ?? a.start_time,
+                duration_minutes: (updated.duration_minutes as number) ?? a.duration_minutes,
+                appointment_type: (updated.appointment_type as string) ?? a.appointment_type,
+                status: (updated.status as AppointmentStatus) ?? a.status,
+                memo: (updated.memo as string | null) ?? a.memo,
+                lab_order_id: (updated.lab_order_id as string | null) ?? a.lab_order_id,
+                updated_at: (updated.updated_at as string) ?? a.updated_at,
+              }
+            })
+          )
+        },
+        onDelete: (payload) => {
+          const old = payload.old as Record<string, unknown>
+          const id = old?.id as string
+          if (id) {
+            setAppointments(prev => prev.filter(a => a.id !== id))
+          }
+        },
       },
-      onDelete: (payload) => {
-        const old = payload.old as Record<string, unknown>
-        const id = old?.id as string
-        if (id) {
-          setAppointments(prev => prev.filter(a => a.id !== id))
-        }
+      labOrders: {
+        onUpdate: (payload) => {
+          const updated = payload.new as Record<string, unknown>
+          const labOrderId = updated?.id as string
+          if (!labOrderId) return
+
+          // lab_order_id で紐付いた予約の lab_order データを更新
+          setAppointments(prev =>
+            prev.map(a => {
+              if (a.lab_order_id !== labOrderId || !a.lab_order) return a
+              return {
+                ...a,
+                lab_order: {
+                  ...a.lab_order,
+                  status: (updated.status as LabOrderStatus) ?? a.lab_order.status,
+                  due_date: (updated.due_date as string | null) ?? a.lab_order.due_date,
+                  set_date: (updated.set_date as string | null) ?? a.lab_order.set_date,
+                },
+              }
+            })
+          )
+        },
       },
     })
 
     return () => {
       if (channelRef.current) {
-        unsubscribeFromAppointments(channelRef.current)
+        unsubscribe(channelRef.current)
         channelRef.current = null
       }
     }
@@ -136,13 +159,11 @@ export function useAppointments() {
     try {
       await execute(
         id,
-        // 楽観的更新
         () => {
           setAppointments(prev =>
             prev.map(a => a.id === id ? { ...a, status: newStatus } : a)
           )
         },
-        // API 呼び出し
         async () => {
           const res = await fetch('/api/appointments', {
             method: 'PUT',
@@ -157,7 +178,6 @@ export function useAppointments() {
           const data = await res.json()
 
           if (res.status === 409 && data.conflict) {
-            // 競合: 再取得
             await refreshAppointments()
             showToast('他の端末で更新されたため、最新データを再取得しました', 'info')
             return data
@@ -167,7 +187,6 @@ export function useAppointments() {
             throw new Error(data.error || 'ステータス更新に失敗しました')
           }
 
-          // 成功: updated_at を同期
           const appt = data.appointment
           if (appt) {
             setAppointments(prev =>
@@ -176,7 +195,6 @@ export function useAppointments() {
           }
           return data
         },
-        // ロールバック
         () => {
           setAppointments(prev =>
             prev.map(a => a.id === id ? { ...a, status: oldStatus } : a)
@@ -207,7 +225,6 @@ export function useAppointments() {
     try {
       await execute(
         id,
-        // 楽観的更新
         () => {
           setAppointments(prev =>
             prev.map(a => a.id === id
@@ -216,7 +233,6 @@ export function useAppointments() {
             )
           )
         },
-        // API 呼び出し
         async () => {
           const res = await fetch('/api/appointments', {
             method: 'PUT',
@@ -246,7 +262,6 @@ export function useAppointments() {
             throw new Error(data.error || '移動に失敗しました')
           }
 
-          // updated_at 同期
           const appt = data.appointment
           if (appt) {
             setAppointments(prev =>
@@ -257,7 +272,6 @@ export function useAppointments() {
           showToast('予約を移動しました', 'success')
           return data
         },
-        // ロールバック
         () => {
           revert()
         },
