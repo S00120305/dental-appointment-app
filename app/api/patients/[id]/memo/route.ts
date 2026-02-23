@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { getSessionUser, recordLog } from '@/lib/log'
 
 // PATCH: 患者メモの更新
 export async function PATCH(
@@ -27,6 +28,18 @@ export async function PATCH(
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    // ログ記録
+    const user = await getSessionUser()
+    await recordLog({
+      userId: user?.userId,
+      userName: user?.userName,
+      actionType: 'update',
+      targetType: 'patient',
+      targetId: id,
+      summary: `${user?.userName || '不明'}が 患者メモを更新`,
+      details: { memo: memo ? `${String(memo).slice(0, 100)}...` : '' },
+    })
 
     return NextResponse.json({ patient: data })
   } catch {

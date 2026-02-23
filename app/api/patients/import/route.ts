@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { getSessionUser, recordLog } from '@/lib/log'
 
 type ImportRow = {
   chart_number: string
@@ -78,6 +79,18 @@ export async function POST(request: NextRequest) {
         }
       }
     }
+
+    // ログ記録
+    const user = await getSessionUser()
+    await recordLog({
+      userId: user?.userId,
+      userName: user?.userName,
+      actionType: 'import',
+      targetType: 'patient',
+      targetId: null,
+      summary: `${user?.userName || '不明'}が 患者CSVインポートを実行（新規${inserted}件, 更新${updated}件, エラー${errors.length}件）`,
+      details: { total: rows.length, inserted, updated, errorCount: errors.length },
+    })
 
     return NextResponse.json({
       inserted,

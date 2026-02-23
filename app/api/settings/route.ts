@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { getSessionUser, recordLog } from '@/lib/log'
 
 // GET: 全設定取得
 export async function GET() {
@@ -54,6 +55,18 @@ export async function PUT(request: NextRequest) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    // ログ記録
+    const user = await getSessionUser()
+    await recordLog({
+      userId: user?.userId,
+      userName: user?.userName,
+      actionType: 'update',
+      targetType: 'setting',
+      targetId: key,
+      summary: `${user?.userName || '不明'}が 設定「${key}」を更新`,
+      details: { key, value },
+    })
 
     return NextResponse.json({ setting: data })
   } catch {

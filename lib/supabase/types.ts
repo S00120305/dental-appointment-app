@@ -106,3 +106,16 @@ export type Staff = {
   is_admin: boolean
   sort_order: number | null
 }
+
+// 操作ログ
+export type AppointmentLog = {
+  id: string
+  user_id: string | null
+  user_name: string | null
+  action_type: string
+  target_type: string
+  target_id: string | null
+  summary: string
+  details: Record<string, unknown>
+  created_at: string
+}

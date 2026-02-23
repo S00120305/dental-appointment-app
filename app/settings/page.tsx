@@ -9,6 +9,7 @@ const settingsItems = [
   { href: '/settings/appointment-types', label: '予約種別管理', description: '予約種別の追加・編集' },
   { href: '/settings/reminders', label: 'リマインド設定', description: 'SMS・メール通知のテンプレート設定' },
   { href: '/settings/import', label: 'CSVインポート', description: 'オプテックからの患者データ取り込み' },
+  { href: '/settings/logs', label: '操作ログ', description: '予約・患者・設定の操作履歴を確認' },
 ]
 
 export default function SettingsPage() {

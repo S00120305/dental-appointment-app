@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { getSessionUser, recordLog } from '@/lib/log'
 
 // GET: ブロック枠一覧取得
 export async function GET(request: NextRequest) {
@@ -80,6 +81,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    // ログ記録
+    const user = await getSessionUser()
+    const time = new Date(start_time).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })
+    const unitLabel = unit_number === 0 ? '全ユニット' : `診察室${unit_number}`
+    await recordLog({
+      userId: user?.userId,
+      userName: user?.userName,
+      actionType: 'create',
+      targetType: 'blocked_slot',
+      targetId: data?.id,
+      summary: `${user?.userName || '不明'}が ブロック枠を作成（${time} ${unitLabel}${reason ? ' ' + reason : ''}）`,
+      details: { unit_number, start_time, end_time, reason },
+    })
+
     return NextResponse.json({ blocked_slot: data }, { status: 201 })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -97,6 +112,13 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'IDは必須です' }, { status: 400 })
     }
 
+    // 削除前に情報取得（ログ用）
+    const { data: target } = await supabase
+      .from('blocked_slots')
+      .select('unit_number, start_time, reason')
+      .eq('id', id)
+      .single()
+
     const { error } = await supabase
       .from('blocked_slots')
       .update({ is_deleted: true })
@@ -105,6 +127,22 @@ export async function DELETE(request: NextRequest) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    // ログ記録
+    const user = await getSessionUser()
+    const time = target?.start_time
+      ? new Date(target.start_time).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })
+      : ''
+    const unitLabel = target?.unit_number === 0 ? '全ユニット' : `診察室${target?.unit_number}`
+    await recordLog({
+      userId: user?.userId,
+      userName: user?.userName,
+      actionType: 'delete',
+      targetType: 'blocked_slot',
+      targetId: id,
+      summary: `${user?.userName || '不明'}が ブロック枠を削除（${time} ${unitLabel}）`,
+      details: { unit_number: target?.unit_number, start_time: target?.start_time, reason: target?.reason },
+    })
 
     return NextResponse.json({ success: true })
   } catch {

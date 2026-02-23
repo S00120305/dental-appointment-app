@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { getSessionUser, recordLog } from '@/lib/log'
 
 // GET: 予約一覧取得（日付/範囲フィルター、JOIN付き）
 export async function GET(request: NextRequest) {
@@ -145,6 +146,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    // ログ記録
+    const user = await getSessionUser()
+    const patientName = data?.patient && !Array.isArray(data.patient) ? (data.patient as { name: string }).name : '不明'
+    const time = new Date(start_time).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })
+    await recordLog({
+      userId: user?.userId,
+      userName: user?.userName,
+      actionType: 'create',
+      targetType: 'appointment',
+      targetId: data?.id,
+      summary: `${user?.userName || '不明'}が ${patientName} の予約を作成（${time} 診察室${unit_number}）`,
+      details: { patient_id, unit_number, staff_id, start_time, duration_minutes, appointment_type },
+    })
+
     return NextResponse.json({ appointment: data }, { status: 201 })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -173,10 +188,10 @@ export async function PUT(request: NextRequest) {
 
     if (!id) return NextResponse.json({ error: 'IDは必須です' }, { status: 400 })
 
-    // 更新前の予約を取得（競合検出 + start_time 変更検知に使用）
+    // 更新前の予約を取得（競合検出 + start_time 変更検知 + ログ用）
     const { data: existing } = await supabase
       .from('appointments')
-      .select('updated_at, start_time, lab_order_id')
+      .select('updated_at, start_time, lab_order_id, status, unit_number, patient:patients!patient_id(name)')
       .eq('id', id)
       .single()
 
@@ -236,6 +251,32 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    // ログ記録
+    const user = await getSessionUser()
+    const existingPatient = existing?.patient && !Array.isArray(existing.patient) ? (existing.patient as { name: string }) : null
+    const patientName = data?.patient && !Array.isArray(data.patient) ? (data.patient as { name: string }).name : existingPatient?.name || '不明'
+    if (isStatusOnly) {
+      await recordLog({
+        userId: user?.userId,
+        userName: user?.userName,
+        actionType: 'status_change',
+        targetType: 'appointment',
+        targetId: id,
+        summary: `${user?.userName || '不明'}が ${patientName} のステータスを ${status} に変更`,
+        details: { previous_status: existing?.status, new_status: status },
+      })
+    } else {
+      await recordLog({
+        userId: user?.userId,
+        userName: user?.userName,
+        actionType: 'update',
+        targetType: 'appointment',
+        targetId: id,
+        summary: `${user?.userName || '不明'}が ${patientName} の予約を更新`,
+        details: updateData,
+      })
+    }
+
     // 予約日変更時: 紐付く lab_orders.set_date を同期更新
     // start_time が実際に変わった場合のみ（ステータス変更等では更新しない）
     if (start_time && existing && data) {
@@ -274,6 +315,13 @@ export async function DELETE(request: NextRequest) {
 
     if (!id) return NextResponse.json({ error: 'IDは必須です' }, { status: 400 })
 
+    // 削除前に情報取得（ログ用）
+    const { data: target } = await supabase
+      .from('appointments')
+      .select('unit_number, start_time, patient:patients!patient_id(name)')
+      .eq('id', id)
+      .single()
+
     const { error } = await supabase
       .from('appointments')
       .update({ is_deleted: true })
@@ -282,6 +330,19 @@ export async function DELETE(request: NextRequest) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    // ログ記録
+    const user = await getSessionUser()
+    const patientName = target?.patient && !Array.isArray(target.patient) ? (target.patient as { name: string }).name : '不明'
+    await recordLog({
+      userId: user?.userId,
+      userName: user?.userName,
+      actionType: 'delete',
+      targetType: 'appointment',
+      targetId: id,
+      summary: `${user?.userName || '不明'}が ${patientName} の予約を削除`,
+      details: { unit_number: target?.unit_number, start_time: target?.start_time },
+    })
 
     return NextResponse.json({ success: true })
   } catch {

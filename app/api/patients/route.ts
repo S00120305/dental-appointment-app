@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { getSessionUser, recordLog } from '@/lib/log'
 
 // GET: 患者一覧取得（検索対応）
 export async function GET(request: NextRequest) {
@@ -72,6 +73,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    // ログ記録
+    const user = await getSessionUser()
+    await recordLog({
+      userId: user?.userId,
+      userName: user?.userName,
+      actionType: 'create',
+      targetType: 'patient',
+      targetId: data?.id,
+      summary: `${user?.userName || '不明'}が 患者 ${name.trim()}（${chart_number.trim()}）を登録`,
+      details: { chart_number, name },
+    })
+
     return NextResponse.json({ patient: data }, { status: 201 })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -136,6 +149,18 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    // ログ記録
+    const user = await getSessionUser()
+    await recordLog({
+      userId: user?.userId,
+      userName: user?.userName,
+      actionType: 'update',
+      targetType: 'patient',
+      targetId: id,
+      summary: `${user?.userName || '不明'}が 患者 ${name.trim()}（${chart_number.trim()}）を更新`,
+      details: updateData,
+    })
+
     return NextResponse.json({ patient: data })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -153,6 +178,13 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'IDは必須です' }, { status: 400 })
     }
 
+    // 削除前に情報取得（ログ用）
+    const { data: target } = await supabase
+      .from('patients')
+      .select('name, chart_number')
+      .eq('id', id)
+      .single()
+
     const { error } = await supabase
       .from('patients')
       .update({ is_active: false })
@@ -161,6 +193,18 @@ export async function DELETE(request: NextRequest) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    // ログ記録
+    const user = await getSessionUser()
+    await recordLog({
+      userId: user?.userId,
+      userName: user?.userName,
+      actionType: 'delete',
+      targetType: 'patient',
+      targetId: id,
+      summary: `${user?.userName || '不明'}が 患者 ${target?.name || '不明'}（${target?.chart_number || ''}）を削除`,
+      details: { name: target?.name, chart_number: target?.chart_number },
+    })
 
     return NextResponse.json({ success: true })
   } catch {
