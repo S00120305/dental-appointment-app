@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useMemo, useCallback } from 'react'
 import FullCalendar from '@fullcalendar/react'
-import resourceTimelinePlugin from '@fullcalendar/resource-timeline'
+import resourceTimeGridPlugin from '@fullcalendar/resource-timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import type {
   EventClickArg,
@@ -33,7 +33,7 @@ interface CalendarViewProps {
   staffColors: Record<string, string>
   staffList: { id: string; name: string }[]
   initialDate: string
-  viewType: 'resourceTimelineDay' | 'resourceTimelineWeek'
+  viewType: 'resourceTimeGridDay' | 'resourceTimeGridWeek'
   onDateSelect: (start: Date, end: Date, resourceId: string) => void
   onEventClick: (appointmentId: string) => void
   onEventDrop: (appointmentId: string, newStart: Date, newResourceId: string, revert: () => void) => void
@@ -152,15 +152,13 @@ export default function CalendarView({
     <div className="calendar-container">
       <FullCalendar
         ref={calendarRef}
-        plugins={[resourceTimelinePlugin, interactionPlugin]}
+        plugins={[resourceTimeGridPlugin, interactionPlugin]}
         initialView={viewType}
         initialDate={initialDate}
         schedulerLicenseKey="GPL-My-Project-Is-Open-Source"
         // Resources（横軸：ユニット）
         resources={resources}
-        resourceAreaWidth="80px"
-        resourceAreaHeaderContent="ユニット"
-        // 時間設定
+        // 時間設定（縦軸：時間）
         slotMinTime={businessHours.start + ':00'}
         slotMaxTime={businessHours.end + ':00'}
         slotDuration="00:10:00"
@@ -175,6 +173,7 @@ export default function CalendarView({
         height="auto"
         nowIndicator={true}
         locale="ja"
+        allDaySlot={false}
         // Events
         events={events}
         eventContent={renderEventContent}
@@ -196,7 +195,7 @@ export default function CalendarView({
         stickyHeaderDates={true}
         // 週表示の場合の追加設定
         views={{
-          resourceTimelineWeek: {
+          resourceTimeGridWeek: {
             slotDuration: '00:30:00',
             slotLabelInterval: '01:00:00',
           },

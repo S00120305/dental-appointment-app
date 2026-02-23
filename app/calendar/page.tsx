@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import AppLayout from '@/components/layout/AppLayout'
 import AppointmentModal from '@/components/calendar/AppointmentModal'
@@ -18,16 +18,17 @@ function formatDateLocal(date: Date): string {
   return `${y}-${m}-${d}`
 }
 
-type ViewType = 'resourceTimelineDay' | 'resourceTimelineWeek'
+type ViewType = 'resourceTimeGridDay' | 'resourceTimeGridWeek'
 
 export default function CalendarPage() {
   const { showToast } = useToast()
 
   // State
   const [selectedDate, setSelectedDate] = useState(formatDateLocal(new Date()))
-  const [viewType, setViewType] = useState<ViewType>('resourceTimelineDay')
+  const [viewType, setViewType] = useState<ViewType>('resourceTimeGridDay')
   const [appointments, setAppointments] = useState<AppointmentWithRelations[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [settingsReady, setSettingsReady] = useState(false)
 
   // Settings
   const [unitCount, setUnitCount] = useState(5)
@@ -59,13 +60,15 @@ export default function CalendarPage() {
     }))
   }, [unitCount, filteredUnit])
 
-  // Date range for fetching
+  // Date range for fetching (use ref to avoid re-render loops)
+  const fetchRangeRef = useRef<string>('')
   const [fetchRange, setFetchRange] = useState<{ start: string; end: string } | null>(null)
 
   // Fetch settings + staff on mount
   useEffect(() => {
-    fetchSettings()
-    fetchStaff()
+    Promise.all([fetchSettings(), fetchStaff()]).then(() => {
+      setSettingsReady(true)
+    })
   }, [])
 
   // Fetch appointments when date range changes
@@ -73,6 +76,7 @@ export default function CalendarPage() {
     if (fetchRange) {
       fetchAppointments(fetchRange.start, fetchRange.end)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchRange])
 
   async function fetchSettings() {
@@ -129,7 +133,12 @@ export default function CalendarPage() {
     const startStr = formatDateLocal(start)
     const endDate = new Date(end.getTime() - 1) // end is exclusive
     const endStr = formatDateLocal(endDate)
-    setFetchRange({ start: startStr, end: endStr })
+    const rangeKey = `${startStr}_${endStr}`
+    // Only update if range actually changed (prevents infinite loop)
+    if (fetchRangeRef.current !== rangeKey) {
+      fetchRangeRef.current = rangeKey
+      setFetchRange({ start: startStr, end: endStr })
+    }
   }, [])
 
   const handleDateSelect = useCallback((start: Date, _end: Date, resourceId: string) => {
@@ -258,9 +267,9 @@ export default function CalendarPage() {
           {/* 表示切替 */}
           <div className="flex rounded-md border border-gray-300">
             <button
-              onClick={() => setViewType('resourceTimelineDay')}
+              onClick={() => setViewType('resourceTimeGridDay')}
               className={`min-h-[44px] px-3 text-sm ${
-                viewType === 'resourceTimelineDay'
+                viewType === 'resourceTimeGridDay'
                   ? 'bg-blue-600 text-white'
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               } rounded-l-md`}
@@ -268,9 +277,9 @@ export default function CalendarPage() {
               日
             </button>
             <button
-              onClick={() => setViewType('resourceTimelineWeek')}
+              onClick={() => setViewType('resourceTimeGridWeek')}
               className={`min-h-[44px] px-3 text-sm ${
-                viewType === 'resourceTimelineWeek'
+                viewType === 'resourceTimeGridWeek'
                   ? 'bg-blue-600 text-white'
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               } rounded-r-md border-l border-gray-300`}
@@ -313,25 +322,32 @@ export default function CalendarPage() {
         </div>
 
         {/* カレンダー本体 */}
-        <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
-          {loading && appointments.length === 0 ? (
+        <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden relative">
+          {!settingsReady ? (
             <div className="flex h-96 items-center justify-center">
               <div className="text-gray-400">読み込み中...</div>
             </div>
           ) : (
-            <CalendarView
-              appointments={appointments}
-              resources={resources}
-              businessHours={businessHours}
-              staffColors={staffColors}
-              staffList={staffList}
-              initialDate={selectedDate}
-              viewType={viewType}
-              onDateSelect={handleDateSelect}
-              onEventClick={handleEventClick}
-              onEventDrop={handleEventDrop}
-              onDatesSet={handleDatesSet}
-            />
+            <>
+              {loading && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60">
+                  <div className="text-gray-400">読み込み中...</div>
+                </div>
+              )}
+              <CalendarView
+                appointments={appointments}
+                resources={resources}
+                businessHours={businessHours}
+                staffColors={staffColors}
+                staffList={staffList}
+                initialDate={selectedDate}
+                viewType={viewType}
+                onDateSelect={handleDateSelect}
+                onEventClick={handleEventClick}
+                onEventDrop={handleEventDrop}
+                onDatesSet={handleDatesSet}
+              />
+            </>
           )}
         </div>
       </div>

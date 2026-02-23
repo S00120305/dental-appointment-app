@@ -2,7 +2,7 @@
 
 /* FullCalendar カスタムスタイル */
 
-/* Resource Timeline の基本調整 */
+/* Resource TimeGrid の基本調整 */
 .fc {
   --fc-border-color: #e5e7eb;
   --fc-today-bg-color: #eff6ff;
@@ -11,16 +11,16 @@
   font-family: inherit;
 }
 
-/* リソースヘッダー（ユニット名）*/
-.fc .fc-resource-timeline .fc-datagrid-cell-frame {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* リソースヘッダー（ユニット名）横軸に並ぶ */
+.fc .fc-col-header-cell {
+  padding: 8px 4px;
+  font-weight: 600;
+  font-size: 0.875rem;
 }
 
-/* タイムライングリッド行を少し広く */
-.fc .fc-timeline-slot {
-  height: auto;
+/* 時間ラベル（縦軸） */
+.fc .fc-timegrid-slot-label-cushion {
+  font-size: 0.75rem;
 }
 
 /* 予約ブロック内のカスタムコンテンツ */
@@ -42,20 +42,13 @@
   opacity: 0.5;
 }
 
-/* iPad タッチ操作最適化 */
-.fc .fc-timeline-slot-lane {
-  min-height: 60px;
-}
-
-/* リソースラベルの幅 */
-.fc .fc-datagrid-cell-cushion {
-  padding: 8px 4px;
-  font-weight: 600;
-  font-size: 0.875rem;
+/* iPad タッチ操作最適化：タイムグリッドの行高さ */
+.fc .fc-timegrid-slot {
+  height: 2em;
 }
 
 /* 現在時刻インジケーター */
-.fc .fc-timeline-now-indicator-line {
+.fc .fc-timegrid-now-indicator-line {
   border-color: var(--fc-now-indicator-color);
   border-width: 2px;
 }
@@ -63,11 +56,6 @@
 /* スクロールバー調整（iPad向け） */
 .fc .fc-scroller {
   -webkit-overflow-scrolling: touch;
-}
-
-/* 週表示の日付ヘッダー */
-.fc .fc-timeline-header .fc-timeline-slot-cushion {
-  font-size: 0.75rem;
 }
 
 /* ドラッグ中のゴースト */
