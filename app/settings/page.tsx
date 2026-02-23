@@ -1,0 +1,41 @@
+'use client'
+
+import Link from 'next/link'
+import AppLayout from '@/components/layout/AppLayout'
+
+const settingsItems = [
+  { href: '/settings/staff', label: 'スタッフ管理', description: 'スタッフの追加・編集・PIN管理' },
+  { href: '/settings/units', label: 'ユニット設定', description: 'ユニット数・診療時間の設定' },
+  { href: '/settings/appointment-types', label: '予約種別管理', description: '予約種別の追加・編集' },
+  { href: '/settings/reminders', label: 'リマインド設定', description: 'SMS・メール通知のテンプレート設定' },
+  { href: '/settings/import', label: 'CSVインポート', description: 'オプテックからの患者データ取り込み' },
+]
+
+export default function SettingsPage() {
+  return (
+    <AppLayout>
+      <div className="p-4 sm:p-6">
+        <h1 className="mb-6 text-2xl font-bold text-gray-900">設定</h1>
+        <div className="space-y-2">
+          {settingsItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="block rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-colors hover:bg-gray-50"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-medium text-gray-900">{item.label}</h2>
+                  <p className="mt-1 text-sm text-gray-500">{item.description}</p>
+                </div>
+                <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </AppLayout>
+  )
+}

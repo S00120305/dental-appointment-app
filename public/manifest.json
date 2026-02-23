@@ -1,0 +1,10 @@
+{
+  "name": "予約・来院管理",
+  "short_name": "予約管理",
+  "description": "歯科医院 予約・来院管理アプリ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": []
+}

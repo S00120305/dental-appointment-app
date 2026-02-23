@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /c/Users/s0012/dental-appointment-app && npm install 2>&1)",
+      "Bash(true:*)",
+      "Bash(cd /c/Users/s0012/dental-appointment-app && npx next build 2>&1)",
+      "Bash(curl:*)",
+      "Bash(cd:*)"
+    ]
+  }
+}
