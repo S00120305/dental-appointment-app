@@ -12,7 +12,9 @@
       "Bash(echo vercel CLI not installed:*)",
       "Bash(sort:*)",
       "Bash(head:*)",
-      "Bash(cd /c/Users/s0012/dental-appointment-app && rm -rf node_modules package-lock.json && npm install 2>&1)"
+      "Bash(cd /c/Users/s0012/dental-appointment-app && rm -rf node_modules package-lock.json && npm install 2>&1)",
+      "Bash(cd /c/Users/s0012/dental-appointment-app && git commit -m \"$\\(cat <<'EOF'\nfix: Next.js 16 + React 19 にアップグレード（Vercel Edge Runtime 互換）\n\nNext.js 14.2 の Webpack ベースの middleware バンドルに node:async_hooks と\nnode:buffer が含まれ、Vercel Edge Runtime で MIDDLEWARE_INVOCATION_FAILED が\n発生していた問題を修正。\n\n- Next.js 14.2.35 → 16.1.6（App A と同じバージョン）\n- React 18 → 19.2.3\n- next.config.js → next.config.ts\n- tsconfig.json を Next.js 16 が自動調整（jsx: react-jsx, target: ES2017）\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\" && git push origin main 2>&1)",
+      "Bash(cd /c/Users/s0012/dental-appointment-app && npm uninstall tailwindcss autoprefixer && npm install tailwindcss@latest @tailwindcss/postcss@latest 2>&1)"
     ]
   }
 }
