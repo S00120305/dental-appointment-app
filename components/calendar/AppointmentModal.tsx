@@ -70,7 +70,7 @@ export default function AppointmentModal({
   const isEdit = !!appointment
 
   // Settings
-  const [unitCount, setUnitCount] = useState(5)
+  const [unitList, setUnitList] = useState<number[]>([1, 2, 3, 4, 5])
   const [appointmentTypes, setAppointmentTypes] = useState<string[]>([])
   const [businessHours, setBusinessHours] = useState({ start: '09:00', end: '18:00' })
   const [staffList, setStaffList] = useState<Staff[]>([])
@@ -180,8 +180,9 @@ export default function AppointmentModal({
       const data = await res.json()
       if (res.ok && data.settings) {
         const s = data.settings
-        if (s.visible_units) setUnitCount(parseInt(s.visible_units))
-        else if (s.unit_count) setUnitCount(parseInt(s.unit_count))
+        const { parseVisibleUnits } = await import('@/hooks/useSettings')
+        const raw = s.visible_units || s.unit_count || '5'
+        setUnitList(parseVisibleUnits(raw))
         if (s.appointment_types) {
           try { setAppointmentTypes(JSON.parse(s.appointment_types)) } catch { /* ignore */ }
         }
@@ -513,7 +514,7 @@ export default function AppointmentModal({
                   errors.unit_number ? 'border-red-500' : 'border-gray-300'
                 }`}
               >
-                {Array.from({ length: unitCount }, (_, i) => i + 1).map((n) => (
+                {unitList.map((n) => (
                   <option key={n} value={n}>
                     診察室{n}
                   </option>

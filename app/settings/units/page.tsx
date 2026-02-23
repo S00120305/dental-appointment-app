@@ -9,29 +9,46 @@ import { useSettings } from '@/hooks/useSettings'
 export default function UnitsSettingsPage() {
   const { showToast } = useToast()
   const { visibleUnits, mutate, isLoading } = useSettings()
-  const [selectedCount, setSelectedCount] = useState(4)
+  const [selectedUnits, setSelectedUnits] = useState<number[]>([1, 2, 3, 4])
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    if (!isLoading) {
-      setSelectedCount(visibleUnits)
+    if (!isLoading && visibleUnits.length > 0) {
+      setSelectedUnits(visibleUnits)
     }
   }, [visibleUnits, isLoading])
 
+  function toggleUnit(n: number) {
+    setSelectedUnits(prev => {
+      if (prev.includes(n)) {
+        // 最低1つは必要
+        if (prev.length <= 1) return prev
+        return prev.filter(u => u !== n).sort((a, b) => a - b)
+      }
+      return [...prev, n].sort((a, b) => a - b)
+    })
+  }
+
+  const hasChanged = JSON.stringify(selectedUnits) !== JSON.stringify(visibleUnits)
+
   async function handleSave() {
+    if (selectedUnits.length === 0) {
+      showToast('最低1つの診察室を選択してください', 'error')
+      return
+    }
     setSaving(true)
     try {
       const res = await fetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: 'visible_units', value: String(selectedCount) }),
+        body: JSON.stringify({ key: 'visible_units', value: selectedUnits.join(',') }),
       })
       if (!res.ok) {
         const data = await res.json()
         showToast(data.error || 'エラーが発生しました', 'error')
         return
       }
-      showToast('診察室数を更新しました', 'success')
+      showToast('診察室設定を更新しました', 'success')
       mutate()
     } catch {
       showToast('通信エラーが発生しました', 'error')
@@ -59,28 +76,40 @@ export default function UnitsSettingsPage() {
           <h2 className="mb-4 text-base font-bold text-gray-900">カレンダー設定</h2>
 
           <div className="mb-6">
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              表示する診察室数
+            <label className="mb-3 block text-sm font-medium text-gray-700">
+              表示する診察室
             </label>
-            <select
-              value={selectedCount}
-              onChange={(e) => setSelectedCount(parseInt(e.target.value))}
-              className="w-full max-w-[200px] rounded-md border border-gray-300 px-3 py-2 text-base"
-            >
-              {Array.from({ length: 8 }, (_, i) => i + 1).map((n) => (
-                <option key={n} value={n}>
-                  {n} （診察室1〜{n}）
-                </option>
-              ))}
-            </select>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {Array.from({ length: 8 }, (_, i) => i + 1).map((n) => {
+                const checked = selectedUnits.includes(n)
+                return (
+                  <label
+                    key={n}
+                    className={`flex min-h-[44px] cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors ${
+                      checked
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleUnit(n)}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600"
+                    />
+                    診察室{n}
+                  </label>
+                )
+              })}
+            </div>
             <p className="mt-2 text-sm text-gray-500">
-              カレンダーに表示する診察室の数です。予約作成時の選択肢にも反映されます。
+              チェックした診察室がカレンダー・予約作成の選択肢に反映されます。最低1つは選択してください。
             </p>
           </div>
 
           <Button
             onClick={handleSave}
-            disabled={saving || selectedCount === visibleUnits}
+            disabled={saving || !hasChanged}
           >
             {saving ? '保存中...' : '保存'}
           </Button>

@@ -80,7 +80,7 @@ export default function DashboardPage() {
       .filter(a => a.status === 'checked_in')
       .map(a => a.unit_number)
   )
-  const availableUnits = visibleUnits - busyUnits.size
+  const availableUnits = visibleUnits.filter(u => !busyUnits.has(u)).length
 
   // 次の予約
   const now = new Date()
@@ -164,7 +164,7 @@ export default function DashboardPage() {
               cancelledCount={cancelledCount}
               noShowCount={noShowCount}
               availableUnits={availableUnits}
-              visibleUnits={visibleUnits}
+              visibleUnits={visibleUnits.length}
               nextAppointment={nextAppointment ? {
                 patient_name: nextAppointment.patient?.name || '',
                 start_time: nextAppointment.start_time,

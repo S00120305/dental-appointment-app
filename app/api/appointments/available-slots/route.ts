@@ -48,13 +48,14 @@ export async function GET(request: NextRequest) {
     const { data: settingsData } = await supabase
       .from('appointment_settings')
       .select('key, value')
-      .in('key', ['business_hours', 'unit_count'])
+      .in('key', ['business_hours', 'unit_count', 'visible_units'])
 
     let bhStart = '09:00'
     let bhEnd = '18:00'
     let lunchStart = '12:30'
     let lunchEnd = '14:00'
-    let unitCount = 5
+    let visibleUnitsRaw = ''
+    let unitCountRaw = ''
 
     if (settingsData) {
       for (const row of settingsData) {
@@ -67,16 +68,26 @@ export async function GET(request: NextRequest) {
             lunchEnd = bh.lunch_end || '14:00'
           } catch { /* ignore */ }
         }
-        if (row.key === 'unit_count') {
-          unitCount = parseInt(row.value) || 5
-        }
+        if (row.key === 'visible_units') visibleUnitsRaw = row.value
+        if (row.key === 'unit_count') unitCountRaw = row.value
       }
     }
+
+    // visible_units をパース（"1,3,5" or 旧形式 "4"）
+    function parseUnits(raw: string): number[] {
+      const trimmed = raw.trim()
+      if (/^\d+$/.test(trimmed)) {
+        const n = parseInt(trimmed, 10)
+        if (n >= 1 && n <= 8) return Array.from({ length: n }, (_, i) => i + 1)
+      }
+      return trimmed.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= 8).sort((a, b) => a - b)
+    }
+    const allUnits = parseUnits(visibleUnitsRaw || unitCountRaw || '5')
 
     // 対象ユニットリスト
     const targetUnits = unitNumber > 0
       ? [unitNumber]
-      : Array.from({ length: unitCount }, (_, i) => i + 1)
+      : allUnits
 
     // 期間内の予約を一括取得
     const rangeStart = `${startDate}T00:00:00+09:00`

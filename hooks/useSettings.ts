@@ -13,6 +13,24 @@ export type SettingsMap = {
   [key: string]: string | undefined
 }
 
+/** "1,3,5" → [1,3,5], 旧形式 "4" → [1,2,3,4] にも対応 */
+export function parseVisibleUnits(value: string): number[] {
+  const trimmed = value.trim()
+  // 旧形式: 数値のみ（カンマなし）→ 1〜N の連番を生成
+  if (/^\d+$/.test(trimmed)) {
+    const n = parseInt(trimmed, 10)
+    if (n >= 1 && n <= 8) {
+      return Array.from({ length: n }, (_, i) => i + 1)
+    }
+  }
+  // 新形式: カンマ区切り
+  return trimmed
+    .split(',')
+    .map(s => parseInt(s.trim(), 10))
+    .filter(n => !isNaN(n) && n >= 1 && n <= 8)
+    .sort((a, b) => a - b)
+}
+
 export type BusinessHours = {
   start: string
   end: string
@@ -28,8 +46,8 @@ export function useSettings() {
 
   const settings: SettingsMap = data?.settings || {}
 
-  const unitCount = settings.unit_count ? parseInt(settings.unit_count) : 5
-  const visibleUnits = settings.visible_units ? parseInt(settings.visible_units) : unitCount
+  const rawVisible = settings.visible_units || settings.unit_count || '5'
+  const visibleUnits = parseVisibleUnits(rawVisible)
 
   let businessHours: BusinessHours = {
     start: '09:00', end: '18:00', lunch_start: '12:30', lunch_end: '14:00',
@@ -53,7 +71,6 @@ export function useSettings() {
 
   return {
     settings,
-    unitCount,
     visibleUnits,
     businessHours,
     staffColors,

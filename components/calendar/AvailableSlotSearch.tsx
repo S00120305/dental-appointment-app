@@ -15,7 +15,7 @@ type AvailableSlotSearchProps = {
   isOpen: boolean
   onClose: () => void
   onSelectSlot: (slot: AvailableSlot, durationMinutes: number) => void
-  visibleUnits: number
+  visibleUnits: number[]
   preSelectedPatientId?: string
   preSelectedPatientName?: string
 }
@@ -196,7 +196,7 @@ export default function AvailableSlotSearch({
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
                 >
                   <option value={0}>全診察室</option>
-                  {Array.from({ length: visibleUnits }, (_, i) => i + 1).map((n) => (
+                  {visibleUnits.map((n) => (
                     <option key={n} value={n}>診察室{n}</option>
                   ))}
                 </select>

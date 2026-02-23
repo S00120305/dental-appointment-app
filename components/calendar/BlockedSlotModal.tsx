@@ -17,7 +17,7 @@ type BlockedSlotModalProps = {
   defaultStartTime?: string // HH:mm
   defaultEndTime?: string // HH:mm
   defaultUnitNumber?: number
-  visibleUnits?: number
+  visibleUnits?: number[]
   businessHours?: { start: string; end: string }
 }
 
@@ -48,7 +48,7 @@ export default function BlockedSlotModal({
   defaultStartTime,
   defaultEndTime,
   defaultUnitNumber,
-  visibleUnits = 5,
+  visibleUnits = [1, 2, 3, 4, 5],
   businessHours = { start: '09:00', end: '18:00' },
 }: BlockedSlotModalProps) {
   const { showToast } = useToast()
@@ -170,7 +170,7 @@ export default function BlockedSlotModal({
                   />
                   全診察室
                 </label>
-                {Array.from({ length: visibleUnits }, (_, i) => i + 1).map((n) => (
+                {visibleUnits.map((n) => (
                   <label
                     key={n}
                     className={`flex min-h-[44px] cursor-pointer items-center rounded-md border px-3 text-sm ${

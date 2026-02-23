@@ -105,9 +105,9 @@ export default function AppointmentsPage() {
     if (filteredUnit) {
       return [{ id: String(filteredUnit), title: `診察室${filteredUnit}` }]
     }
-    return Array.from({ length: visibleUnits }, (_, i) => ({
-      id: String(i + 1),
-      title: `診察室${i + 1}`,
+    return visibleUnits.map(n => ({
+      id: String(n),
+      title: `診察室${n}`,
     }))
   }, [visibleUnits, filteredUnit])
 
@@ -463,7 +463,7 @@ export default function AppointmentsPage() {
             >
               全て
             </button>
-            {Array.from({ length: visibleUnits }, (_, i) => i + 1).map((n) => (
+            {visibleUnits.map((n) => (
               <button
                 key={n}
                 onClick={() => setFilteredUnit(filteredUnit === n ? null : n)}
