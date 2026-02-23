@@ -33,7 +33,7 @@
 - 技工物連動: appointments.lab_order_id → lab_orders.id
 - lab_orders.patient_id はテキスト型のカルテNo。patients.chart_number と照合する
 - lab_orders.memo は追記方式（[日付 名前 → ステータス] 形式）を尊重
-- 技工物ステータス: 未発注 → 製作中 → 出荷済み → 納品済み → セット完了
+- 技工物ステータス: 未発注 → 製作中 → 納品済み → セット完了 / キャンセル
 
 ## 画面構成
 マスターPW → PIN → ダッシュボード → カレンダー / 患者管理 / 設定

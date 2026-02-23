@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
         .from('lab_orders')
         .select(`
           id, status, item_type, tooth_info, due_date, set_date,
-          lab:labs!lab_id(id, name)
+          lab:labs!left(id, name)
         `)
         .in('id', labOrderIds)
         .eq('is_deleted', false)
@@ -63,16 +63,16 @@ export async function GET(request: NextRequest) {
       .lte('start_time', nextDayEnd)
       .not('lab_order_id', 'is', null)
 
-    // 4. 納品遅延の技工物（due_date < 今日 & まだ製作中 or 出荷済み）
+    // 4. 納品遅延の技工物（due_date < 今日 & まだ製作中）
     const { data: overdueLabOrders } = await supabase
       .from('lab_orders')
       .select(`
         id, patient_id, status, item_type, tooth_info, due_date,
-        lab:labs!lab_id(id, name)
+        lab:labs!left(id, name)
       `)
       .eq('is_deleted', false)
       .lt('due_date', dateStr)
-      .in('status', ['製作中', '出荷済み'])
+      .in('status', ['製作中'])
 
     // 5. 在庫アラート数（発注点以下のアイテム）
     const { count: inventoryAlertCount } = await supabase

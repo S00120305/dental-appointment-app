@@ -7,9 +7,10 @@ type LabOrderBadgeProps = {
 
 const LAB_STATUS_CONFIG: Record<string, { icon: string; label: string; color: string }> = {
   '納品済み': { icon: '\u2705', label: 'セット準備OK', color: '#15803d' },
-  '出荷済み': { icon: '\uD83D\uDE9A', label: '本日届く予定', color: '#1d4ed8' },
+  'セット完了': { icon: '\u2705', label: 'セット完了', color: '#6b7280' },
   '製作中': { icon: '\u26A0\uFE0F', label: '製作中', color: '#b45309' },
   '未発注': { icon: '\u274C', label: '未発注！', color: '#dc2626' },
+  'キャンセル': { icon: '\u2014', label: 'キャンセル', color: '#9ca3af' },
 }
 
 export function getLabStatusConfig(status: string) {

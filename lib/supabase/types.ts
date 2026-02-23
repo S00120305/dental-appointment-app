@@ -42,7 +42,7 @@ export type AppointmentSetting = {
 }
 
 // 技工物（App A 管理、App B は読み取りのみ）
-export type LabOrderStatus = '未発注' | '製作中' | '出荷済み' | '納品済み'
+export type LabOrderStatus = '未発注' | '製作中' | '納品済み' | 'セット完了' | 'キャンセル'
 
 export type LabOrder = {
   id: string

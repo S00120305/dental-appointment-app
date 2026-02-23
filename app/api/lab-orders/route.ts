@@ -12,8 +12,9 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('lab_orders')
       .select(`
-        *,
-        lab:labs!lab_id(id, name)
+        id, patient_id, lab_id, item_type, tooth_info, status,
+        due_date, set_date, memo, is_deleted, created_at, updated_at,
+        lab:labs!left(id, name)
       `)
       .eq('is_deleted', false)
       .order('created_at', { ascending: false })
@@ -23,9 +24,9 @@ export async function GET(request: NextRequest) {
       query = query.eq('patient_id', patientChartNumber)
     }
 
-    // 予約紐付け用: 未セットの技工物のみ（製作中/出荷済み/納品済み）
+    // 予約紐付け用: セット完了・キャンセル以外の技工物
     if (forAppointment === 'true') {
-      query = query.in('status', ['製作中', '出荷済み', '納品済み'])
+      query = query.in('status', ['未発注', '製作中', '納品済み'])
     }
 
     const { data, error } = await query
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ lab_orders: data })
+    return NextResponse.json({ lab_orders: data || [] })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

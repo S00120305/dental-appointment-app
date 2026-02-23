@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       *,
       patient:patients!patient_id(id, chart_number, name, name_kana),
       staff:users!staff_id(id, name),
-      lab_order:lab_orders!left(id, status, item_type, tooth_info, due_date, set_date, lab:labs!lab_id(id, name))
+      lab_order:lab_orders!left(id, status, item_type, tooth_info, due_date, set_date, lab:labs!left(id, name))
     `
 
     // 単一予約取得（Realtime INSERT 後の詳細取得用）
@@ -82,7 +82,7 @@ const selectQueryPost = `
   *,
   patient:patients!patient_id(id, chart_number, name, name_kana),
   staff:users!staff_id(id, name),
-  lab_order:lab_orders!left(id, status, item_type, tooth_info, due_date, set_date, lab:labs!lab_id(id, name))
+  lab_order:lab_orders!left(id, status, item_type, tooth_info, due_date, set_date, lab:labs!left(id, name))
 `
 
 // POST: 新規予約作成
