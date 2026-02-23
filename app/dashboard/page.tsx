@@ -1,10 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback } from 'react'
+import useSWR from 'swr'
 import AppLayout from '@/components/layout/AppLayout'
 import TodaySummary from '@/components/dashboard/TodaySummary'
 import LabOrderAlert from '@/components/dashboard/LabOrderAlert'
 import InventoryAlert from '@/components/dashboard/InventoryAlert'
+import Skeleton from '@/components/ui/Skeleton'
+import { useSettings } from '@/hooks/useSettings'
 
 function formatDateLocal(date: Date): string {
   const y = date.getFullYear()
@@ -12,6 +15,8 @@ function formatDateLocal(date: Date): string {
   const d = String(date.getDate()).padStart(2, '0')
   return `${y}-${m}-${d}`
 }
+
+const fetcher = (url: string) => fetch(url).then(res => res.json())
 
 type DashboardData = {
   todayAppointments: Array<{
@@ -47,48 +52,18 @@ type DashboardData = {
 }
 
 export default function DashboardPage() {
-  const [data, setData] = useState<DashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [unitCount, setUnitCount] = useState(5)
-
   const today = formatDateLocal(new Date())
+  const { unitCount } = useSettings()
 
-  const fetchDashboard = useCallback(async () => {
-    setLoading(true)
-    try {
-      const [dashRes, settingsRes] = await Promise.all([
-        fetch(`/api/dashboard?date=${today}`),
-        fetch('/api/settings'),
-      ])
+  const { data, isLoading, mutate } = useSWR<DashboardData>(
+    `/api/dashboard?date=${today}`,
+    fetcher,
+    { revalidateOnFocus: true }
+  )
 
-      const dashData = await dashRes.json()
-      const settingsData = await settingsRes.json()
-
-      if (dashRes.ok) setData(dashData)
-      if (settingsRes.ok && settingsData.settings?.unit_count) {
-        setUnitCount(parseInt(settingsData.settings.unit_count))
-      }
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false)
-    }
-  }, [today])
-
-  useEffect(() => {
-    fetchDashboard()
-  }, [fetchDashboard])
-
-  // visibilitychange でリフレッシュ
-  useEffect(() => {
-    function handleVisibilityChange() {
-      if (document.visibilityState === 'visible') {
-        fetchDashboard()
-      }
-    }
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
-  }, [fetchDashboard])
+  const handleRefresh = useCallback(() => {
+    mutate()
+  }, [mutate])
 
   // サマリー集計
   const appointments = data?.todayAppointments || []
@@ -99,7 +74,7 @@ export default function DashboardPage() {
   const cancelledCount = appointments.filter(a => a.status === 'キャンセル').length
   const notArrivedCount = appointments.filter(a => a.status === '予約済み').length
 
-  // 現在の空きユニット計算（診療中のユニット数を除外）
+  // 現在の空きユニット計算
   const busyUnits = new Set(
     appointments
       .filter(a => a.status === '診療中')
@@ -107,14 +82,14 @@ export default function DashboardPage() {
   )
   const availableUnits = unitCount - busyUnits.size
 
-  // 次の予約（現在時刻以降で未来院の最初の予約）
+  // 次の予約
   const now = new Date()
   const nextAppointment = appointments.find(a => {
     if (a.status !== '予約済み') return false
     return new Date(a.start_time) >= now
   })
 
-  // 本日のセット予定（技工物紐付き予約をlab_ordersとマッチ）
+  // 本日のセット予定
   const labOrderMap = new Map(
     (data?.todayLabOrders || []).map(lo => [lo.id, lo])
   )
@@ -149,21 +124,38 @@ export default function DashboardPage() {
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">ダッシュボード</h1>
           <button
-            onClick={fetchDashboard}
-            disabled={loading}
+            onClick={handleRefresh}
+            disabled={isLoading}
             className="min-h-[44px] rounded-md border border-gray-300 bg-white px-3 text-sm hover:bg-gray-50 disabled:opacity-50"
           >
-            {loading ? '更新中...' : '更新'}
+            {isLoading ? '更新中...' : '更新'}
           </button>
         </div>
 
-        {loading && !data ? (
-          <div className="flex h-64 items-center justify-center">
-            <div className="text-gray-400">読み込み中...</div>
+        {isLoading && !data ? (
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+              <Skeleton className="mb-3 h-6 w-32" />
+              <div className="space-y-2">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+              <Skeleton className="mb-3 h-6 w-32" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+              <Skeleton className="mb-3 h-6 w-32" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
           </div>
         ) : (
           <div className="grid gap-4 lg:grid-cols-3">
-            {/* 本日サマリー */}
             <TodaySummary
               totalCount={totalCount}
               arrivedCount={arrivedCount}
@@ -179,15 +171,11 @@ export default function DashboardPage() {
                 unit_number: nextAppointment.unit_number,
               } : null}
             />
-
-            {/* 技工物アラート */}
             <LabOrderAlert
               todayLabSets={todayLabSets}
               tomorrowLabSetCount={data?.tomorrowLabOrderCount || 0}
               overdueItems={overdueItems}
             />
-
-            {/* 在庫アラート */}
             <InventoryAlert
               alertCount={data?.inventoryAlertCount || 0}
             />

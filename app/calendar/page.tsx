@@ -1,13 +1,16 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import AppLayout from '@/components/layout/AppLayout'
 import AppointmentModal from '@/components/calendar/AppointmentModal'
 import Button from '@/components/ui/Button'
+import Skeleton from '@/components/ui/Skeleton'
 import { useAppointments } from '@/hooks/useAppointments'
+import { useSettings } from '@/hooks/useSettings'
+import { useStaff } from '@/hooks/useStaff'
 import type { AppointmentWithRelations } from '@/lib/supabase/types'
-import type { BusinessHours, CalendarResource } from '@/components/calendar/CalendarView'
+import type { CalendarResource } from '@/components/calendar/CalendarView'
 
 const CalendarView = dynamic(() => import('@/components/calendar/CalendarView'), { ssr: false })
 
@@ -32,18 +35,12 @@ export default function CalendarPage() {
     removeAppointment,
   } = useAppointments()
 
+  const { unitCount, businessHours, staffColors, isLoading: settingsLoading } = useSettings()
+  const { staffList } = useStaff()
+
   // State
   const [selectedDate, setSelectedDate] = useState(formatDateLocal(new Date()))
   const [viewType, setViewType] = useState<ViewType>('resourceTimeGridDay')
-  const [settingsReady, setSettingsReady] = useState(false)
-
-  // Settings
-  const [unitCount, setUnitCount] = useState(5)
-  const [businessHours, setBusinessHours] = useState<BusinessHours>({
-    start: '09:00', end: '18:00', lunch_start: '12:30', lunch_end: '14:00',
-  })
-  const [staffColors, setStaffColors] = useState<Record<string, string>>({})
-  const [staffList, setStaffList] = useState<{ id: string; name: string }[]>([])
 
   // Modal
   const [modalOpen, setModalOpen] = useState(false)
@@ -57,11 +54,10 @@ export default function CalendarPage() {
 
   // Resources
   const resources: CalendarResource[] = useMemo(() => {
-    const count = filteredUnit ? 1 : unitCount
     if (filteredUnit) {
       return [{ id: String(filteredUnit), title: `ユニット${filteredUnit}` }]
     }
-    return Array.from({ length: count }, (_, i) => ({
+    return Array.from({ length: unitCount }, (_, i) => ({
       id: String(i + 1),
       title: `U${i + 1}`,
     }))
@@ -70,53 +66,12 @@ export default function CalendarPage() {
   // Date range for fetching (use ref to avoid re-render loops)
   const fetchRangeRef = useRef<string>('')
 
-  // Fetch settings + staff on mount
-  useEffect(() => {
-    Promise.all([fetchSettingsData(), fetchStaffData()]).then(() => {
-      setSettingsReady(true)
-    })
-  }, [])
-
-  async function fetchSettingsData() {
-    try {
-      const res = await fetch('/api/settings')
-      const data = await res.json()
-      if (res.ok && data.settings) {
-        const s = data.settings
-        if (s.unit_count) setUnitCount(parseInt(s.unit_count))
-        if (s.business_hours) {
-          try {
-            const bh = JSON.parse(s.business_hours)
-            setBusinessHours({
-              start: bh.start || '09:00',
-              end: bh.end || '18:00',
-              lunch_start: bh.lunch_start || '12:30',
-              lunch_end: bh.lunch_end || '14:00',
-            })
-          } catch { /* ignore */ }
-        }
-        if (s.staff_colors) {
-          try { setStaffColors(JSON.parse(s.staff_colors)) } catch { /* ignore */ }
-        }
-      }
-    } catch { /* ignore */ }
-  }
-
-  async function fetchStaffData() {
-    try {
-      const res = await fetch('/api/users')
-      const data = await res.json()
-      if (res.ok) setStaffList(data.users || [])
-    } catch { /* ignore */ }
-  }
-
   // Calendar callbacks
   const handleDatesSet = useCallback((start: Date, end: Date) => {
     const startStr = formatDateLocal(start)
-    const endDate = new Date(end.getTime() - 1) // end is exclusive
+    const endDate = new Date(end.getTime() - 1)
     const endStr = formatDateLocal(endDate)
     const rangeKey = `${startStr}_${endStr}`
-    // Only update if range actually changed (prevents infinite loop)
     if (fetchRangeRef.current !== rangeKey) {
       fetchRangeRef.current = rangeKey
       fetchAppointments(startStr, endStr)
@@ -150,17 +105,13 @@ export default function CalendarPage() {
 
   function handleSaved(savedAppointment?: AppointmentWithRelations) {
     if (savedAppointment) {
-      // 新規作成 or 編集後: stateに追加/更新
       const exists = appointments.some(a => a.id === savedAppointment.id)
       if (exists) {
-        // 編集: refreshで最新取得
         refreshAppointments()
       } else {
-        // 新規: stateに追加
         addAppointment(savedAppointment)
       }
     } else {
-      // 削除時など appointment がない場合は refresh
       refreshAppointments()
     }
   }
@@ -291,9 +242,16 @@ export default function CalendarPage() {
 
         {/* カレンダー本体 */}
         <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden relative">
-          {!settingsReady ? (
-            <div className="flex h-96 items-center justify-center">
-              <div className="text-gray-400">読み込み中...</div>
+          {settingsLoading ? (
+            <div className="p-4 space-y-3">
+              <div className="flex gap-2">
+                {Array.from({ length: 5 }, (_, i) => (
+                  <Skeleton key={i} className="h-8 flex-1" />
+                ))}
+              </div>
+              {Array.from({ length: 12 }, (_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
             </div>
           ) : (
             <>
