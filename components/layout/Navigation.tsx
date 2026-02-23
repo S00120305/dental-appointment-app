@@ -4,10 +4,9 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const navItems = [
-  { href: '/dashboard', label: 'ダッシュボード', icon: 'home' },
-  { href: '/today', label: '本日', icon: 'list' },
-  { href: '/calendar', label: 'カレンダー', icon: 'calendar' },
-  { href: '/patients', label: '患者管理', icon: 'users' },
+  { href: '/dashboard', label: 'ホーム', icon: 'home' },
+  { href: '/appointments', label: '予約', icon: 'calendar' },
+  { href: '/patients', label: '患者', icon: 'users' },
   { href: '/settings', label: '設定', icon: 'settings' },
 ] as const
 
@@ -29,12 +28,6 @@ function NavIcon({ icon, className }: { icon: string; className?: string }) {
       return (
         <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-        </svg>
-      )
-    case 'list':
-      return (
-        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
         </svg>
       )
     case 'settings':

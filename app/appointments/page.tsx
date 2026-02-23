@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import AppLayout from '@/components/layout/AppLayout'
+import AppointmentListView from '@/components/appointments/AppointmentListView'
 import AppointmentModal from '@/components/calendar/AppointmentModal'
 import BlockedSlotModal from '@/components/calendar/BlockedSlotModal'
 import SlotActionMenu from '@/components/calendar/SlotActionMenu'
@@ -26,9 +27,10 @@ function formatDateLocal(date: Date): string {
   return `${y}-${m}-${d}`
 }
 
-type ViewType = 'resourceTimeGridDay' | 'resourceTimeGridWeek'
+type ActiveView = 'list' | 'calendar'
+type CalendarViewType = 'resourceTimeGridDay' | 'resourceTimeGridWeek'
 
-export default function CalendarPage() {
+export default function AppointmentsPage() {
   const {
     appointments,
     loading,
@@ -43,9 +45,10 @@ export default function CalendarPage() {
   const { visibleUnits, businessHours, staffColors, isLoading: settingsLoading } = useSettings()
   const { staffList } = useStaff()
 
-  // State
+  // Shared state
+  const [activeView, setActiveView] = useState<ActiveView>('calendar')
   const [selectedDate, setSelectedDate] = useState(formatDateLocal(new Date()))
-  const [viewType, setViewType] = useState<ViewType>('resourceTimeGridDay')
+  const [calendarViewType, setCalendarViewType] = useState<CalendarViewType>('resourceTimeGridDay')
 
   // Appointment Modal
   const [modalOpen, setModalOpen] = useState(false)
@@ -84,6 +87,19 @@ export default function CalendarPage() {
   // Unit filter (mobile)
   const [filteredUnit, setFilteredUnit] = useState<number | null>(null)
 
+  // Sync detailAppointment with latest appointments data (status revert bug fix)
+  useEffect(() => {
+    if (detailAppointment) {
+      const updated = appointments.find(a => a.id === detailAppointment.id)
+      if (updated && (
+        updated.status !== detailAppointment.status ||
+        updated.updated_at !== detailAppointment.updated_at
+      )) {
+        setDetailAppointment(updated)
+      }
+    }
+  }, [appointments, detailAppointment])
+
   // Resources
   const resources: CalendarResource[] = useMemo(() => {
     if (filteredUnit) {
@@ -95,7 +111,7 @@ export default function CalendarPage() {
     }))
   }, [visibleUnits, filteredUnit])
 
-  // Date range for fetching (use ref to avoid re-render loops)
+  // Date range for calendar fetching (use ref to avoid re-render loops)
   const fetchRangeRef = useRef<string>('')
 
   // Fetch blocked slots
@@ -110,6 +126,41 @@ export default function CalendarPage() {
       // silent fail
     }
   }, [])
+
+  // List view: fetch data when date changes
+  const listFetchedRef = useRef<string>('')
+  useEffect(() => {
+    if (activeView === 'list') {
+      const key = selectedDate
+      if (listFetchedRef.current !== key) {
+        listFetchedRef.current = key
+        fetchAppointments(selectedDate, selectedDate)
+        fetchBlockedSlots(selectedDate, selectedDate)
+      }
+    }
+  }, [activeView, selectedDate, fetchAppointments, fetchBlockedSlots])
+
+  // Reset list fetch ref when switching to calendar (so switching back re-fetches)
+  useEffect(() => {
+    if (activeView === 'calendar') {
+      listFetchedRef.current = ''
+    }
+  }, [activeView])
+
+  // Filter appointments for selected date (list view)
+  const listAppointments = useMemo(() => {
+    return appointments.filter(a => {
+      const apptDate = a.start_time.slice(0, 10)
+      return apptDate === selectedDate
+    })
+  }, [appointments, selectedDate])
+
+  const listBlockedSlots = useMemo(() => {
+    return blockedSlots.filter(b => {
+      const bDate = b.start_time.slice(0, 10)
+      return bDate === selectedDate
+    })
+  }, [blockedSlots, selectedDate])
 
   // Calendar callbacks
   const handleDatesSet = useCallback((start: Date, end: Date) => {
@@ -130,8 +181,6 @@ export default function CalendarPage() {
     const endTimeStr = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`
     const unit = parseInt(resourceId) || 1
 
-    // SlotActionMenu を表示
-    // マウスイベントの位置を取得（ない場合は画面中央）
     const lastEvent = window.event as MouseEvent | TouchEvent | null
     let x = window.innerWidth / 2
     let y = window.innerHeight / 3
@@ -221,6 +270,12 @@ export default function CalendarPage() {
     [moveAppointment]
   )
 
+  // List view: appointment click → detail panel
+  const handleListAppointmentClick = useCallback((appt: AppointmentWithRelations) => {
+    setDetailAppointment(appt)
+    setDetailPanelOpen(true)
+  }, [])
+
   function handleSaved(savedAppointment?: AppointmentWithRelations) {
     if (savedAppointment) {
       const exists = appointments.some(a => a.id === savedAppointment.id)
@@ -239,16 +294,24 @@ export default function CalendarPage() {
   }
 
   function handleBlockSaved() {
-    const range = fetchRangeRef.current.split('_')
-    if (range.length === 2) {
-      fetchBlockedSlots(range[0], range[1])
+    if (activeView === 'list') {
+      fetchBlockedSlots(selectedDate, selectedDate)
+    } else {
+      const range = fetchRangeRef.current.split('_')
+      if (range.length === 2) {
+        fetchBlockedSlots(range[0], range[1])
+      }
     }
   }
 
   function handleBlockDeleted() {
-    const range = fetchRangeRef.current.split('_')
-    if (range.length === 2) {
-      fetchBlockedSlots(range[0], range[1])
+    if (activeView === 'list') {
+      fetchBlockedSlots(selectedDate, selectedDate)
+    } else {
+      const range = fetchRangeRef.current.split('_')
+      if (range.length === 2) {
+        fetchBlockedSlots(range[0], range[1])
+      }
     }
   }
 
@@ -331,29 +394,55 @@ export default function CalendarPage() {
             {dateObj.getFullYear()}/{dateObj.getMonth() + 1}/{dateObj.getDate()}（{dayOfWeek}）
           </span>
 
-          {/* 表示切替 */}
+          {/* ビュー切替: リスト / カレンダー */}
           <div className="flex rounded-md border border-gray-300">
             <button
-              onClick={() => setViewType('resourceTimeGridDay')}
+              onClick={() => setActiveView('list')}
               className={`min-h-[44px] px-3 text-sm ${
-                viewType === 'resourceTimeGridDay'
+                activeView === 'list'
                   ? 'bg-blue-600 text-white'
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               } rounded-l-md`}
             >
-              日
+              リスト
             </button>
             <button
-              onClick={() => setViewType('resourceTimeGridWeek')}
+              onClick={() => setActiveView('calendar')}
               className={`min-h-[44px] px-3 text-sm ${
-                viewType === 'resourceTimeGridWeek'
+                activeView === 'calendar'
                   ? 'bg-blue-600 text-white'
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               } rounded-r-md border-l border-gray-300`}
             >
-              週
+              カレンダー
             </button>
           </div>
+
+          {/* 日/週 切替 (カレンダー表示時のみ) */}
+          {activeView === 'calendar' && (
+            <div className="flex rounded-md border border-gray-300">
+              <button
+                onClick={() => setCalendarViewType('resourceTimeGridDay')}
+                className={`min-h-[44px] px-3 text-sm ${
+                  calendarViewType === 'resourceTimeGridDay'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                } rounded-l-md`}
+              >
+                日
+              </button>
+              <button
+                onClick={() => setCalendarViewType('resourceTimeGridWeek')}
+                className={`min-h-[44px] px-3 text-sm ${
+                  calendarViewType === 'resourceTimeGridWeek'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                } rounded-r-md border-l border-gray-300`}
+              >
+                週
+              </button>
+            </div>
+          )}
 
           {/* 新規予約ボタン */}
           <div className="ml-auto">
@@ -361,72 +450,86 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        {/* ユニットフィルター（モバイル/タブレット） */}
-        <div className="mb-2 flex gap-1 overflow-x-auto sm:hidden">
-          <button
-            onClick={() => setFilteredUnit(null)}
-            className={`min-h-[36px] flex-shrink-0 rounded-full px-3 text-xs font-medium ${
-              filteredUnit === null
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700'
-            }`}
-          >
-            全て
-          </button>
-          {Array.from({ length: visibleUnits }, (_, i) => i + 1).map((n) => (
+        {/* ユニットフィルター（モバイル/タブレット、カレンダー表示時のみ） */}
+        {activeView === 'calendar' && (
+          <div className="mb-2 flex gap-1 overflow-x-auto sm:hidden">
             <button
-              key={n}
-              onClick={() => setFilteredUnit(filteredUnit === n ? null : n)}
+              onClick={() => setFilteredUnit(null)}
               className={`min-h-[36px] flex-shrink-0 rounded-full px-3 text-xs font-medium ${
-                filteredUnit === n
+                filteredUnit === null
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 text-gray-700'
               }`}
             >
-              診{n}
+              全て
             </button>
-          ))}
-        </div>
+            {Array.from({ length: visibleUnits }, (_, i) => i + 1).map((n) => (
+              <button
+                key={n}
+                onClick={() => setFilteredUnit(filteredUnit === n ? null : n)}
+                className={`min-h-[36px] flex-shrink-0 rounded-full px-3 text-xs font-medium ${
+                  filteredUnit === n
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700'
+                }`}
+              >
+                診{n}
+              </button>
+            ))}
+          </div>
+        )}
 
-        {/* カレンダー本体 */}
-        <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden relative">
-          {settingsLoading ? (
-            <div className="p-4 space-y-3">
-              <div className="flex gap-2">
-                {Array.from({ length: 5 }, (_, i) => (
-                  <Skeleton key={i} className="h-8 flex-1" />
+        {/* メインコンテンツ */}
+        {activeView === 'list' ? (
+          <div className="rounded-lg border border-gray-200 bg-white shadow-sm p-4">
+            <AppointmentListView
+              appointments={listAppointments}
+              blockedSlots={listBlockedSlots}
+              loading={loading}
+              onStatusChange={updateStatus}
+              onAppointmentClick={handleListAppointmentClick}
+            />
+          </div>
+        ) : (
+          <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden relative">
+            {settingsLoading ? (
+              <div className="p-4 space-y-3">
+                <div className="flex gap-2">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <Skeleton key={i} className="h-8 flex-1" />
+                  ))}
+                </div>
+                {Array.from({ length: 12 }, (_, i) => (
+                  <Skeleton key={i} className="h-10 w-full" />
                 ))}
               </div>
-              {Array.from({ length: 12 }, (_, i) => (
-                <Skeleton key={i} className="h-10 w-full" />
-              ))}
-            </div>
-          ) : (
-            <>
-              {loading && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60">
-                  <div className="text-gray-400">読み込み中...</div>
-                </div>
-              )}
-              <CalendarView
-                appointments={appointments}
-                blockedSlots={blockedSlots}
-                resources={resources}
-                businessHours={businessHours}
-                staffColors={staffColors}
-                staffList={staffList}
-                initialDate={selectedDate}
-                viewType={viewType}
-                onDateSelect={handleDateSelect}
-                onEventClick={handleEventClick}
-                onBlockedSlotClick={handleBlockedSlotClick}
-                onEventDrop={handleEventDrop}
-                onDatesSet={handleDatesSet}
-                onStatusClick={handleStatusClick}
-              />
-            </>
-          )}
-        </div>
+            ) : (
+              <>
+                {loading && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60">
+                    <div className="text-gray-400">読み込み中...</div>
+                  </div>
+                )}
+                <CalendarView
+                  appointments={appointments}
+                  blockedSlots={blockedSlots}
+                  resources={resources}
+                  businessHours={businessHours}
+                  staffColors={staffColors}
+                  staffList={staffList}
+                  initialDate={selectedDate}
+                  viewType={calendarViewType}
+                  onDateSelect={handleDateSelect}
+                  onEventClick={handleEventClick}
+                  onBlockedSlotClick={handleBlockedSlotClick}
+                  onEventDrop={handleEventDrop}
+                  onDatesSet={handleDatesSet}
+                  onStatusClick={handleStatusClick}
+                />
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 空き枠検索フローティングボタン */}

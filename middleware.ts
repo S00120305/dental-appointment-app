@@ -9,6 +9,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // 旧ページから /appointments へリダイレクト
+  if (pathname === '/today' || pathname === '/calendar') {
+    return NextResponse.redirect(new URL('/appointments', request.url))
+  }
+
   // デバイス認証Cookie の存在確認のみ
   const deviceAuth = request.cookies.get('device_auth')
   if (!deviceAuth) {
