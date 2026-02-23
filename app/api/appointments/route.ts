@@ -223,6 +223,23 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    // 予約日変更時: 紐付く lab_orders.set_date を同期更新
+    if (start_time && data) {
+      const effectiveLabOrderId = lab_order_id !== undefined ? lab_order_id : data.lab_order_id
+      if (effectiveLabOrderId) {
+        const newSetDate = new Date(start_time).toISOString().split('T')[0]
+        try {
+          await supabase
+            .from('lab_orders')
+            .update({ set_date: newSetDate, updated_at: new Date().toISOString() })
+            .eq('id', effectiveLabOrderId)
+        } catch {
+          // set_date 更新失敗でも予約変更自体は成功させる
+          console.error('Failed to update lab_order set_date')
+        }
+      }
+    }
+
     return NextResponse.json({ appointment: data })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
