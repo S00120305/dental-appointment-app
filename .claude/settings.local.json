@@ -14,7 +14,8 @@
       "Bash(head:*)",
       "Bash(cd /c/Users/s0012/dental-appointment-app && rm -rf node_modules package-lock.json && npm install 2>&1)",
       "Bash(cd /c/Users/s0012/dental-appointment-app && git commit -m \"$\\(cat <<'EOF'\nfix: Next.js 16 + React 19 にアップグレード（Vercel Edge Runtime 互換）\n\nNext.js 14.2 の Webpack ベースの middleware バンドルに node:async_hooks と\nnode:buffer が含まれ、Vercel Edge Runtime で MIDDLEWARE_INVOCATION_FAILED が\n発生していた問題を修正。\n\n- Next.js 14.2.35 → 16.1.6（App A と同じバージョン）\n- React 18 → 19.2.3\n- next.config.js → next.config.ts\n- tsconfig.json を Next.js 16 が自動調整（jsx: react-jsx, target: ES2017）\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\" && git push origin main 2>&1)",
-      "Bash(cd /c/Users/s0012/dental-appointment-app && npm uninstall tailwindcss autoprefixer && npm install tailwindcss@latest @tailwindcss/postcss@latest 2>&1)"
+      "Bash(cd /c/Users/s0012/dental-appointment-app && npm uninstall tailwindcss autoprefixer && npm install tailwindcss@latest @tailwindcss/postcss@latest 2>&1)",
+      "Bash(cd /c/Users/s0012/dental-appointment-app && git commit -m \"$\\(cat <<'EOF'\nfix: Tailwind CSS v4 にアップグレード（__dirname エラー修正）\n\nTailwind CSS v3 が Next.js 16 の ESM 環境で __dirname を使用し\nVercel デプロイで ReferenceError が発生していた問題を修正。\n\n- Tailwind CSS v3 → v4（App A と同じ構成）\n- postcss.config.js → postcss.config.mjs（ESM形式）\n- tailwind.config.ts を削除（v4 では不要）\n- globals.css: @tailwind ディレクティブ → @import \"tailwindcss\"\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\" && git push origin main 2>&1)"
     ]
   }
 }
