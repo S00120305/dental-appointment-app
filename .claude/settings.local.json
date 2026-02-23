@@ -5,7 +5,14 @@
       "Bash(true:*)",
       "Bash(cd /c/Users/s0012/dental-appointment-app && npx next build 2>&1)",
       "Bash(curl:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(cd /c/Users/s0012/dental-appointment-app && git push origin main 2>&1)",
+      "Bash(cd /c/Users/s0012/dental-appointment-app && npm uninstall bcrypt @types/bcrypt && npm install bcryptjs && npm install -D @types/bcryptjs 2>&1)",
+      "Bash(cd /c/Users/s0012/dental-appointment-app && git add package.json package-lock.json app/api/auth/master-password/route.ts app/api/auth/pin/route.ts && git commit -m \"$\\(cat <<'EOF'\nfix: bcrypt を bcryptjs に置換（Vercel Edge Runtime 互換）\n\nネイティブモジュールの bcrypt を純粋JS実装の bcryptjs に置換。\nVercel の Edge Runtime で MIDDLEWARE_INVOCATION_FAILED が発生する問題を修正。\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\" && git push origin main 2>&1)",
+      "Bash(echo vercel CLI not installed:*)",
+      "Bash(sort:*)",
+      "Bash(head:*)",
+      "Bash(cd /c/Users/s0012/dental-appointment-app && rm -rf node_modules package-lock.json && npm install 2>&1)"
     ]
   }
 }
