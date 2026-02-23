@@ -1,0 +1,91 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@/lib/supabase/server'
+
+type ImportRow = {
+  chart_number: string
+  name: string
+  name_kana?: string
+  phone?: string
+  email?: string
+}
+
+// POST: CSV一括インポート（UPSERT）
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = createServerClient()
+    const body = await request.json()
+    const rows: ImportRow[] = body.rows
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return NextResponse.json({ error: 'インポートデータがありません' }, { status: 400 })
+    }
+
+    let inserted = 0
+    let updated = 0
+    let errors: { row: number; message: string }[] = []
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i]
+
+      if (!row.chart_number?.trim()) {
+        errors.push({ row: i + 1, message: 'カルテNoは必須です' })
+        continue
+      }
+      if (!row.name?.trim()) {
+        errors.push({ row: i + 1, message: '氏名は必須です' })
+        continue
+      }
+
+      // 既存レコードをチェック
+      const { data: existing } = await supabase
+        .from('patients')
+        .select('id')
+        .eq('chart_number', row.chart_number.trim())
+        .single()
+
+      if (existing) {
+        // 更新（UPSERT: 既存レコードを更新）
+        const { error } = await supabase
+          .from('patients')
+          .update({
+            name: row.name.trim(),
+            name_kana: row.name_kana?.trim() || null,
+            phone: row.phone?.trim() || null,
+            email: row.email?.trim() || null,
+            is_active: true,
+          })
+          .eq('id', existing.id)
+
+        if (error) {
+          errors.push({ row: i + 1, message: error.message })
+        } else {
+          updated++
+        }
+      } else {
+        // 新規登録
+        const { error } = await supabase.from('patients').insert({
+          chart_number: row.chart_number.trim(),
+          name: row.name.trim(),
+          name_kana: row.name_kana?.trim() || null,
+          phone: row.phone?.trim() || null,
+          email: row.email?.trim() || null,
+        })
+
+        if (error) {
+          errors.push({ row: i + 1, message: error.message })
+        } else {
+          inserted++
+        }
+      }
+    }
+
+    return NextResponse.json({
+      inserted,
+      updated,
+      errorCount: errors.length,
+      errors: errors.slice(0, 50), // 最大50件のエラーを返す
+    })
+  } catch {
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
