@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import bcrypt from 'bcryptjs'
+import bcrypt from 'bcrypt'
 import { createServerClient } from '@/lib/supabase/server'
 import { DEVICE_AUTH_COOKIE, DEVICE_AUTH_MAX_AGE } from '@/lib/auth/device'
 
