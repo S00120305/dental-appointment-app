@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
         .from('appointments')
         .select('unit_number, start_time, duration_minutes, status')
         .eq('is_deleted', false)
-        .neq('status', 'キャンセル')
+        .not('status', 'in', '("cancelled","no_show")')
         .gte('start_time', rangeStart)
         .lte('start_time', rangeEnd),
       supabase

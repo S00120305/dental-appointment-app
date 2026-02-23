@@ -7,7 +7,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import StatusBadge from '@/components/calendar/StatusBadge'
 import LabOrderBadge from '@/components/calendar/LabOrderBadge'
 import { useToast } from '@/components/ui/Toast'
-import { getNextStatus, getPrevStatus, STATUS_TEXT } from '@/lib/constants/appointment'
+import { getNextStatus, getPrevStatus, STATUS_TEXT, STATUS_LABELS } from '@/lib/constants/appointment'
 import type { AppointmentStatus, AppointmentWithRelations, LabOrderWithLab, Patient, Staff } from '@/lib/supabase/types'
 
 type AppointmentModalProps = {
@@ -368,7 +368,7 @@ export default function AppointmentModal({
       <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? '予約の編集' : '新規予約'}>
         <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
           {/* ステータス操作セクション（編集モード時のみ） */}
-          {isEdit && appointment && onStatusChange && currentStatus !== 'キャンセル' && (
+          {isEdit && appointment && onStatusChange && currentStatus !== 'cancelled' && currentStatus !== 'no_show' && (
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
               <div className="flex items-center justify-between gap-2">
                 <button
@@ -389,34 +389,45 @@ export default function AppointmentModal({
                     backgroundColor: nextStatus ? (STATUS_TEXT[nextStatus] || '#374151') : '#9ca3af',
                   }}
                 >
-                  {nextStatus ? `${nextStatus}にする ▶` : '完了'}
+                  {nextStatus ? `${STATUS_LABELS[nextStatus]}にする ▶` : '完了'}
                 </button>
               </div>
-              {currentStatus === '予約済み' && (
+              {/* キャンセル / 無断キャンセル ドロップダウン */}
+              <div className="mt-2 flex gap-2">
                 <button
                   type="button"
                   disabled={statusChanging}
                   onClick={() => setShowCancelConfirm(true)}
-                  className="mt-2 w-full min-h-[44px] rounded-md border border-red-300 bg-white px-3 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                  className="flex-1 min-h-[44px] rounded-md border border-red-300 bg-white px-3 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
                 >
-                  キャンセルにする
+                  キャンセル
                 </button>
-              )}
+                <button
+                  type="button"
+                  disabled={statusChanging}
+                  onClick={() => handleStatusChange('no_show')}
+                  className="flex-1 min-h-[44px] rounded-md border border-yellow-400 bg-white px-3 text-sm font-medium text-yellow-700 hover:bg-yellow-50 disabled:opacity-50"
+                >
+                  無断キャンセル
+                </button>
+              </div>
             </div>
           )}
 
-          {/* キャンセル済み表示 */}
-          {isEdit && currentStatus === 'キャンセル' && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-center">
-              <StatusBadge status="キャンセル" size="lg" />
+          {/* キャンセル / 無断キャンセル済み表示 */}
+          {isEdit && (currentStatus === 'cancelled' || currentStatus === 'no_show') && (
+            <div className={`rounded-lg border p-3 text-center ${
+              currentStatus === 'no_show' ? 'border-yellow-200 bg-yellow-50' : 'border-red-200 bg-red-50'
+            }`}>
+              <StatusBadge status={currentStatus} size="lg" />
               {onStatusChange && (
                 <button
                   type="button"
                   disabled={statusChanging}
-                  onClick={() => handleStatusChange('予約済み')}
+                  onClick={() => handleStatusChange('scheduled')}
                   className="mt-2 w-full min-h-[44px] rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                 >
-                  予約済みに戻す
+                  未来院に戻す
                 </button>
               )}
             </div>
@@ -742,7 +753,7 @@ export default function AppointmentModal({
       <ConfirmDialog
         isOpen={showCancelConfirm}
         onClose={() => setShowCancelConfirm(false)}
-        onConfirm={() => handleStatusChange('キャンセル')}
+        onConfirm={() => handleStatusChange('cancelled')}
         title="予約のキャンセル"
         message="この予約をキャンセルしますか？"
         confirmLabel="キャンセルにする"

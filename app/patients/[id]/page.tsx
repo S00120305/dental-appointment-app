@@ -70,8 +70,8 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
   }
 
   const now = new Date()
-  const futureAppointments = appointments.filter(a => new Date(a.start_time) >= now && a.status !== 'キャンセル')
-  const pastAppointments = appointments.filter(a => new Date(a.start_time) < now || a.status === 'キャンセル')
+  const futureAppointments = appointments.filter(a => new Date(a.start_time) >= now && a.status !== 'cancelled' && a.status !== 'no_show')
+  const pastAppointments = appointments.filter(a => new Date(a.start_time) < now || a.status === 'cancelled' || a.status === 'no_show')
 
   return (
     <AppLayout>

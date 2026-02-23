@@ -88,6 +88,7 @@ export async function PUT(request: NextRequest) {
       id, chart_number, name, name_kana, phone, email,
       reminder_sms, reminder_email,
       is_vip, caution_level, is_infection_alert,
+      birth_date, memo,
     } = body
 
     if (!id) {
@@ -115,6 +116,8 @@ export async function PUT(request: NextRequest) {
     if (is_vip !== undefined) updateData.is_vip = is_vip
     if (caution_level !== undefined) updateData.caution_level = caution_level
     if (is_infection_alert !== undefined) updateData.is_infection_alert = is_infection_alert
+    if (birth_date !== undefined) updateData.birth_date = birth_date || null
+    if (memo !== undefined) updateData.memo = memo ?? ''
 
     const { data, error } = await supabase
       .from('patients')

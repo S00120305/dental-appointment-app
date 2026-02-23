@@ -13,12 +13,14 @@ export type Patient = {
   is_vip: boolean
   caution_level: number // 0=なし, 1=注意①, 2=注意②, 3=注意③
   is_infection_alert: boolean
+  birth_date: string | null
+  memo: string
   is_active: boolean
   created_at: string
   updated_at: string
 }
 
-export type AppointmentStatus = '予約済み' | '来院済み' | '診療中' | '帰宅済み' | 'キャンセル'
+export type AppointmentStatus = 'scheduled' | 'checked_in' | 'completed' | 'cancelled' | 'no_show'
 
 export type Appointment = {
   id: string

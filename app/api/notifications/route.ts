@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
         patient:patients!patient_id(id, name, phone, email, reminder_sms, reminder_email)
       `)
       .eq('is_deleted', false)
-      .eq('status', '予約済み')
+      .eq('status', 'scheduled')
       .gte('start_time', dayStart)
       .lte('start_time', dayEnd)
 

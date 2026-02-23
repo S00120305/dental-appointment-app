@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
         appointment_type,
         memo: memo || null,
         lab_order_id: lab_order_id || null,
-        status: '予約済み',
+        status: 'scheduled',
       })
       .select(selectQueryPost)
       .single()

@@ -68,16 +68,16 @@ export default function DashboardPage() {
   // サマリー集計
   const appointments = data?.todayAppointments || []
   const totalCount = appointments.length
-  const arrivedCount = appointments.filter(a => a.status === '来院済み').length
-  const inProgressCount = appointments.filter(a => a.status === '診療中').length
-  const completedCount = appointments.filter(a => a.status === '帰宅済み').length
-  const cancelledCount = appointments.filter(a => a.status === 'キャンセル').length
-  const notArrivedCount = appointments.filter(a => a.status === '予約済み').length
+  const checkedInCount = appointments.filter(a => a.status === 'checked_in').length
+  const completedCount = appointments.filter(a => a.status === 'completed').length
+  const cancelledCount = appointments.filter(a => a.status === 'cancelled').length
+  const noShowCount = appointments.filter(a => a.status === 'no_show').length
+  const scheduledCount = appointments.filter(a => a.status === 'scheduled').length
 
   // 現在の空きユニット計算
   const busyUnits = new Set(
     appointments
-      .filter(a => a.status === '診療中')
+      .filter(a => a.status === 'checked_in')
       .map(a => a.unit_number)
   )
   const availableUnits = unitCount - busyUnits.size
@@ -85,7 +85,7 @@ export default function DashboardPage() {
   // 次の予約
   const now = new Date()
   const nextAppointment = appointments.find(a => {
-    if (a.status !== '予約済み') return false
+    if (a.status !== 'scheduled') return false
     return new Date(a.start_time) >= now
   })
 
@@ -158,11 +158,11 @@ export default function DashboardPage() {
           <div className="grid gap-4 lg:grid-cols-3">
             <TodaySummary
               totalCount={totalCount}
-              arrivedCount={arrivedCount}
-              notArrivedCount={notArrivedCount}
-              cancelledCount={cancelledCount}
-              inProgressCount={inProgressCount}
+              scheduledCount={scheduledCount}
+              checkedInCount={checkedInCount}
               completedCount={completedCount}
+              cancelledCount={cancelledCount}
+              noShowCount={noShowCount}
               availableUnits={availableUnits}
               unitCount={unitCount}
               nextAppointment={nextAppointment ? {

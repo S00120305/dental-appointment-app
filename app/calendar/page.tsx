@@ -7,6 +7,7 @@ import AppointmentModal from '@/components/calendar/AppointmentModal'
 import BlockedSlotModal from '@/components/calendar/BlockedSlotModal'
 import SlotActionMenu from '@/components/calendar/SlotActionMenu'
 import AvailableSlotSearch from '@/components/calendar/AvailableSlotSearch'
+import PatientDetailPanel from '@/components/calendar/PatientDetailPanel'
 import Button from '@/components/ui/Button'
 import Skeleton from '@/components/ui/Skeleton'
 import { useAppointments } from '@/hooks/useAppointments'
@@ -74,6 +75,10 @@ export default function CalendarPage() {
   // Available Slot Search
   const [slotSearchOpen, setSlotSearchOpen] = useState(false)
   const [defaultModalDuration, setDefaultModalDuration] = useState<number | undefined>(undefined)
+
+  // Patient Detail Panel
+  const [detailPanelOpen, setDetailPanelOpen] = useState(false)
+  const [detailAppointment, setDetailAppointment] = useState<AppointmentWithRelations | null>(null)
 
   // Unit filter (mobile)
   const [filteredUnit, setFilteredUnit] = useState<number | null>(null)
@@ -170,10 +175,28 @@ export default function CalendarPage() {
   const handleEventClick = useCallback((appointmentId: string) => {
     const appt = appointments.find((a) => a.id === appointmentId)
     if (appt) {
-      setSelectedAppointment(appt)
-      setModalOpen(true)
+      setDetailAppointment(appt)
+      setDetailPanelOpen(true)
     }
   }, [appointments])
+
+  // Detail panel → edit modal
+  const handleDetailEditClick = useCallback(() => {
+    if (detailAppointment) {
+      setSelectedAppointment(detailAppointment)
+      setModalOpen(true)
+    }
+  }, [detailAppointment])
+
+  // Detail panel → new appointment via available slot search
+  const handleDetailNewAppointment = useCallback((_patientId: string, _patientName: string) => {
+    setSlotSearchOpen(true)
+  }, [])
+
+  // Detail panel → jump to date
+  const handleJumpToDate = useCallback((date: string) => {
+    setSelectedDate(date)
+  }, [])
 
   const handleBlockedSlotClick = useCallback((slot: BlockedSlot) => {
     setSelectedBlockedSlot(slot)
@@ -435,6 +458,19 @@ export default function CalendarPage() {
         defaultStartTime={defaultModalTime}
         defaultDuration={defaultModalDuration}
       />
+
+      {/* 患者詳細パネル */}
+      {detailAppointment && (
+        <PatientDetailPanel
+          isOpen={detailPanelOpen}
+          onClose={() => setDetailPanelOpen(false)}
+          appointment={detailAppointment}
+          onStatusChange={updateStatus}
+          onEditClick={handleDetailEditClick}
+          onNewAppointment={handleDetailNewAppointment}
+          onJumpToDate={handleJumpToDate}
+        />
+      )}
 
       {/* ブロック枠モーダル */}
       <BlockedSlotModal

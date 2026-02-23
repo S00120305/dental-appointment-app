@@ -23,8 +23,8 @@ export function getEventStyle(
   status: string,
   staffColor: string
 ): React.CSSProperties {
-  const bg = STATUS_BG[status] || STATUS_BG['予約済み']
-  const textColor = STATUS_TEXT[status] || STATUS_TEXT['予約済み']
+  const bg = STATUS_BG[status] || STATUS_BG['scheduled']
+  const textColor = STATUS_TEXT[status] || STATUS_TEXT['scheduled']
 
   return {
     backgroundColor: bg,
@@ -42,7 +42,7 @@ export default function AppointmentBlock({ eventInfo }: { eventInfo: EventConten
   const patientName = extendedProps.patient_name || ''
   const appointmentType = extendedProps.appointment_type || ''
   const staffName = extendedProps.staff_name || ''
-  const status = extendedProps.status || '予約済み'
+  const status = extendedProps.status || 'scheduled'
   const staffColor = extendedProps.staff_color || '#3b82f6'
   const labOrderStatus = extendedProps.lab_order_status as string | undefined
   const isInfectionAlert = extendedProps.is_infection_alert as boolean | undefined

@@ -1,6 +1,6 @@
 'use client'
 
-import { STATUS_BG_CLASS } from '@/lib/constants/appointment'
+import { STATUS_BG_CLASS, STATUS_LABELS } from '@/lib/constants/appointment'
 
 type StatusBadgeProps = {
   status: string
@@ -16,10 +16,11 @@ const SIZE_CLASSES = {
 export default function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
   const colorClass = STATUS_BG_CLASS[status] || 'bg-gray-100 text-gray-600'
   const sizeClass = SIZE_CLASSES[size]
+  const label = STATUS_LABELS[status as keyof typeof STATUS_LABELS] || status
 
   return (
     <span className={`inline-flex items-center rounded-full whitespace-nowrap ${colorClass} ${sizeClass}`}>
-      {status}
+      {label}
     </span>
   )
 }
