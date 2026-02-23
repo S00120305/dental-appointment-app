@@ -1,19 +1,15 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import AppLayout from '@/components/layout/AppLayout'
 import AppointmentModal from '@/components/calendar/AppointmentModal'
 import Button from '@/components/ui/Button'
-import Skeleton from '@/components/ui/Skeleton'
-import type { AppointmentWithRelations, AppointmentStatus } from '@/lib/supabase/types'
+import { useToast } from '@/components/ui/Toast'
+import type { AppointmentWithRelations } from '@/lib/supabase/types'
+import type { BusinessHours, CalendarResource } from '@/components/calendar/CalendarView'
 
-const STATUS_COLORS: Record<AppointmentStatus, string> = {
-  '予約済み': 'bg-blue-100 text-blue-800',
-  '来院済み': 'bg-green-100 text-green-800',
-  '診療中': 'bg-yellow-100 text-yellow-800',
-  '帰宅済み': 'bg-gray-100 text-gray-600',
-  'キャンセル': 'bg-red-100 text-red-700',
-}
+const CalendarView = dynamic(() => import('@/components/calendar/CalendarView'), { ssr: false })
 
 function formatDateLocal(date: Date): string {
   const y = date.getFullYear()
@@ -22,44 +18,186 @@ function formatDateLocal(date: Date): string {
   return `${y}-${m}-${d}`
 }
 
+type ViewType = 'resourceTimelineDay' | 'resourceTimelineWeek'
+
 export default function CalendarPage() {
+  const { showToast } = useToast()
+
+  // State
   const [selectedDate, setSelectedDate] = useState(formatDateLocal(new Date()))
+  const [viewType, setViewType] = useState<ViewType>('resourceTimelineDay')
   const [appointments, setAppointments] = useState<AppointmentWithRelations[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Settings
+  const [unitCount, setUnitCount] = useState(5)
+  const [businessHours, setBusinessHours] = useState<BusinessHours>({
+    start: '09:00', end: '18:00', lunch_start: '12:30', lunch_end: '14:00',
+  })
+  const [staffColors, setStaffColors] = useState<Record<string, string>>({})
+  const [staffList, setStaffList] = useState<{ id: string; name: string }[]>([])
+
+  // Modal
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithRelations | null>(null)
+  const [defaultModalDate, setDefaultModalDate] = useState<string>('')
+  const [defaultModalTime, setDefaultModalTime] = useState<string>('')
+  const [defaultModalUnit, setDefaultModalUnit] = useState<number>(1)
 
-  const fetchAppointments = useCallback(async (date: string) => {
+  // Unit filter (mobile)
+  const [filteredUnit, setFilteredUnit] = useState<number | null>(null)
+
+  // Resources
+  const resources: CalendarResource[] = useMemo(() => {
+    const count = filteredUnit ? 1 : unitCount
+    if (filteredUnit) {
+      return [{ id: String(filteredUnit), title: `ユニット${filteredUnit}` }]
+    }
+    return Array.from({ length: count }, (_, i) => ({
+      id: String(i + 1),
+      title: `U${i + 1}`,
+    }))
+  }, [unitCount, filteredUnit])
+
+  // Date range for fetching
+  const [fetchRange, setFetchRange] = useState<{ start: string; end: string } | null>(null)
+
+  // Fetch settings + staff on mount
+  useEffect(() => {
+    fetchSettings()
+    fetchStaff()
+  }, [])
+
+  // Fetch appointments when date range changes
+  useEffect(() => {
+    if (fetchRange) {
+      fetchAppointments(fetchRange.start, fetchRange.end)
+    }
+  }, [fetchRange])
+
+  async function fetchSettings() {
+    try {
+      const res = await fetch('/api/settings')
+      const data = await res.json()
+      if (res.ok && data.settings) {
+        const s = data.settings
+        if (s.unit_count) setUnitCount(parseInt(s.unit_count))
+        if (s.business_hours) {
+          try {
+            const bh = JSON.parse(s.business_hours)
+            setBusinessHours({
+              start: bh.start || '09:00',
+              end: bh.end || '18:00',
+              lunch_start: bh.lunch_start || '12:30',
+              lunch_end: bh.lunch_end || '14:00',
+            })
+          } catch { /* ignore */ }
+        }
+        if (s.staff_colors) {
+          try { setStaffColors(JSON.parse(s.staff_colors)) } catch { /* ignore */ }
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
+  async function fetchStaff() {
+    try {
+      const res = await fetch('/api/users')
+      const data = await res.json()
+      if (res.ok) setStaffList(data.users || [])
+    } catch { /* ignore */ }
+  }
+
+  async function fetchAppointments(startDate: string, endDate: string) {
     setLoading(true)
     try {
-      const res = await fetch(`/api/appointments?date=${date}`)
+      const res = await fetch(
+        `/api/appointments?start_date=${startDate}&end_date=${endDate}`
+      )
       const data = await res.json()
       if (res.ok) {
         setAppointments(data.appointments || [])
       }
-    } catch {
-      // ignore
-    } finally {
+    } catch { /* ignore */ }
+    finally {
       setLoading(false)
     }
+  }
+
+  // Calendar callbacks
+  const handleDatesSet = useCallback((start: Date, end: Date) => {
+    const startStr = formatDateLocal(start)
+    const endDate = new Date(end.getTime() - 1) // end is exclusive
+    const endStr = formatDateLocal(endDate)
+    setFetchRange({ start: startStr, end: endStr })
   }, [])
 
-  useEffect(() => {
-    fetchAppointments(selectedDate)
-  }, [selectedDate, fetchAppointments])
+  const handleDateSelect = useCallback((start: Date, _end: Date, resourceId: string) => {
+    setSelectedAppointment(null)
+    setDefaultModalDate(formatDateLocal(start))
+    setDefaultModalTime(
+      `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`
+    )
+    setDefaultModalUnit(parseInt(resourceId) || 1)
+    setModalOpen(true)
+  }, [])
+
+  const handleEventClick = useCallback((appointmentId: string) => {
+    const appt = appointments.find((a) => a.id === appointmentId)
+    if (appt) {
+      setSelectedAppointment(appt)
+      setModalOpen(true)
+    }
+  }, [appointments])
+
+  const handleEventDrop = useCallback(
+    async (appointmentId: string, newStart: Date, newResourceId: string, revert: () => void) => {
+      const startTime = newStart.toISOString()
+      const appt = appointments.find((a) => a.id === appointmentId)
+      if (!appt) { revert(); return }
+
+      try {
+        const res = await fetch('/api/appointments', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: appointmentId,
+            unit_number: parseInt(newResourceId),
+            start_time: startTime,
+            duration_minutes: appt.duration_minutes,
+            patient_id: appt.patient_id,
+            staff_id: appt.staff_id,
+            appointment_type: appt.appointment_type,
+          }),
+        })
+
+        if (!res.ok) {
+          const data = await res.json()
+          showToast(data.error || '移動に失敗しました', 'error')
+          revert()
+          return
+        }
+
+        showToast('予約を移動しました', 'success')
+        if (fetchRange) fetchAppointments(fetchRange.start, fetchRange.end)
+      } catch {
+        showToast('通信エラーが発生しました', 'error')
+        revert()
+      }
+    },
+    [appointments, fetchRange, showToast]
+  )
+
+  function handleSaved() {
+    if (fetchRange) fetchAppointments(fetchRange.start, fetchRange.end)
+  }
 
   function handleNewAppointment() {
     setSelectedAppointment(null)
+    setDefaultModalDate(selectedDate)
+    setDefaultModalTime('')
+    setDefaultModalUnit(1)
     setModalOpen(true)
-  }
-
-  function handleEditAppointment(appt: AppointmentWithRelations) {
-    setSelectedAppointment(appt)
-    setModalOpen(true)
-  }
-
-  function handleSaved() {
-    fetchAppointments(selectedDate)
   }
 
   function handleDateChange(offset: number) {
@@ -68,132 +206,134 @@ export default function CalendarPage() {
     setSelectedDate(formatDateLocal(d))
   }
 
+  function handleGoToday() {
+    setSelectedDate(formatDateLocal(new Date()))
+  }
+
   const dateObj = new Date(selectedDate + 'T00:00:00')
   const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()]
 
   return (
     <AppLayout>
-      <div className="p-4 sm:p-6">
-        {/* ヘッダー */}
-        <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">予約一覧</h1>
-          <Button onClick={handleNewAppointment}>新規予約</Button>
+      <div className="p-2 sm:p-4">
+        {/* 上部コントロール */}
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          {/* 日付ナビゲーション */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => handleDateChange(-1)}
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-gray-300 bg-white hover:bg-gray-50"
+            >
+              <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="rounded-md border border-gray-300 px-2 py-2 text-sm"
+            />
+            <button
+              onClick={() => handleDateChange(1)}
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-gray-300 bg-white hover:bg-gray-50"
+            >
+              <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            <button
+              onClick={handleGoToday}
+              className="min-h-[44px] rounded-md border border-gray-300 bg-white px-3 text-sm hover:bg-gray-50"
+            >
+              今日
+            </button>
+          </div>
+
+          {/* 日付表示 */}
+          <span className="text-sm font-medium text-gray-700">
+            {dateObj.getFullYear()}/{dateObj.getMonth() + 1}/{dateObj.getDate()}（{dayOfWeek}）
+          </span>
+
+          {/* 表示切替 */}
+          <div className="flex rounded-md border border-gray-300">
+            <button
+              onClick={() => setViewType('resourceTimelineDay')}
+              className={`min-h-[44px] px-3 text-sm ${
+                viewType === 'resourceTimelineDay'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
+              } rounded-l-md`}
+            >
+              日
+            </button>
+            <button
+              onClick={() => setViewType('resourceTimelineWeek')}
+              className={`min-h-[44px] px-3 text-sm ${
+                viewType === 'resourceTimelineWeek'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
+              } rounded-r-md border-l border-gray-300`}
+            >
+              週
+            </button>
+          </div>
+
+          {/* 新規予約ボタン */}
+          <div className="ml-auto">
+            <Button onClick={handleNewAppointment}>新規予約</Button>
+          </div>
         </div>
 
-        {/* 日付選択 */}
-        <div className="mb-4 flex items-center gap-2">
+        {/* ユニットフィルター（モバイル/タブレット） */}
+        <div className="mb-2 flex gap-1 overflow-x-auto sm:hidden">
           <button
-            onClick={() => handleDateChange(-1)}
-            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-gray-300 bg-white hover:bg-gray-50"
+            onClick={() => setFilteredUnit(null)}
+            className={`min-h-[36px] flex-shrink-0 rounded-full px-3 text-xs font-medium ${
+              filteredUnit === null
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700'
+            }`}
           >
-            <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
+            全て
           </button>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-center text-base"
-          />
-          <button
-            onClick={() => handleDateChange(1)}
-            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-gray-300 bg-white hover:bg-gray-50"
-          >
-            <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-          <button
-            onClick={() => setSelectedDate(formatDateLocal(new Date()))}
-            className="min-h-[44px] rounded-md border border-gray-300 bg-white px-3 text-sm hover:bg-gray-50"
-          >
-            今日
-          </button>
+          {Array.from({ length: unitCount }, (_, i) => i + 1).map((n) => (
+            <button
+              key={n}
+              onClick={() => setFilteredUnit(filteredUnit === n ? null : n)}
+              className={`min-h-[36px] flex-shrink-0 rounded-full px-3 text-xs font-medium ${
+                filteredUnit === n
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700'
+              }`}
+            >
+              U{n}
+            </button>
+          ))}
         </div>
 
-        {/* 日付表示 */}
-        <p className="mb-4 text-center text-lg font-medium text-gray-700">
-          {dateObj.getMonth() + 1}月{dateObj.getDate()}日（{dayOfWeek}）
-        </p>
-
-        {/* 予約一覧 */}
-        {loading ? (
-          <div className="space-y-3">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-20 w-full rounded-lg" />
-            ))}
-          </div>
-        ) : appointments.length === 0 ? (
-          <div className="rounded-lg border border-gray-200 bg-white p-8 text-center shadow-sm">
-            <p className="text-gray-500">この日の予約はありません</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {appointments.map((appt) => {
-              const startTime = new Date(appt.start_time)
-              const endTime = new Date(startTime.getTime() + appt.duration_minutes * 60 * 1000)
-              const timeStr = `${startTime.getHours().toString().padStart(2, '0')}:${startTime.getMinutes().toString().padStart(2, '0')}`
-              const endStr = `${endTime.getHours().toString().padStart(2, '0')}:${endTime.getMinutes().toString().padStart(2, '0')}`
-              const statusColor = STATUS_COLORS[appt.status as AppointmentStatus] || 'bg-gray-100 text-gray-600'
-
-              return (
-                <button
-                  key={appt.id}
-                  onClick={() => handleEditAppointment(appt)}
-                  className="w-full rounded-lg border border-gray-200 bg-white p-4 text-left shadow-sm transition-colors hover:bg-gray-50 active:bg-gray-100 min-h-[44px]"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium text-gray-900">
-                          {timeStr} - {endStr}
-                        </span>
-                        <span className="inline-flex items-center rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
-                          U{appt.unit_number}
-                        </span>
-                        <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${statusColor}`}>
-                          {appt.status}
-                        </span>
-                      </div>
-                      <div className="mt-1 flex items-center gap-2">
-                        {appt.patient && (
-                          <>
-                            <span className="inline-flex items-center rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-800">
-                              {appt.patient.chart_number}
-                            </span>
-                            <span className="text-base font-medium text-gray-900">
-                              {appt.patient.name}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                      <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
-                        <span>{appt.appointment_type}</span>
-                        {appt.staff && <span>/ {appt.staff.name}</span>}
-                        {appt.memo && <span className="truncate">/ {appt.memo}</span>}
-                      </div>
-                    </div>
-                    <svg
-                      className="ml-2 h-5 w-5 flex-shrink-0 text-gray-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        )}
-
-        {/* Step 1-3 でFullCalendarに置き換え予定 */}
-        <p className="mt-6 text-center text-xs text-gray-400">
-          ※ この一覧は仮実装です。Step 1-3 で FullCalendar に置き換えます
-        </p>
+        {/* カレンダー本体 */}
+        <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
+          {loading && appointments.length === 0 ? (
+            <div className="flex h-96 items-center justify-center">
+              <div className="text-gray-400">読み込み中...</div>
+            </div>
+          ) : (
+            <CalendarView
+              appointments={appointments}
+              resources={resources}
+              businessHours={businessHours}
+              staffColors={staffColors}
+              staffList={staffList}
+              initialDate={selectedDate}
+              viewType={viewType}
+              onDateSelect={handleDateSelect}
+              onEventClick={handleEventClick}
+              onEventDrop={handleEventDrop}
+              onDatesSet={handleDatesSet}
+            />
+          )}
+        </div>
       </div>
 
       {/* 予約モーダル */}
@@ -202,7 +342,9 @@ export default function CalendarPage() {
         onClose={() => setModalOpen(false)}
         onSaved={handleSaved}
         appointment={selectedAppointment}
-        defaultDate={selectedDate}
+        defaultDate={defaultModalDate}
+        defaultUnitNumber={defaultModalUnit}
+        defaultStartTime={defaultModalTime}
       />
     </AppLayout>
   )

@@ -1,1 +1,76 @@
 @import "tailwindcss";
+
+/* FullCalendar カスタムスタイル */
+
+/* Resource Timeline の基本調整 */
+.fc {
+  --fc-border-color: #e5e7eb;
+  --fc-today-bg-color: #eff6ff;
+  --fc-now-indicator-color: #ef4444;
+  --fc-event-border-color: transparent;
+  font-family: inherit;
+}
+
+/* リソースヘッダー（ユニット名）*/
+.fc .fc-resource-timeline .fc-datagrid-cell-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* タイムライングリッド行を少し広く */
+.fc .fc-timeline-slot {
+  height: auto;
+}
+
+/* 予約ブロック内のカスタムコンテンツ */
+.fc-event {
+  cursor: pointer;
+  border-radius: 6px !important;
+  border: none !important;
+  overflow: hidden;
+}
+
+.fc-event .fc-event-main {
+  padding: 2px 6px;
+  overflow: hidden;
+}
+
+/* 昼休みの背景 */
+.fc-event.lunch-break {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* iPad タッチ操作最適化 */
+.fc .fc-timeline-slot-lane {
+  min-height: 60px;
+}
+
+/* リソースラベルの幅 */
+.fc .fc-datagrid-cell-cushion {
+  padding: 8px 4px;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+/* 現在時刻インジケーター */
+.fc .fc-timeline-now-indicator-line {
+  border-color: var(--fc-now-indicator-color);
+  border-width: 2px;
+}
+
+/* スクロールバー調整（iPad向け） */
+.fc .fc-scroller {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 週表示の日付ヘッダー */
+.fc .fc-timeline-header .fc-timeline-slot-cushion {
+  font-size: 0.75rem;
+}
+
+/* ドラッグ中のゴースト */
+.fc-event-dragging {
+  opacity: 0.7;
+}
