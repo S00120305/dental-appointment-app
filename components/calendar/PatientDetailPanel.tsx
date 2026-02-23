@@ -298,7 +298,7 @@ export default function PatientDetailPanel({
                 <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
                   <span>{appointment.appointment_type}</span>
                   {appointment.staff?.name && <span>/ {appointment.staff.name}</span>}
-                  <span>/ ユニット{appointment.unit_number}</span>
+                  <span>/ 診察室{appointment.unit_number}</span>
                   <span className={`text-xs rounded-full px-2 py-0.5 ${hasCompletedPast ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-700'}`}>
                     {hasCompletedPast ? '再診' : '初診'}
                   </span>

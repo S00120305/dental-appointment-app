@@ -29,6 +29,7 @@ export function useSettings() {
   const settings: SettingsMap = data?.settings || {}
 
   const unitCount = settings.unit_count ? parseInt(settings.unit_count) : 5
+  const visibleUnits = settings.visible_units ? parseInt(settings.visible_units) : unitCount
 
   let businessHours: BusinessHours = {
     start: '09:00', end: '18:00', lunch_start: '12:30', lunch_end: '14:00',
@@ -53,6 +54,7 @@ export function useSettings() {
   return {
     settings,
     unitCount,
+    visibleUnits,
     businessHours,
     staffColors,
     isLoading,

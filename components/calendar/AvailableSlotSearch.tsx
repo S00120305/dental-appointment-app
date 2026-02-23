@@ -15,7 +15,7 @@ type AvailableSlotSearchProps = {
   isOpen: boolean
   onClose: () => void
   onSelectSlot: (slot: AvailableSlot, durationMinutes: number) => void
-  unitCount: number
+  visibleUnits: number
   preSelectedPatientId?: string
   preSelectedPatientName?: string
 }
@@ -52,7 +52,7 @@ export default function AvailableSlotSearch({
   isOpen,
   onClose,
   onSelectSlot,
-  unitCount,
+  visibleUnits,
   preSelectedPatientId,
   preSelectedPatientName,
 }: AvailableSlotSearchProps) {
@@ -189,15 +189,15 @@ export default function AvailableSlotSearch({
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">ユニット</label>
+                <label className="mb-1 block text-sm font-medium text-gray-700">診察室</label>
                 <select
                   value={unitNumber}
                   onChange={(e) => setUnitNumber(parseInt(e.target.value))}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
                 >
-                  <option value={0}>全ユニット</option>
-                  {Array.from({ length: unitCount }, (_, i) => i + 1).map((n) => (
-                    <option key={n} value={n}>ユニット {n}</option>
+                  <option value={0}>全診察室</option>
+                  {Array.from({ length: visibleUnits }, (_, i) => i + 1).map((n) => (
+                    <option key={n} value={n}>診察室{n}</option>
                   ))}
                 </select>
               </div>
@@ -252,7 +252,7 @@ export default function AvailableSlotSearch({
                   <ul className="text-xs text-gray-400 mt-1 space-y-0.5">
                     <li>- 期間を広げる</li>
                     <li>- 必要時間を短くする</li>
-                    <li>- ユニット指定を外す</li>
+                    <li>- 診察室指定を外す</li>
                   </ul>
                 </div>
               ) : (
@@ -277,7 +277,7 @@ export default function AvailableSlotSearch({
                             >
                               <div className="flex items-center gap-2">
                                 <span className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600">
-                                  U{slot.unit_number}
+                                  診{slot.unit_number}
                                 </span>
                                 <span className="text-gray-900">
                                   {formatTime(slot.start_time)}〜{formatTime(slot.end_time)}

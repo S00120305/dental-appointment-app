@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
 
     // バリデーション
     if (!patient_id) return NextResponse.json({ error: '患者は必須です' }, { status: 400 })
-    if (!unit_number) return NextResponse.json({ error: 'ユニットは必須です' }, { status: 400 })
+    if (!unit_number) return NextResponse.json({ error: '診察室は必須です' }, { status: 400 })
     if (!staff_id) return NextResponse.json({ error: '担当スタッフは必須です' }, { status: 400 })
     if (!start_time) return NextResponse.json({ error: '開始時刻は必須です' }, { status: 400 })
     if (!duration_minutes) return NextResponse.json({ error: '所要時間は必須です' }, { status: 400 })
@@ -330,7 +330,7 @@ async function checkOverlap(
       // 重複判定: 新規の開始 < 既存の終了 AND 新規の終了 > 既存の開始
       if (newStart < existEnd && newEnd > existStart) {
         const timeStr = existStart.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
-        return `ユニット${unitNumber}の${timeStr}に既存の予約があります`
+        return `診察室${unitNumber}の${timeStr}に既存の予約があります`
       }
     }
   }

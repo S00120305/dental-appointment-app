@@ -17,7 +17,7 @@ type BlockedSlotModalProps = {
   defaultStartTime?: string // HH:mm
   defaultEndTime?: string // HH:mm
   defaultUnitNumber?: number
-  unitCount?: number
+  visibleUnits?: number
   businessHours?: { start: string; end: string }
 }
 
@@ -48,7 +48,7 @@ export default function BlockedSlotModal({
   defaultStartTime,
   defaultEndTime,
   defaultUnitNumber,
-  unitCount = 5,
+  visibleUnits = 5,
   businessHours = { start: '09:00', end: '18:00' },
 }: BlockedSlotModalProps) {
   const { showToast } = useToast()
@@ -148,10 +148,10 @@ export default function BlockedSlotModal({
         <div className="space-y-4">
           {/* ユニット選択 */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">ユニット</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">診察室</label>
             {isDetail ? (
               <p className="text-base text-gray-900">
-                {unitNumber === 0 ? '全ユニット' : `ユニット ${unitNumber}`}
+                {unitNumber === 0 ? '全診察室' : `診察室${unitNumber}`}
               </p>
             ) : (
               <div className="flex flex-wrap gap-2">
@@ -168,9 +168,9 @@ export default function BlockedSlotModal({
                     onChange={() => setUnitNumber(0)}
                     className="mr-2"
                   />
-                  全ユニット
+                  全診察室
                 </label>
-                {Array.from({ length: unitCount }, (_, i) => i + 1).map((n) => (
+                {Array.from({ length: visibleUnits }, (_, i) => i + 1).map((n) => (
                   <label
                     key={n}
                     className={`flex min-h-[44px] cursor-pointer items-center rounded-md border px-3 text-sm ${
@@ -185,7 +185,7 @@ export default function BlockedSlotModal({
                       onChange={() => setUnitNumber(n)}
                       className="mr-2"
                     />
-                    U{n}
+                    診{n}
                   </label>
                 ))}
               </div>

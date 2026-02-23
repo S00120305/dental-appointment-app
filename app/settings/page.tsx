@@ -5,7 +5,7 @@ import AppLayout from '@/components/layout/AppLayout'
 
 const settingsItems = [
   { href: '/settings/staff', label: 'スタッフ管理', description: 'スタッフの追加・編集・PIN管理' },
-  { href: '/settings/units', label: 'ユニット設定', description: 'ユニット数・診療時間の設定' },
+  { href: '/settings/units', label: '診察室設定', description: '表示する診察室数の設定' },
   { href: '/settings/appointment-types', label: '予約種別管理', description: '予約種別の追加・編集' },
   { href: '/settings/reminders', label: 'リマインド設定', description: 'SMS・メール通知のテンプレート設定' },
   { href: '/settings/import', label: 'CSVインポート', description: 'オプテックからの患者データ取り込み' },

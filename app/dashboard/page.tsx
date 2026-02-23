@@ -53,7 +53,7 @@ type DashboardData = {
 
 export default function DashboardPage() {
   const today = formatDateLocal(new Date())
-  const { unitCount } = useSettings()
+  const { visibleUnits } = useSettings()
 
   const { data, isLoading, mutate } = useSWR<DashboardData>(
     `/api/dashboard?date=${today}`,
@@ -80,7 +80,7 @@ export default function DashboardPage() {
       .filter(a => a.status === 'checked_in')
       .map(a => a.unit_number)
   )
-  const availableUnits = unitCount - busyUnits.size
+  const availableUnits = visibleUnits - busyUnits.size
 
   // 次の予約
   const now = new Date()
@@ -164,7 +164,7 @@ export default function DashboardPage() {
               cancelledCount={cancelledCount}
               noShowCount={noShowCount}
               availableUnits={availableUnits}
-              unitCount={unitCount}
+              visibleUnits={visibleUnits}
               nextAppointment={nextAppointment ? {
                 patient_name: nextAppointment.patient?.name || '',
                 start_time: nextAppointment.start_time,

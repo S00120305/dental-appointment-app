@@ -1,9 +1,10 @@
 'use client'
 
 import type { EventContentArg } from '@fullcalendar/core'
-import { STATUS_BG, STATUS_TEXT } from '@/lib/constants/appointment'
+import { STATUS_BG, STATUS_TEXT, STATUS_ICON, STATUS_ICON_COLOR, STATUS_BORDER_COLOR } from '@/lib/constants/appointment'
 import { getPatientTagIconString } from '@/lib/constants/patient-tags'
 import LabOrderBadge from './LabOrderBadge'
+import type { AppointmentStatus } from '@/lib/supabase/types'
 
 // デフォルトのスタッフカラーパレット
 const DEFAULT_STAFF_COLORS = [
@@ -21,29 +22,36 @@ export function getStaffColor(
 
 export function getEventStyle(
   status: string,
-  staffColor: string
+  _staffColor: string
 ): React.CSSProperties {
   const bg = STATUS_BG[status] || STATUS_BG['scheduled']
   const textColor = STATUS_TEXT[status] || STATUS_TEXT['scheduled']
+  const borderColor = STATUS_BORDER_COLOR[status] || STATUS_BORDER_COLOR['scheduled']
+  const isCancelledOrNoShow = status === 'cancelled' || status === 'no_show'
 
   return {
     backgroundColor: bg,
     color: textColor,
-    borderLeft: `4px solid ${staffColor}`,
+    borderLeft: `4px solid ${borderColor}`,
     height: '100%',
     padding: '2px 6px',
     overflow: 'hidden',
     lineHeight: '1.3',
+    opacity: isCancelledOrNoShow ? 0.5 : 1,
   }
 }
 
-export default function AppointmentBlock({ eventInfo }: { eventInfo: EventContentArg }) {
+type AppointmentBlockProps = {
+  eventInfo: EventContentArg
+  onStatusClick?: (appointmentId: string) => void
+}
+
+export default function AppointmentBlock({ eventInfo, onStatusClick }: AppointmentBlockProps) {
   const { extendedProps } = eventInfo.event
   const patientName = extendedProps.patient_name || ''
   const appointmentType = extendedProps.appointment_type || ''
   const staffName = extendedProps.staff_name || ''
-  const status = extendedProps.status || 'scheduled'
-  const staffColor = extendedProps.staff_color || '#3b82f6'
+  const status = (extendedProps.status || 'scheduled') as AppointmentStatus
   const labOrderStatus = extendedProps.lab_order_status as string | undefined
   const isInfectionAlert = extendedProps.is_infection_alert as boolean | undefined
 
@@ -53,13 +61,37 @@ export default function AppointmentBlock({ eventInfo }: { eventInfo: EventConten
     is_infection_alert: isInfectionAlert,
   })
 
-  const style = getEventStyle(status, staffColor)
+  const style = getEventStyle(status, '')
+
+  const statusIcon = STATUS_ICON[status] || '\u25CB'
+  const statusIconColor = STATUS_ICON_COLOR[status] || '#9ca3af'
+  const canAdvance = status === 'scheduled' || status === 'checked_in'
+
+  const handleStatusClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (canAdvance && onStatusClick) {
+      onStatusClick(eventInfo.event.id)
+    }
+  }
 
   return (
     <div style={style} className="rounded-md">
       <div className="truncate text-xs font-bold leading-tight">
+        <span
+          role={canAdvance ? 'button' : undefined}
+          onClick={handleStatusClick}
+          className={`mr-0.5 ${canAdvance ? 'cursor-pointer hover:opacity-70' : ''}`}
+          style={{ color: statusIconColor }}
+          title={canAdvance ? 'タップでステータス変更' : undefined}
+        >
+          {statusIcon}
+        </span>
         {labOrderStatus && <span className="mr-0.5">{'\uD83E\uDDB7'}</span>}
-        {patientName}
+        {status === 'cancelled' || status === 'no_show' ? (
+          <span className="line-through">{patientName}</span>
+        ) : (
+          patientName
+        )}
         {tagIcons && (
           <>
             {' '}

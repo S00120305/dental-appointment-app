@@ -40,6 +40,7 @@ interface CalendarViewProps {
   onBlockedSlotClick: (slot: BlockedSlot) => void
   onEventDrop: (appointmentId: string, newStart: Date, newResourceId: string, revert: () => void) => void
   onDatesSet: (start: Date, end: Date) => void
+  onStatusClick?: (appointmentId: string) => void
 }
 
 export default function CalendarView({
@@ -56,6 +57,7 @@ export default function CalendarView({
   onBlockedSlotClick,
   onEventDrop,
   onDatesSet,
+  onStatusClick,
 }: CalendarViewProps) {
   const calendarRef = useRef<FullCalendar>(null)
 
@@ -204,8 +206,8 @@ export default function CalendarView({
       )
     }
 
-    return <AppointmentBlock eventInfo={eventInfo} />
-  }, [])
+    return <AppointmentBlock eventInfo={eventInfo} onStatusClick={onStatusClick} />
+  }, [onStatusClick])
 
   return (
     <div className="calendar-container">

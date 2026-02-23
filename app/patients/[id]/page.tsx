@@ -234,7 +234,7 @@ function AppointmentCard({ appointment, highlight }: { appointment: AppointmentW
             {dateStr} ({dayOfWeek}) {timeStr}
           </div>
           <div className="mt-0.5 text-xs text-gray-500">
-            {appointment.appointment_type} / ユニット{appointment.unit_number}
+            {appointment.appointment_type} / 診察室{appointment.unit_number}
             {appointment.staff?.name && ` / ${appointment.staff.name}`}
           </div>
         </div>

@@ -79,7 +79,7 @@ export default function LabOrderAlert({
                         {new Date(item.start_time).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                       <span className="font-medium text-gray-700">{item.patient_name}</span>
-                      <span className="text-xs text-gray-400">(ユニット{item.unit_number})</span>
+                      <span className="text-xs text-gray-400">(診察室{item.unit_number})</span>
                     </div>
                     <div className="mt-1 text-xs text-gray-500">
                       {item.item_type || '技工物'}

@@ -180,7 +180,8 @@ export default function AppointmentModal({
       const data = await res.json()
       if (res.ok && data.settings) {
         const s = data.settings
-        if (s.unit_count) setUnitCount(parseInt(s.unit_count))
+        if (s.visible_units) setUnitCount(parseInt(s.visible_units))
+        else if (s.unit_count) setUnitCount(parseInt(s.unit_count))
         if (s.appointment_types) {
           try { setAppointmentTypes(JSON.parse(s.appointment_types)) } catch { /* ignore */ }
         }
@@ -251,7 +252,7 @@ export default function AppointmentModal({
   function validate(): boolean {
     const newErrors: Record<string, string> = {}
     if (!form.patient_id) newErrors.patient_id = '患者を選択してください'
-    if (!form.unit_number) newErrors.unit_number = 'ユニットを選択してください'
+    if (!form.unit_number) newErrors.unit_number = '診察室を選択してください'
     if (!form.staff_id) newErrors.staff_id = '担当スタッフを選択してください'
     if (!form.date) newErrors.date = '日付を選択してください'
     if (!form.time) newErrors.time = '開始時刻を選択してください'
@@ -503,7 +504,7 @@ export default function AppointmentModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                ユニット <span className="text-red-500">*</span>
+                診察室 <span className="text-red-500">*</span>
               </label>
               <select
                 value={form.unit_number}
@@ -514,7 +515,7 @@ export default function AppointmentModal({
               >
                 {Array.from({ length: unitCount }, (_, i) => i + 1).map((n) => (
                   <option key={n} value={n}>
-                    ユニット {n}
+                    診察室{n}
                   </option>
                 ))}
               </select>

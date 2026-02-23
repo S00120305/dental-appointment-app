@@ -36,6 +36,33 @@ export const STATUS_BG_CLASS: Record<string, string> = {
   no_show: 'bg-yellow-100 text-yellow-700',
 }
 
+// ステータスアイコン（カレンダー予約ブロック用）
+export const STATUS_ICON: Record<AppointmentStatus, string> = {
+  scheduled: '\u25CB',      // ○
+  checked_in: '\u2705',     // ✅
+  completed: '\u2705\u2705', // ✅✅
+  cancelled: '\u2715',      // ✕
+  no_show: '\u2715',        // ✕
+}
+
+// ステータスアイコンの色（カレンダー予約ブロック用）
+export const STATUS_ICON_COLOR: Record<AppointmentStatus, string> = {
+  scheduled: '#9ca3af',  // グレー
+  checked_in: '#2563eb', // 青
+  completed: '#16a34a',  // 緑
+  cancelled: '#dc2626',  // 赤
+  no_show: '#dc2626',    // 赤
+}
+
+// ステータス別左ボーダー色（カレンダー予約ブロック用）
+export const STATUS_BORDER_COLOR: Record<string, string> = {
+  scheduled: '#d1d5db',  // グレー
+  checked_in: '#3b82f6', // 青
+  completed: '#22c55e',  // 緑
+  cancelled: '#f87171',  // 赤
+  no_show: '#fbbf24',    // 黄
+}
+
 // ステータス遷移フロー（メインフロー: scheduled → checked_in → completed）
 export const STATUS_FLOW: AppointmentStatus[] = ['scheduled', 'checked_in', 'completed']
 

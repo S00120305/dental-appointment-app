@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     // バリデーション
     if (unit_number === undefined || unit_number === null) {
-      return NextResponse.json({ error: 'ユニットは必須です' }, { status: 400 })
+      return NextResponse.json({ error: '診察室は必須です' }, { status: 400 })
     }
     if (!start_time) {
       return NextResponse.json({ error: '開始時刻は必須です' }, { status: 400 })

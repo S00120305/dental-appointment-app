@@ -13,6 +13,7 @@ import Skeleton from '@/components/ui/Skeleton'
 import { useAppointments } from '@/hooks/useAppointments'
 import { useSettings } from '@/hooks/useSettings'
 import { useStaff } from '@/hooks/useStaff'
+import { getNextStatus } from '@/lib/constants/appointment'
 import type { AppointmentWithRelations, BlockedSlot } from '@/lib/supabase/types'
 import type { CalendarResource } from '@/components/calendar/CalendarView'
 
@@ -39,7 +40,7 @@ export default function CalendarPage() {
     removeAppointment,
   } = useAppointments()
 
-  const { unitCount, businessHours, staffColors, isLoading: settingsLoading } = useSettings()
+  const { visibleUnits, businessHours, staffColors, isLoading: settingsLoading } = useSettings()
   const { staffList } = useStaff()
 
   // State
@@ -86,13 +87,13 @@ export default function CalendarPage() {
   // Resources
   const resources: CalendarResource[] = useMemo(() => {
     if (filteredUnit) {
-      return [{ id: String(filteredUnit), title: `ユニット${filteredUnit}` }]
+      return [{ id: String(filteredUnit), title: `診察室${filteredUnit}` }]
     }
-    return Array.from({ length: unitCount }, (_, i) => ({
+    return Array.from({ length: visibleUnits }, (_, i) => ({
       id: String(i + 1),
-      title: `U${i + 1}`,
+      title: `診察室${i + 1}`,
     }))
-  }, [unitCount, filteredUnit])
+  }, [visibleUnits, filteredUnit])
 
   // Date range for fetching (use ref to avoid re-render loops)
   const fetchRangeRef = useRef<string>('')
@@ -197,6 +198,16 @@ export default function CalendarPage() {
   const handleJumpToDate = useCallback((date: string) => {
     setSelectedDate(date)
   }, [])
+
+  // Calendar block status icon click → advance status
+  const handleStatusClick = useCallback((appointmentId: string) => {
+    const appt = appointments.find(a => a.id === appointmentId)
+    if (!appt) return
+    const next = getNextStatus(appt.status)
+    if (next) {
+      updateStatus(appt.id, next)
+    }
+  }, [appointments, updateStatus])
 
   const handleBlockedSlotClick = useCallback((slot: BlockedSlot) => {
     setSelectedBlockedSlot(slot)
@@ -362,7 +373,7 @@ export default function CalendarPage() {
           >
             全て
           </button>
-          {Array.from({ length: unitCount }, (_, i) => i + 1).map((n) => (
+          {Array.from({ length: visibleUnits }, (_, i) => i + 1).map((n) => (
             <button
               key={n}
               onClick={() => setFilteredUnit(filteredUnit === n ? null : n)}
@@ -372,7 +383,7 @@ export default function CalendarPage() {
                   : 'bg-gray-100 text-gray-700'
               }`}
             >
-              U{n}
+              診{n}
             </button>
           ))}
         </div>
@@ -411,6 +422,7 @@ export default function CalendarPage() {
                 onBlockedSlotClick={handleBlockedSlotClick}
                 onEventDrop={handleEventDrop}
                 onDatesSet={handleDatesSet}
+                onStatusClick={handleStatusClick}
               />
             </>
           )}
@@ -433,7 +445,7 @@ export default function CalendarPage() {
         isOpen={slotSearchOpen}
         onClose={() => setSlotSearchOpen(false)}
         onSelectSlot={handleAvailableSlotSelect}
-        unitCount={unitCount}
+        visibleUnits={visibleUnits}
       />
 
       {/* SlotActionMenu */}
@@ -483,7 +495,7 @@ export default function CalendarPage() {
         defaultStartTime={defaultBlockStartTime}
         defaultEndTime={defaultBlockEndTime}
         defaultUnitNumber={defaultBlockUnit}
-        unitCount={unitCount}
+        visibleUnits={visibleUnits}
         businessHours={{ start: businessHours.start, end: businessHours.end }}
       />
     </AppLayout>
