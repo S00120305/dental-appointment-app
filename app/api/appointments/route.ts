@@ -119,6 +119,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: overlapError }, { status: 409 })
     }
 
+    // ブロック枠チェック
+    const blockError = await checkBlockedSlotOverlap(supabase, unit_number, start_time, duration_minutes)
+    if (blockError) {
+      return NextResponse.json({ error: blockError }, { status: 409 })
+    }
+
     const { data, error } = await supabase
       .from('appointments')
       .insert({
@@ -197,6 +203,12 @@ export async function PUT(request: NextRequest) {
         const overlapError = await checkOverlap(supabase, unit_number, start_time, duration_minutes, id)
         if (overlapError) {
           return NextResponse.json({ error: overlapError }, { status: 409 })
+        }
+
+        // ブロック枠チェック
+        const blockError = await checkBlockedSlotOverlap(supabase, unit_number, start_time, duration_minutes)
+        if (blockError) {
+          return NextResponse.json({ error: blockError }, { status: 409 })
         }
       }
     }
@@ -319,6 +331,47 @@ async function checkOverlap(
       if (newStart < existEnd && newEnd > existStart) {
         const timeStr = existStart.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
         return `ユニット${unitNumber}の${timeStr}に既存の予約があります`
+      }
+    }
+  }
+
+  return null
+}
+
+// ブロック枠との重複チェック
+async function checkBlockedSlotOverlap(
+  supabase: ReturnType<typeof createServerClient>,
+  unitNumber: number,
+  startTime: string,
+  durationMinutes: number
+): Promise<string | null> {
+  const newStart = new Date(startTime)
+  const newEnd = new Date(newStart.getTime() + durationMinutes * 60 * 1000)
+
+  const dayStart = new Date(newStart)
+  dayStart.setHours(0, 0, 0, 0)
+  const dayEnd = new Date(newStart)
+  dayEnd.setHours(23, 59, 59, 999)
+
+  // unit_number が一致 OR unit_number = 0（全ユニット）のブロック枠を取得
+  const { data: blocks, error } = await supabase
+    .from('blocked_slots')
+    .select('id, start_time, end_time, reason, unit_number')
+    .eq('is_deleted', false)
+    .gte('start_time', dayStart.toISOString())
+    .lte('start_time', dayEnd.toISOString())
+    .or(`unit_number.eq.${unitNumber},unit_number.eq.0`)
+
+  if (error) return 'ブロック枠の確認中にエラーが発生しました'
+
+  if (blocks) {
+    for (const block of blocks) {
+      const blockStart = new Date(block.start_time)
+      const blockEnd = new Date(block.end_time)
+
+      if (newStart < blockEnd && newEnd > blockStart) {
+        const reason = block.reason ? `（理由: ${block.reason}）` : ''
+        return `この時間帯はブロックされています${reason}`
       }
     }
   }

@@ -4,12 +4,15 @@ import { useState, useCallback, useMemo, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import AppLayout from '@/components/layout/AppLayout'
 import AppointmentModal from '@/components/calendar/AppointmentModal'
+import BlockedSlotModal from '@/components/calendar/BlockedSlotModal'
+import SlotActionMenu from '@/components/calendar/SlotActionMenu'
+import AvailableSlotSearch from '@/components/calendar/AvailableSlotSearch'
 import Button from '@/components/ui/Button'
 import Skeleton from '@/components/ui/Skeleton'
 import { useAppointments } from '@/hooks/useAppointments'
 import { useSettings } from '@/hooks/useSettings'
 import { useStaff } from '@/hooks/useStaff'
-import type { AppointmentWithRelations } from '@/lib/supabase/types'
+import type { AppointmentWithRelations, BlockedSlot } from '@/lib/supabase/types'
 import type { CalendarResource } from '@/components/calendar/CalendarView'
 
 const CalendarView = dynamic(() => import('@/components/calendar/CalendarView'), { ssr: false })
@@ -42,12 +45,35 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState(formatDateLocal(new Date()))
   const [viewType, setViewType] = useState<ViewType>('resourceTimeGridDay')
 
-  // Modal
+  // Appointment Modal
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithRelations | null>(null)
   const [defaultModalDate, setDefaultModalDate] = useState<string>('')
   const [defaultModalTime, setDefaultModalTime] = useState<string>('')
   const [defaultModalUnit, setDefaultModalUnit] = useState<number>(1)
+
+  // Blocked Slots
+  const [blockedSlots, setBlockedSlots] = useState<BlockedSlot[]>([])
+  const [blockModalOpen, setBlockModalOpen] = useState(false)
+  const [selectedBlockedSlot, setSelectedBlockedSlot] = useState<BlockedSlot | null>(null)
+  const [defaultBlockDate, setDefaultBlockDate] = useState<string>('')
+  const [defaultBlockStartTime, setDefaultBlockStartTime] = useState<string>('')
+  const [defaultBlockEndTime, setDefaultBlockEndTime] = useState<string>('')
+  const [defaultBlockUnit, setDefaultBlockUnit] = useState<number>(0)
+
+  // Slot Action Menu
+  const [slotActionMenu, setSlotActionMenu] = useState<{
+    open: boolean
+    position: { x: number; y: number }
+    date: string
+    time: string
+    endTime: string
+    unit: number
+  }>({ open: false, position: { x: 0, y: 0 }, date: '', time: '', endTime: '', unit: 1 })
+
+  // Available Slot Search
+  const [slotSearchOpen, setSlotSearchOpen] = useState(false)
+  const [defaultModalDuration, setDefaultModalDuration] = useState<number | undefined>(undefined)
 
   // Unit filter (mobile)
   const [filteredUnit, setFilteredUnit] = useState<number | null>(null)
@@ -66,6 +92,19 @@ export default function CalendarPage() {
   // Date range for fetching (use ref to avoid re-render loops)
   const fetchRangeRef = useRef<string>('')
 
+  // Fetch blocked slots
+  const fetchBlockedSlots = useCallback(async (startDate: string, endDate: string) => {
+    try {
+      const res = await fetch(`/api/blocked-slots?start_date=${startDate}&end_date=${endDate}`)
+      const data = await res.json()
+      if (res.ok) {
+        setBlockedSlots(data.blocked_slots || [])
+      }
+    } catch {
+      // silent fail
+    }
+  }, [])
+
   // Calendar callbacks
   const handleDatesSet = useCallback((start: Date, end: Date) => {
     const startStr = formatDateLocal(start)
@@ -75,18 +114,58 @@ export default function CalendarPage() {
     if (fetchRangeRef.current !== rangeKey) {
       fetchRangeRef.current = rangeKey
       fetchAppointments(startStr, endStr)
+      fetchBlockedSlots(startStr, endStr)
     }
-  }, [fetchAppointments])
+  }, [fetchAppointments, fetchBlockedSlots])
 
-  const handleDateSelect = useCallback((start: Date, _end: Date, resourceId: string) => {
-    setSelectedAppointment(null)
-    setDefaultModalDate(formatDateLocal(start))
-    setDefaultModalTime(
-      `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`
-    )
-    setDefaultModalUnit(parseInt(resourceId) || 1)
-    setModalOpen(true)
+  const handleDateSelect = useCallback((start: Date, end: Date, resourceId: string) => {
+    const dateStr = formatDateLocal(start)
+    const timeStr = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`
+    const endTimeStr = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`
+    const unit = parseInt(resourceId) || 1
+
+    // SlotActionMenu を表示
+    // マウスイベントの位置を取得（ない場合は画面中央）
+    const lastEvent = window.event as MouseEvent | TouchEvent | null
+    let x = window.innerWidth / 2
+    let y = window.innerHeight / 3
+    if (lastEvent) {
+      if ('clientX' in lastEvent) {
+        x = lastEvent.clientX
+        y = lastEvent.clientY
+      } else if (lastEvent.touches?.length > 0) {
+        x = lastEvent.touches[0].clientX
+        y = lastEvent.touches[0].clientY
+      }
+    }
+
+    setSlotActionMenu({
+      open: true,
+      position: { x, y },
+      date: dateStr,
+      time: timeStr,
+      endTime: endTimeStr,
+      unit,
+    })
   }, [])
+
+  const handleSlotActionAppointment = useCallback(() => {
+    setSelectedAppointment(null)
+    setDefaultModalDate(slotActionMenu.date)
+    setDefaultModalTime(slotActionMenu.time)
+    setDefaultModalUnit(slotActionMenu.unit)
+    setDefaultModalDuration(undefined)
+    setModalOpen(true)
+  }, [slotActionMenu])
+
+  const handleSlotActionBlock = useCallback(() => {
+    setSelectedBlockedSlot(null)
+    setDefaultBlockDate(slotActionMenu.date)
+    setDefaultBlockStartTime(slotActionMenu.time)
+    setDefaultBlockEndTime(slotActionMenu.endTime)
+    setDefaultBlockUnit(slotActionMenu.unit)
+    setBlockModalOpen(true)
+  }, [slotActionMenu])
 
   const handleEventClick = useCallback((appointmentId: string) => {
     const appt = appointments.find((a) => a.id === appointmentId)
@@ -95,6 +174,11 @@ export default function CalendarPage() {
       setModalOpen(true)
     }
   }, [appointments])
+
+  const handleBlockedSlotClick = useCallback((slot: BlockedSlot) => {
+    setSelectedBlockedSlot(slot)
+    setBlockModalOpen(true)
+  }, [])
 
   const handleEventDrop = useCallback(
     async (appointmentId: string, newStart: Date, newResourceId: string, revert: () => void) => {
@@ -120,11 +204,41 @@ export default function CalendarPage() {
     removeAppointment(id)
   }
 
+  function handleBlockSaved() {
+    const range = fetchRangeRef.current.split('_')
+    if (range.length === 2) {
+      fetchBlockedSlots(range[0], range[1])
+    }
+  }
+
+  function handleBlockDeleted() {
+    const range = fetchRangeRef.current.split('_')
+    if (range.length === 2) {
+      fetchBlockedSlots(range[0], range[1])
+    }
+  }
+
+  function handleAvailableSlotSelect(
+    slot: { date: string; unit_number: number; start_time: string },
+    durationMinutes: number
+  ) {
+    const startDate = new Date(slot.start_time)
+    const timeStr = `${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}`
+    setSelectedAppointment(null)
+    setDefaultModalDate(slot.date)
+    setDefaultModalTime(timeStr)
+    setDefaultModalUnit(slot.unit_number)
+    setDefaultModalDuration(durationMinutes)
+    setSlotSearchOpen(false)
+    setModalOpen(true)
+  }
+
   function handleNewAppointment() {
     setSelectedAppointment(null)
     setDefaultModalDate(selectedDate)
     setDefaultModalTime('')
     setDefaultModalUnit(1)
+    setDefaultModalDuration(undefined)
     setModalOpen(true)
   }
 
@@ -262,6 +376,7 @@ export default function CalendarPage() {
               )}
               <CalendarView
                 appointments={appointments}
+                blockedSlots={blockedSlots}
                 resources={resources}
                 businessHours={businessHours}
                 staffColors={staffColors}
@@ -270,6 +385,7 @@ export default function CalendarPage() {
                 viewType={viewType}
                 onDateSelect={handleDateSelect}
                 onEventClick={handleEventClick}
+                onBlockedSlotClick={handleBlockedSlotClick}
                 onEventDrop={handleEventDrop}
                 onDatesSet={handleDatesSet}
               />
@@ -277,6 +393,34 @@ export default function CalendarPage() {
           )}
         </div>
       </div>
+
+      {/* 空き枠検索フローティングボタン */}
+      <button
+        onClick={() => setSlotSearchOpen(true)}
+        className="fixed bottom-20 right-4 z-30 flex min-h-[48px] items-center gap-1.5 rounded-full bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg hover:bg-blue-700 active:bg-blue-800 safe-area-bottom"
+      >
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        空き枠検索
+      </button>
+
+      {/* 空き枠検索パネル */}
+      <AvailableSlotSearch
+        isOpen={slotSearchOpen}
+        onClose={() => setSlotSearchOpen(false)}
+        onSelectSlot={handleAvailableSlotSelect}
+        unitCount={unitCount}
+      />
+
+      {/* SlotActionMenu */}
+      <SlotActionMenu
+        isOpen={slotActionMenu.open}
+        position={slotActionMenu.position}
+        onSelectAppointment={handleSlotActionAppointment}
+        onSelectBlock={handleSlotActionBlock}
+        onClose={() => setSlotActionMenu((prev) => ({ ...prev, open: false }))}
+      />
 
       {/* 予約モーダル */}
       <AppointmentModal
@@ -289,6 +433,22 @@ export default function CalendarPage() {
         defaultDate={defaultModalDate}
         defaultUnitNumber={defaultModalUnit}
         defaultStartTime={defaultModalTime}
+        defaultDuration={defaultModalDuration}
+      />
+
+      {/* ブロック枠モーダル */}
+      <BlockedSlotModal
+        isOpen={blockModalOpen}
+        onClose={() => setBlockModalOpen(false)}
+        onSaved={handleBlockSaved}
+        onDeleted={handleBlockDeleted}
+        blockedSlot={selectedBlockedSlot}
+        defaultDate={defaultBlockDate}
+        defaultStartTime={defaultBlockStartTime}
+        defaultEndTime={defaultBlockEndTime}
+        defaultUnitNumber={defaultBlockUnit}
+        unitCount={unitCount}
+        businessHours={{ start: businessHours.start, end: businessHours.end }}
       />
     </AppLayout>
   )

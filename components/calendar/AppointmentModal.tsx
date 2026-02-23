@@ -20,6 +20,7 @@ type AppointmentModalProps = {
   defaultDate?: string // YYYY-MM-DD
   defaultUnitNumber?: number
   defaultStartTime?: string // HH:mm
+  defaultDuration?: number // minutes
 }
 
 type FormData = {
@@ -63,6 +64,7 @@ export default function AppointmentModal({
   defaultDate,
   defaultUnitNumber,
   defaultStartTime,
+  defaultDuration,
 }: AppointmentModalProps) {
   const { showToast } = useToast()
   const isEdit = !!appointment
@@ -146,7 +148,7 @@ export default function AppointmentModal({
         staff_id: '',
         date: today,
         time: defaultStartTime || '09:00',
-        duration_minutes: 30,
+        duration_minutes: defaultDuration || 30,
         appointment_type: '',
         memo: '',
         lab_order_id: '',
@@ -154,7 +156,7 @@ export default function AppointmentModal({
       setSelectedPatient(null)
       setLabOrderEnabled(false)
     }
-  }, [isOpen, appointment, defaultDate, defaultUnitNumber, defaultStartTime])
+  }, [isOpen, appointment, defaultDate, defaultUnitNumber, defaultStartTime, defaultDuration])
 
   // Set default appointment type when types are loaded
   useEffect(() => {

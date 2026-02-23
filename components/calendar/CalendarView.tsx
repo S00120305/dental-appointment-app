@@ -12,7 +12,7 @@ import type {
   EventContentArg,
 } from '@fullcalendar/core'
 import AppointmentBlock, { getStaffColor, getEventStyle } from './AppointmentBlock'
-import type { AppointmentWithRelations } from '@/lib/supabase/types'
+import type { AppointmentWithRelations, BlockedSlot } from '@/lib/supabase/types'
 
 export type BusinessHours = {
   start: string
@@ -28,6 +28,7 @@ export type CalendarResource = {
 
 interface CalendarViewProps {
   appointments: AppointmentWithRelations[]
+  blockedSlots: BlockedSlot[]
   resources: CalendarResource[]
   businessHours: BusinessHours
   staffColors: Record<string, string>
@@ -36,12 +37,14 @@ interface CalendarViewProps {
   viewType: 'resourceTimeGridDay' | 'resourceTimeGridWeek'
   onDateSelect: (start: Date, end: Date, resourceId: string) => void
   onEventClick: (appointmentId: string) => void
+  onBlockedSlotClick: (slot: BlockedSlot) => void
   onEventDrop: (appointmentId: string, newStart: Date, newResourceId: string, revert: () => void) => void
   onDatesSet: (start: Date, end: Date) => void
 }
 
 export default function CalendarView({
   appointments,
+  blockedSlots,
   resources,
   businessHours,
   staffColors,
@@ -50,6 +53,7 @@ export default function CalendarView({
   viewType,
   onDateSelect,
   onEventClick,
+  onBlockedSlotClick,
   onEventDrop,
   onDatesSet,
 }: CalendarViewProps) {
@@ -80,6 +84,7 @@ export default function CalendarView({
         end: endDate,
         title: appt.patient?.name || '',
         extendedProps: {
+          type: 'appointment',
           patient_name: appt.patient?.name || '',
           patient_chart_number: appt.patient?.chart_number || '',
           appointment_type: appt.appointment_type,
@@ -90,6 +95,28 @@ export default function CalendarView({
           lab_order_status: appt.lab_order?.status || null,
         },
       }
+    })
+
+    // ブロック枠イベント
+    const blockedEvents = blockedSlots.flatMap((slot) => {
+      const resourceIds = slot.unit_number === 0
+        ? resources.map((r) => r.id)
+        : [String(slot.unit_number)]
+
+      return resourceIds.map((resourceId) => ({
+        id: `blocked-${slot.id}-${resourceId}`,
+        resourceId,
+        start: new Date(slot.start_time),
+        end: new Date(slot.end_time),
+        title: slot.reason || 'ブロック',
+        editable: false,
+        classNames: ['blocked-slot-event'],
+        extendedProps: {
+          type: 'blocked',
+          blockedSlotId: slot.id,
+          reason: slot.reason,
+        },
+      }))
     })
 
     // 昼休み背景イベント
@@ -103,8 +130,8 @@ export default function CalendarView({
       classNames: ['lunch-break'],
     }))
 
-    return [...appointmentEvents, ...lunchEvents]
-  }, [appointments, resources, businessHours, initialDate, staffColors, staffIndexMap])
+    return [...appointmentEvents, ...blockedEvents, ...lunchEvents]
+  }, [appointments, blockedSlots, resources, businessHours, initialDate, staffColors, staffIndexMap])
 
   // Sync view type
   useEffect(() => {
@@ -132,10 +159,25 @@ export default function CalendarView({
 
   const handleEventClick = useCallback((info: EventClickArg) => {
     if (info.event.id.startsWith('lunch-')) return
+
+    if (info.event.extendedProps.type === 'blocked') {
+      const slotId = info.event.extendedProps.blockedSlotId
+      const slot = blockedSlots.find((s) => s.id === slotId)
+      if (slot) {
+        onBlockedSlotClick(slot)
+      }
+      return
+    }
+
     onEventClick(info.event.id)
-  }, [onEventClick])
+  }, [onEventClick, onBlockedSlotClick, blockedSlots])
 
   const handleEventDrop = useCallback((info: EventDropArg) => {
+    // ブロック枠はドラッグ不可
+    if (info.event.extendedProps.type === 'blocked') {
+      info.revert()
+      return
+    }
     const newResourceId = info.newResource?.id || info.event.getResources()[0]?.id || '1'
     onEventDrop(info.event.id, info.event.start!, newResourceId, info.revert)
   }, [onEventDrop])
@@ -146,6 +188,19 @@ export default function CalendarView({
 
   const renderEventContent = useCallback((eventInfo: EventContentArg) => {
     if (eventInfo.event.display === 'background') return null
+
+    // ブロック枠の表示
+    if (eventInfo.event.extendedProps.type === 'blocked') {
+      const reason = eventInfo.event.extendedProps.reason
+      return (
+        <div className="px-1 py-0.5">
+          <div className="truncate text-xs font-medium">
+            {'\u{1F6AB}'} {reason || 'ブロック'}
+          </div>
+        </div>
+      )
+    }
+
     return <AppointmentBlock eventInfo={eventInfo} />
   }, [])
 

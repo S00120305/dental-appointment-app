@@ -79,6 +79,20 @@ export type AppointmentWithRelations = Appointment & {
   } | null
 }
 
+// 予約枠ブロック
+export type BlockedSlot = {
+  id: string
+  unit_number: number // 0 = 全ユニット
+  start_time: string
+  end_time: string
+  reason: string | null
+  is_recurring: boolean
+  created_by: string | null
+  is_deleted: boolean
+  created_at: string
+  updated_at: string
+}
+
 // スタッフ（users テーブルから取得）
 export type Staff = {
   id: string
