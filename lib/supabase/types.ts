@@ -40,3 +40,18 @@ export type AppointmentSetting = {
   updated_at: string
   updated_by: string
 }
+
+// JOIN済みの予約データ（API レスポンス用）
+export type AppointmentWithRelations = Appointment & {
+  patient: Pick<Patient, 'id' | 'chart_number' | 'name' | 'name_kana'> | null
+  staff: { id: string; name: string } | null
+}
+
+// スタッフ（users テーブルから取得）
+export type Staff = {
+  id: string
+  name: string
+  is_active: boolean
+  is_admin: boolean
+  sort_order: number | null
+}
