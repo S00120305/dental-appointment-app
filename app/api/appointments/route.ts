@@ -6,10 +6,30 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createServerClient()
     const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id') // 単一予約取得
     const date = searchParams.get('date') // YYYY-MM-DD
     const startDate = searchParams.get('start_date') // YYYY-MM-DD
     const endDate = searchParams.get('end_date') // YYYY-MM-DD
     const unitNumber = searchParams.get('unit_number')
+
+    // 単一予約取得（Realtime INSERT 後の詳細取得用）
+    if (id) {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select(`
+          *,
+          patient:patients!patient_id(id, chart_number, name, name_kana),
+          staff:users!staff_id(id, name)
+        `)
+        .eq('id', id)
+        .eq('is_deleted', false)
+        .single()
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+      return NextResponse.json({ appointment: data })
+    }
 
     let query = supabase
       .from('appointments')
@@ -130,9 +150,26 @@ export async function PUT(request: NextRequest) {
       appointment_type,
       status,
       memo,
+      current_updated_at,
     } = body
 
     if (!id) return NextResponse.json({ error: 'IDは必須です' }, { status: 400 })
+
+    // 競合検出: current_updated_at が指定されている場合、DB の updated_at と比較
+    if (current_updated_at) {
+      const { data: existing } = await supabase
+        .from('appointments')
+        .select('updated_at')
+        .eq('id', id)
+        .single()
+
+      if (existing && existing.updated_at !== current_updated_at) {
+        return NextResponse.json(
+          { error: '他の端末で更新されました。最新データを再取得します。', conflict: true },
+          { status: 409 }
+        )
+      }
+    }
 
     // ステータス更新のみの場合はバリデーション＋重複チェックをスキップ
     const isStatusOnly = status && !unit_number && !start_time && !duration_minutes

@@ -1,23 +1,7 @@
 'use client'
 
 import type { EventContentArg } from '@fullcalendar/core'
-
-// ステータス別の背景色
-const STATUS_BG: Record<string, string> = {
-  '予約済み': '#e5e7eb',   // グレー
-  '来院済み': '#dbeafe',   // 青
-  '診療中': '#dcfce7',     // 緑
-  '帰宅済み': '#f3f4f6',   // 薄グレー
-  'キャンセル': '#fee2e2', // 赤
-}
-
-const STATUS_TEXT: Record<string, string> = {
-  '予約済み': '#374151',
-  '来院済み': '#1d4ed8',
-  '診療中': '#15803d',
-  '帰宅済み': '#9ca3af',
-  'キャンセル': '#dc2626',
-}
+import { STATUS_BG, STATUS_TEXT } from '@/lib/constants/appointment'
 
 // デフォルトのスタッフカラーパレット
 const DEFAULT_STAFF_COLORS = [

@@ -4,13 +4,17 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import StatusBadge from '@/components/calendar/StatusBadge'
 import { useToast } from '@/components/ui/Toast'
-import type { Appointment, AppointmentWithRelations, Patient, Staff } from '@/lib/supabase/types'
+import { getNextStatus, getPrevStatus, STATUS_BG, STATUS_TEXT } from '@/lib/constants/appointment'
+import type { AppointmentStatus, AppointmentWithRelations, Patient, Staff } from '@/lib/supabase/types'
 
 type AppointmentModalProps = {
   isOpen: boolean
   onClose: () => void
-  onSaved: () => void
+  onSaved: (appointment?: AppointmentWithRelations) => void
+  onDeleted?: (id: string) => void
+  onStatusChange?: (id: string, newStatus: AppointmentStatus) => Promise<void>
   appointment?: AppointmentWithRelations | null
   defaultDate?: string // YYYY-MM-DD
   defaultUnitNumber?: number
@@ -51,6 +55,8 @@ export default function AppointmentModal({
   isOpen,
   onClose,
   onSaved,
+  onDeleted,
+  onStatusChange,
   appointment,
   defaultDate,
   defaultUnitNumber,
@@ -85,7 +91,9 @@ export default function AppointmentModal({
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
+  const [statusChanging, setStatusChanging] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
   // Fetch settings and staff on mount
   useEffect(() => {
@@ -260,7 +268,7 @@ export default function AppointmentModal({
       }
 
       showToast(isEdit ? '予約を更新しました' : '予約を作成しました', 'success')
-      onSaved()
+      onSaved(data.appointment)
       onClose()
     } catch {
       showToast('通信エラーが発生しました', 'error')
@@ -280,6 +288,7 @@ export default function AppointmentModal({
         return
       }
       showToast('予約を削除しました', 'success')
+      onDeleted?.(appointment.id)
       onSaved()
       onClose()
     } catch {
@@ -290,12 +299,94 @@ export default function AppointmentModal({
     }
   }
 
+  // ステータス変更ハンドラ
+  async function handleStatusChange(newStatus: AppointmentStatus) {
+    if (!appointment || !onStatusChange) return
+    setStatusChanging(true)
+    try {
+      await onStatusChange(appointment.id, newStatus)
+      onClose()
+    } catch {
+      // エラーは useAppointments 側で toast 表示済み
+    } finally {
+      setStatusChanging(false)
+      setShowCancelConfirm(false)
+    }
+  }
+
   const timeSlots = generateTimeSlots(businessHours.start, businessHours.end)
+
+  // ステータス遷移ボタンの情報
+  const currentStatus = appointment?.status as AppointmentStatus | undefined
+  const nextStatus = currentStatus ? getNextStatus(currentStatus) : null
+  const prevStatus = currentStatus ? getPrevStatus(currentStatus) : null
 
   return (
     <>
       <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? '予約の編集' : '新規予約'}>
         <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+          {/* ステータス操作セクション（編集モード時のみ） */}
+          {isEdit && appointment && onStatusChange && currentStatus !== 'キャンセル' && (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <div className="flex items-center justify-between gap-2">
+                {/* 戻すボタン */}
+                <button
+                  type="button"
+                  disabled={!prevStatus || statusChanging}
+                  onClick={() => prevStatus && handleStatusChange(prevStatus)}
+                  className="min-h-[44px] rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  ◀ 戻す
+                </button>
+
+                {/* 現在のステータス */}
+                <StatusBadge status={currentStatus!} size="lg" />
+
+                {/* 進めるボタン */}
+                <button
+                  type="button"
+                  disabled={!nextStatus || statusChanging}
+                  onClick={() => nextStatus && handleStatusChange(nextStatus)}
+                  className="min-h-[44px] rounded-md px-3 text-sm font-medium text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                  style={{
+                    backgroundColor: nextStatus ? (STATUS_TEXT[nextStatus] || '#374151') : '#9ca3af',
+                  }}
+                >
+                  {nextStatus ? `${nextStatus}にする ▶` : '完了'}
+                </button>
+              </div>
+
+              {/* キャンセルにするボタン（予約済みの時のみ） */}
+              {currentStatus === '予約済み' && (
+                <button
+                  type="button"
+                  disabled={statusChanging}
+                  onClick={() => setShowCancelConfirm(true)}
+                  className="mt-2 w-full min-h-[44px] rounded-md border border-red-300 bg-white px-3 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                >
+                  キャンセルにする
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* キャンセル済み表示 */}
+          {isEdit && currentStatus === 'キャンセル' && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-center">
+              <StatusBadge status="キャンセル" size="lg" />
+              {onStatusChange && (
+                <button
+                  type="button"
+                  disabled={statusChanging}
+                  onClick={() => handleStatusChange('予約済み')}
+                  className="mt-2 w-full min-h-[44px] rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  予約済みに戻す
+                </button>
+              )}
+            </div>
+          )}
+
           {/* 重複エラー */}
           {errors.overlap && (
             <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
@@ -530,6 +621,16 @@ export default function AppointmentModal({
         title="予約の削除"
         message="この予約を削除しますか？この操作は元に戻せません。"
         confirmLabel="削除する"
+        variant="danger"
+      />
+
+      <ConfirmDialog
+        isOpen={showCancelConfirm}
+        onClose={() => setShowCancelConfirm(false)}
+        onConfirm={() => handleStatusChange('キャンセル')}
+        title="予約のキャンセル"
+        message="この予約をキャンセルしますか？"
+        confirmLabel="キャンセルにする"
         variant="danger"
       />
     </>

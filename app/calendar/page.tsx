@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 import AppLayout from '@/components/layout/AppLayout'
 import AppointmentModal from '@/components/calendar/AppointmentModal'
 import Button from '@/components/ui/Button'
-import { useToast } from '@/components/ui/Toast'
+import { useAppointments } from '@/hooks/useAppointments'
 import type { AppointmentWithRelations } from '@/lib/supabase/types'
 import type { BusinessHours, CalendarResource } from '@/components/calendar/CalendarView'
 
@@ -21,13 +21,20 @@ function formatDateLocal(date: Date): string {
 type ViewType = 'resourceTimeGridDay' | 'resourceTimeGridWeek'
 
 export default function CalendarPage() {
-  const { showToast } = useToast()
+  const {
+    appointments,
+    loading,
+    fetchAppointments,
+    refreshAppointments,
+    updateStatus,
+    moveAppointment,
+    addAppointment,
+    removeAppointment,
+  } = useAppointments()
 
   // State
   const [selectedDate, setSelectedDate] = useState(formatDateLocal(new Date()))
   const [viewType, setViewType] = useState<ViewType>('resourceTimeGridDay')
-  const [appointments, setAppointments] = useState<AppointmentWithRelations[]>([])
-  const [loading, setLoading] = useState(false)
   const [settingsReady, setSettingsReady] = useState(false)
 
   // Settings
@@ -62,24 +69,15 @@ export default function CalendarPage() {
 
   // Date range for fetching (use ref to avoid re-render loops)
   const fetchRangeRef = useRef<string>('')
-  const [fetchRange, setFetchRange] = useState<{ start: string; end: string } | null>(null)
 
   // Fetch settings + staff on mount
   useEffect(() => {
-    Promise.all([fetchSettings(), fetchStaff()]).then(() => {
+    Promise.all([fetchSettingsData(), fetchStaffData()]).then(() => {
       setSettingsReady(true)
     })
   }, [])
 
-  // Fetch appointments when date range changes
-  useEffect(() => {
-    if (fetchRange) {
-      fetchAppointments(fetchRange.start, fetchRange.end)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchRange])
-
-  async function fetchSettings() {
+  async function fetchSettingsData() {
     try {
       const res = await fetch('/api/settings')
       const data = await res.json()
@@ -104,28 +102,12 @@ export default function CalendarPage() {
     } catch { /* ignore */ }
   }
 
-  async function fetchStaff() {
+  async function fetchStaffData() {
     try {
       const res = await fetch('/api/users')
       const data = await res.json()
       if (res.ok) setStaffList(data.users || [])
     } catch { /* ignore */ }
-  }
-
-  async function fetchAppointments(startDate: string, endDate: string) {
-    setLoading(true)
-    try {
-      const res = await fetch(
-        `/api/appointments?start_date=${startDate}&end_date=${endDate}`
-      )
-      const data = await res.json()
-      if (res.ok) {
-        setAppointments(data.appointments || [])
-      }
-    } catch { /* ignore */ }
-    finally {
-      setLoading(false)
-    }
   }
 
   // Calendar callbacks
@@ -137,9 +119,9 @@ export default function CalendarPage() {
     // Only update if range actually changed (prevents infinite loop)
     if (fetchRangeRef.current !== rangeKey) {
       fetchRangeRef.current = rangeKey
-      setFetchRange({ start: startStr, end: endStr })
+      fetchAppointments(startStr, endStr)
     }
-  }, [])
+  }, [fetchAppointments])
 
   const handleDateSelect = useCallback((start: Date, _end: Date, resourceId: string) => {
     setSelectedAppointment(null)
@@ -161,44 +143,30 @@ export default function CalendarPage() {
 
   const handleEventDrop = useCallback(
     async (appointmentId: string, newStart: Date, newResourceId: string, revert: () => void) => {
-      const startTime = newStart.toISOString()
-      const appt = appointments.find((a) => a.id === appointmentId)
-      if (!appt) { revert(); return }
-
-      try {
-        const res = await fetch('/api/appointments', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: appointmentId,
-            unit_number: parseInt(newResourceId),
-            start_time: startTime,
-            duration_minutes: appt.duration_minutes,
-            patient_id: appt.patient_id,
-            staff_id: appt.staff_id,
-            appointment_type: appt.appointment_type,
-          }),
-        })
-
-        if (!res.ok) {
-          const data = await res.json()
-          showToast(data.error || '移動に失敗しました', 'error')
-          revert()
-          return
-        }
-
-        showToast('予約を移動しました', 'success')
-        if (fetchRange) fetchAppointments(fetchRange.start, fetchRange.end)
-      } catch {
-        showToast('通信エラーが発生しました', 'error')
-        revert()
-      }
+      await moveAppointment(appointmentId, newStart, newResourceId, revert)
     },
-    [appointments, fetchRange, showToast]
+    [moveAppointment]
   )
 
-  function handleSaved() {
-    if (fetchRange) fetchAppointments(fetchRange.start, fetchRange.end)
+  function handleSaved(savedAppointment?: AppointmentWithRelations) {
+    if (savedAppointment) {
+      // 新規作成 or 編集後: stateに追加/更新
+      const exists = appointments.some(a => a.id === savedAppointment.id)
+      if (exists) {
+        // 編集: refreshで最新取得
+        refreshAppointments()
+      } else {
+        // 新規: stateに追加
+        addAppointment(savedAppointment)
+      }
+    } else {
+      // 削除時など appointment がない場合は refresh
+      refreshAppointments()
+    }
+  }
+
+  function handleDeleted(id: string) {
+    removeAppointment(id)
   }
 
   function handleNewAppointment() {
@@ -357,6 +325,8 @@ export default function CalendarPage() {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onSaved={handleSaved}
+        onDeleted={handleDeleted}
+        onStatusChange={updateStatus}
         appointment={selectedAppointment}
         defaultDate={defaultModalDate}
         defaultUnitNumber={defaultModalUnit}
