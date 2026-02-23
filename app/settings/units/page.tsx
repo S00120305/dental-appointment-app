@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import AppLayout from '@/components/layout/AppLayout'
 import Button from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
@@ -11,9 +11,11 @@ export default function UnitsSettingsPage() {
   const { visibleUnits, mutate, isLoading } = useSettings()
   const [selectedUnits, setSelectedUnits] = useState<number[]>([1, 2, 3, 4])
   const [saving, setSaving] = useState(false)
+  const initialized = useRef(false)
 
   useEffect(() => {
-    if (!isLoading && visibleUnits.length > 0) {
+    if (!isLoading && visibleUnits.length > 0 && !initialized.current) {
+      initialized.current = true
       setSelectedUnits(visibleUnits)
     }
   }, [visibleUnits, isLoading])
@@ -49,6 +51,7 @@ export default function UnitsSettingsPage() {
         return
       }
       showToast('診察室設定を更新しました', 'success')
+      initialized.current = false
       mutate()
     } catch {
       showToast('通信エラーが発生しました', 'error')
