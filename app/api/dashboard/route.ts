@@ -74,7 +74,20 @@ export async function GET(request: NextRequest) {
       .lt('due_date', dateStr)
       .in('status', ['製作中'])
 
-    // 5. 在庫アラート数（発注点以下のアイテム）
+    // 5. Web予約通知（直近24時間以内の booking_source='web'）
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const { data: recentWebBookings } = await supabase
+      .from('appointments')
+      .select(`
+        id, start_time, duration_minutes, status, booking_source, created_at,
+        patient:patients!patient_id(id, name)
+      `)
+      .eq('is_deleted', false)
+      .eq('booking_source', 'web')
+      .gte('created_at', twentyFourHoursAgo)
+      .order('created_at', { ascending: false })
+
+    // 6. 在庫アラート数（発注点以下のアイテム）
     const { count: inventoryAlertCount } = await supabase
       .from('items')
       .select('id', { count: 'exact', head: true })
@@ -98,6 +111,7 @@ export async function GET(request: NextRequest) {
       tomorrowLabOrderCount: (tomorrowAppointments || []).length,
       overdueLabOrders: overdueLabOrders || [],
       inventoryAlertCount: actualAlertCount,
+      recentWebBookings: recentWebBookings || [],
     })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -231,37 +231,67 @@ export async function POST(request: NextRequest) {
 
     // 通知送信（非同期、失敗しても予約自体は成功）
     try {
-      // 医院電話番号を取得
-      const { data: phoneData } = await supabase
-        .from('clinic_settings')
-        .select('value')
-        .eq('key', 'clinic_phone')
-        .single()
-      const clinicPhone = phoneData?.value || ''
+      // 医院電話番号・患者情報を並列取得
+      const [phoneRes, patientRes] = await Promise.all([
+        supabase
+          .from('clinic_settings')
+          .select('value')
+          .eq('key', 'clinic_phone')
+          .maybeSingle(),
+        supabase
+          .from('patients')
+          .select('preferred_notification, line_user_id, email')
+          .eq('id', patientId)
+          .single(),
+      ])
+      const clinicPhone = phoneRes.data?.value || ''
+      const patientData = patientRes.data
 
-      const timeFormatted = time
       const dateFormatted = formatDateJP(date)
-      const statusText = autoConfirmed ? '確定' : '仮予約（承認待ち）'
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://appo.oralcare-kanazawa.clinic'
+      const confirmUrl = `${appUrl}/booking/confirm/${bookingToken}`
 
-      let message = `【おーるけあ歯科】Web予約を受け付けました。\n\n`
-      message += `予約日時: ${dateFormatted} ${timeFormatted}\n`
-      message += `予約種別: ${bookingType.display_name}\n`
-      message += `ステータス: ${statusText}\n`
-      if (clinicPhone) {
-        message += `\nご変更・キャンセルはお電話ください。\nTEL: ${clinicPhone}\n`
-      }
+      // 通知先の決定: 患者の preferred_notification を尊重、フォールバック
+      const patientEmail = email?.trim() || patientData?.email || null
+      const lineUserId = patientData?.line_user_id || null
+      const preferredNotification = patientData?.preferred_notification || (patientEmail ? 'email' : 'none')
 
-      if (email) {
+      if (autoConfirmed) {
+        // 即時確定: 確認通知（テンプレートに従う）
+        const emailMessage = `${patient_name.trim()}様\n\nご予約ありがとうございます。\n\n■ ご予約内容\n日時: ${dateFormatted} ${time}〜\n内容: ${bookingType.display_name}（${durationMinutes}分）\n\n■ 予約の確認・変更\n${confirmUrl}\n\n※ 変更・キャンセルは前日18:00まで${clinicPhone ? `\n※ お電話: ${clinicPhone}` : ''}\n\n金澤オーラルケアクリニック`
+
+        const lineMessage = `🦷 金澤オーラルケアクリニック\n\nご予約ありがとうございます。\n\n📅 ${dateFormatted} ${time}〜\n📋 ${bookingType.display_name}（${durationMinutes}分）\n\n▼ 予約の確認\n${confirmUrl}\n\n※変更・キャンセルは前日18:00まで`
+
+        // preferred に応じてメッセージを切り替え
+        const message = preferredNotification === 'line' ? lineMessage : emailMessage
+
         await sendNotification(
           {
             patientId,
-            email,
-            preferredNotification: 'email',
+            email: patientEmail,
+            lineUserId,
+            preferredNotification: preferredNotification as 'line' | 'email' | 'none',
           },
           message,
           'booking_confirm',
           appointment.id,
-          '【おーるけあ歯科】Web予約受付完了'
+          '【金澤オーラルケアクリニック】ご予約確認'
+        )
+      } else {
+        // 承認制: リクエスト受付通知
+        const message = `ご予約リクエストを受け付けました。\n\nご希望日時: ${dateFormatted} ${time}〜\n内容: ${bookingType.display_name}\n\n確認後、確定のご連絡をお送りします。\n（通常1営業日以内）`
+
+        await sendNotification(
+          {
+            patientId,
+            email: patientEmail,
+            lineUserId,
+            preferredNotification: preferredNotification as 'line' | 'email' | 'none',
+          },
+          message,
+          'booking_request',
+          appointment.id,
+          '【金澤オーラルケアクリニック】ご予約リクエスト受付'
         )
       }
     } catch (e) {

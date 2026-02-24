@@ -49,6 +49,15 @@ type DashboardData = {
     lab: { id: string; name: string } | null
   }>
   inventoryAlertCount: number
+  recentWebBookings: Array<{
+    id: string
+    start_time: string
+    duration_minutes: number
+    status: string
+    booking_source: string
+    created_at: string
+    patient: { id: string; name: string } | null
+  }>
 }
 
 export default function DashboardPage() {
@@ -155,33 +164,135 @@ export default function DashboardPage() {
             </div>
           </div>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-3">
-            <TodaySummary
-              totalCount={totalCount}
-              scheduledCount={scheduledCount}
-              checkedInCount={checkedInCount}
-              completedCount={completedCount}
-              cancelledCount={cancelledCount}
-              noShowCount={noShowCount}
-              availableUnits={availableUnits}
-              visibleUnits={visibleUnits.length}
-              nextAppointment={nextAppointment ? {
-                patient_name: nextAppointment.patient?.name || '',
-                start_time: nextAppointment.start_time,
-                unit_number: nextAppointment.unit_number,
-              } : null}
-            />
-            <LabOrderAlert
-              todayLabSets={todayLabSets}
-              tomorrowLabSetCount={data?.tomorrowLabOrderCount || 0}
-              overdueItems={overdueItems}
-            />
-            <InventoryAlert
-              alertCount={data?.inventoryAlertCount || 0}
-            />
-          </div>
+          <>
+            {/* Web予約通知 */}
+            {(data?.recentWebBookings?.length ?? 0) > 0 && (
+              <WebBookingNotifications bookings={data!.recentWebBookings} />
+            )}
+
+            <div className="grid gap-4 lg:grid-cols-3">
+              <TodaySummary
+                totalCount={totalCount}
+                scheduledCount={scheduledCount}
+                checkedInCount={checkedInCount}
+                completedCount={completedCount}
+                cancelledCount={cancelledCount}
+                noShowCount={noShowCount}
+                availableUnits={availableUnits}
+                visibleUnits={visibleUnits.length}
+                nextAppointment={nextAppointment ? {
+                  patient_name: nextAppointment.patient?.name || '',
+                  start_time: nextAppointment.start_time,
+                  unit_number: nextAppointment.unit_number,
+                } : null}
+              />
+              <LabOrderAlert
+                todayLabSets={todayLabSets}
+                tomorrowLabSetCount={data?.tomorrowLabOrderCount || 0}
+                overdueItems={overdueItems}
+              />
+              <InventoryAlert
+                alertCount={data?.inventoryAlertCount || 0}
+              />
+            </div>
+          </>
         )}
       </div>
     </AppLayout>
+  )
+}
+
+// Web予約通知セクション
+function WebBookingNotifications({
+  bookings,
+}: {
+  bookings: DashboardData['recentWebBookings']
+}) {
+  const formatTime = (startTime: string) => {
+    const d = new Date(startTime)
+    const hours = String(d.getHours()).padStart(2, '0')
+    const minutes = String(d.getMinutes()).padStart(2, '0')
+    return `${hours}:${minutes}`
+  }
+
+  const formatDate = (startTime: string) => {
+    const d = new Date(startTime)
+    const m = d.getMonth() + 1
+    const day = d.getDate()
+    const dow = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()]
+    return `${m}/${day}(${dow})`
+  }
+
+  const formatCreatedAt = (createdAt: string) => {
+    const d = new Date(createdAt)
+    const hours = String(d.getHours()).padStart(2, '0')
+    const minutes = String(d.getMinutes()).padStart(2, '0')
+    return `${hours}:${minutes}`
+  }
+
+  const pendingCount = bookings.filter(b => b.status === 'pending').length
+
+  return (
+    <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4 shadow-sm">
+      <div className="mb-3 flex items-center gap-2">
+        <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418" />
+        </svg>
+        <h3 className="text-sm font-bold text-blue-900">
+          Web予約通知
+        </h3>
+        {pendingCount > 0 && (
+          <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white">
+            {pendingCount}件 承認待ち
+          </span>
+        )}
+        <span className="text-xs text-blue-600">（直近24時間）</span>
+      </div>
+      <div className="space-y-2">
+        {bookings.map((booking) => {
+          const patientName = booking.patient && !Array.isArray(booking.patient)
+            ? (booking.patient as { name: string }).name
+            : '不明'
+          const isPending = booking.status === 'pending'
+
+          return (
+            <div
+              key={booking.id}
+              className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm ${
+                isPending
+                  ? 'border border-amber-200 bg-amber-50'
+                  : 'bg-white'
+              }`}
+            >
+              <span className="shrink-0 text-xs text-gray-400">
+                {formatCreatedAt(booking.created_at)}
+              </span>
+              <span className="flex-1 text-gray-800">
+                {isPending ? (
+                  <>
+                    Web予約リクエスト: {patientName}{' '}
+                    {formatDate(booking.start_time)} {formatTime(booking.start_time)}
+                  </>
+                ) : (
+                  <>
+                    Web予約が入りました: {patientName}{' '}
+                    {formatDate(booking.start_time)} {formatTime(booking.start_time)}
+                  </>
+                )}
+              </span>
+              {isPending ? (
+                <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                  承認待ち
+                </span>
+              ) : (
+                <span className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                  確定
+                </span>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }
