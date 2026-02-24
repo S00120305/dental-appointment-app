@@ -1,6 +1,8 @@
 // DB型定義プレースホルダー
 // TODO: Supabaseのテーブル作成後に型を定義する
 
+export type PreferredNotification = 'line' | 'email' | 'none'
+
 export type Patient = {
   id: string
   chart_number: string
@@ -10,6 +12,8 @@ export type Patient = {
   email: string | null
   reminder_sms: boolean
   reminder_email: boolean
+  line_user_id: string | null
+  preferred_notification: PreferredNotification
   is_vip: boolean
   caution_level: number // 0=なし, 1=注意①, 2=注意②, 3=注意③
   is_infection_alert: boolean
@@ -132,6 +136,27 @@ export type Staff = {
   is_active: boolean
   is_admin: boolean
   sort_order: number | null
+}
+
+// 通知ログ
+export type NotificationLog = {
+  id: string
+  patient_id: string
+  appointment_id: string | null
+  channel: 'line' | 'email'
+  type: 'reminder' | 'booking_confirm' | 'booking_change' | 'booking_cancel' | 'approval_result' | 'token_sent'
+  status: 'pending' | 'sent' | 'failed'
+  content: string | null
+  error_message: string | null
+  created_at: string
+}
+
+// LINE仮紐付け
+export type LinePendingLink = {
+  id: string
+  line_user_id: string
+  line_display_name: string | null
+  created_at: string
 }
 
 // 操作ログ

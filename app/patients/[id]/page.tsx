@@ -139,6 +139,15 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
               <InfoRow label="フリガナ" value={patient.name_kana || '—'} />
               <InfoRow label="電話番号" value={patient.phone || '—'} />
               <InfoRow label="メール" value={patient.email || '—'} />
+              <InfoRow
+                label="通知方法"
+                value={
+                  patient.preferred_notification === 'line' ? 'LINE' :
+                  patient.preferred_notification === 'email' ? 'メール' :
+                  '通知なし'
+                }
+              />
+              <InfoRow label="LINE連携" value={patient.line_user_id ? '連携済み' : '未連携'} />
               <InfoRow label="SMS通知" value={patient.reminder_sms ? 'ON' : 'OFF'} />
               <InfoRow label="メール通知" value={patient.reminder_email ? 'ON' : 'OFF'} />
               <InfoRow label="VIP" value={patient.is_vip ? '\u2B50 VIP' : '\u2014'} />

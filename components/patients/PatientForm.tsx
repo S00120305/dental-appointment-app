@@ -5,7 +5,7 @@ import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
-import type { Patient } from '@/lib/supabase/types'
+import type { Patient, LinePendingLink, PreferredNotification } from '@/lib/supabase/types'
 
 type PatientFormProps = {
   isOpen: boolean
@@ -22,6 +22,7 @@ type FormData = {
   email: string
   reminder_sms: boolean
   reminder_email: boolean
+  preferred_notification: PreferredNotification
   is_vip: boolean
   caution_level: number
   is_infection_alert: boolean
@@ -35,6 +36,7 @@ const initialFormData: FormData = {
   email: '',
   reminder_sms: false,
   reminder_email: false,
+  preferred_notification: 'line',
   is_vip: false,
   caution_level: 0,
   is_infection_alert: false,
@@ -46,6 +48,12 @@ export default function PatientForm({ isOpen, onClose, onSaved, patient }: Patie
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  // LINE紐付け
+  const [showLineLinkModal, setShowLineLinkModal] = useState(false)
+  const [pendingLinks, setPendingLinks] = useState<LinePendingLink[]>([])
+  const [selectedLinkId, setSelectedLinkId] = useState<string>('')
+  const [linkingLine, setLinkingLine] = useState(false)
 
   const isEdit = !!patient
 
@@ -59,6 +67,7 @@ export default function PatientForm({ isOpen, onClose, onSaved, patient }: Patie
         email: patient.email || '',
         reminder_sms: patient.reminder_sms,
         reminder_email: patient.reminder_email,
+        preferred_notification: patient.preferred_notification || 'line',
         is_vip: patient.is_vip ?? false,
         caution_level: patient.caution_level ?? 0,
         is_infection_alert: patient.is_infection_alert ?? false,
@@ -137,6 +146,83 @@ export default function PatientForm({ isOpen, onClose, onSaved, patient }: Patie
     }
   }
 
+  // LINE紐付けモーダルを開く
+  async function openLineLinkModal() {
+    try {
+      const res = await fetch('/api/line/pending')
+      const data = await res.json()
+      setPendingLinks(data.pending_links || [])
+      setSelectedLinkId('')
+      setShowLineLinkModal(true)
+    } catch {
+      showToast('LINE情報の取得に失敗しました', 'error')
+    }
+  }
+
+  // LINE紐付け実行
+  async function handleLineLink() {
+    if (!patient || !selectedLinkId) return
+
+    setLinkingLine(true)
+    try {
+      const res = await fetch('/api/line/pending', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patient_id: patient.id,
+          line_pending_link_id: selectedLinkId,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        showToast(data.error || '紐付けに失敗しました', 'error')
+        return
+      }
+
+      showToast('LINE連携が完了しました', 'success')
+      setShowLineLinkModal(false)
+      setForm({ ...form, preferred_notification: 'line' })
+      onSaved()
+    } catch {
+      showToast('通信エラーが発生しました', 'error')
+    } finally {
+      setLinkingLine(false)
+    }
+  }
+
+  // LINE連携解除
+  async function handleLineUnlink() {
+    if (!patient) return
+
+    setSaving(true)
+    try {
+      const res = await fetch('/api/patients', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: patient.id,
+          chart_number: form.chart_number,
+          name: form.name,
+          line_user_id: null,
+          preferred_notification: form.email ? 'email' : 'none',
+        }),
+      })
+
+      if (res.ok) {
+        showToast('LINE連携を解除しました', 'success')
+        setForm({ ...form, preferred_notification: form.email ? 'email' : 'none' })
+        onSaved()
+      }
+    } catch {
+      showToast('通信エラーが発生しました', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const hasLineLinked = !!patient?.line_user_id
+
   return (
     <>
       <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? '患者情報の編集' : '患者の新規登録'}>
@@ -213,44 +299,129 @@ export default function PatientForm({ isOpen, onClose, onSaved, patient }: Patie
             />
           </div>
 
-          {/* SMS通知 */}
-          <div className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-3">
-            <label className="text-sm font-medium text-gray-700">SMS通知を希望</label>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={form.reminder_sms}
-              onClick={() => setForm({ ...form, reminder_sms: !form.reminder_sms })}
-              className={`relative inline-flex h-7 w-12 min-w-[48px] items-center rounded-full transition-colors ${
-                form.reminder_sms ? 'bg-blue-600' : 'bg-gray-300'
-              }`}
-            >
-              <span
-                className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                  form.reminder_sms ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
-            </button>
-          </div>
+          {/* 通知設定 */}
+          <div className="rounded-lg border border-gray-200 p-3 space-y-3">
+            <h3 className="text-sm font-medium text-gray-700">通知設定</h3>
 
-          {/* メール通知 */}
-          <div className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-3">
-            <label className="text-sm font-medium text-gray-700">メール通知を希望</label>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={form.reminder_email}
-              onClick={() => setForm({ ...form, reminder_email: !form.reminder_email })}
-              className={`relative inline-flex h-7 w-12 min-w-[48px] items-center rounded-full transition-colors ${
-                form.reminder_email ? 'bg-blue-600' : 'bg-gray-300'
-              }`}
-            >
-              <span
-                className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                  form.reminder_email ? 'translate-x-6' : 'translate-x-1'
+            {/* 通知方法 */}
+            <div>
+              <span className="mb-1.5 block text-sm text-gray-600">通知方法</span>
+              <div className="flex gap-1.5">
+                {([
+                  {
+                    value: 'line' as const,
+                    label: 'LINE',
+                    sublabel: '推奨',
+                    disabled: isEdit && !hasLineLinked,
+                  },
+                  {
+                    value: 'email' as const,
+                    label: 'メール',
+                    sublabel: null,
+                    disabled: !form.email,
+                  },
+                  {
+                    value: 'none' as const,
+                    label: '通知なし',
+                    sublabel: null,
+                    disabled: false,
+                  },
+                ]).map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    disabled={opt.disabled}
+                    onClick={() => setForm({ ...form, preferred_notification: opt.value })}
+                    className={`flex-1 min-h-[44px] rounded-md border-2 text-sm font-medium transition-colors ${
+                      form.preferred_notification === opt.value
+                        ? 'border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-200 ring-offset-1'
+                        : opt.disabled
+                          ? 'border-gray-100 text-gray-300 cursor-not-allowed'
+                          : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    {opt.label}
+                    {opt.sublabel && (
+                      <span className="block text-[10px] font-normal opacity-70">{opt.sublabel}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              {isEdit && !hasLineLinked && form.preferred_notification === 'line' && (
+                <p className="mt-1 text-xs text-amber-600">LINE未連携のため、メールにフォールバックします</p>
+              )}
+              {form.preferred_notification === 'email' && !form.email && (
+                <p className="mt-1 text-xs text-amber-600">メールアドレスを入力してください</p>
+              )}
+            </div>
+
+            {/* LINE連携ステータス（編集時のみ） */}
+            {isEdit && (
+              <div className="rounded-md bg-gray-50 p-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">LINE連携</span>
+                  {hasLineLinked ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-green-600">連携済み</span>
+                      <button
+                        type="button"
+                        onClick={handleLineUnlink}
+                        className="text-xs text-red-500 underline hover:text-red-700"
+                      >
+                        解除
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={openLineLinkModal}
+                      className="min-h-[36px] rounded-md bg-green-600 px-3 text-xs font-medium text-white hover:bg-green-700"
+                    >
+                      LINEアカウントを紐付ける
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 旧SMS/メール通知トグル */}
+            <div className="flex items-center justify-between">
+              <label className="text-sm text-gray-600">SMS通知（旧設定）</label>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={form.reminder_sms}
+                onClick={() => setForm({ ...form, reminder_sms: !form.reminder_sms })}
+                className={`relative inline-flex h-7 w-12 min-w-[48px] items-center rounded-full transition-colors ${
+                  form.reminder_sms ? 'bg-blue-600' : 'bg-gray-300'
                 }`}
-              />
-            </button>
+              >
+                <span
+                  className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                    form.reminder_sms ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <label className="text-sm text-gray-600">メール通知（旧設定）</label>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={form.reminder_email}
+                onClick={() => setForm({ ...form, reminder_email: !form.reminder_email })}
+                className={`relative inline-flex h-7 w-12 min-w-[48px] items-center rounded-full transition-colors ${
+                  form.reminder_email ? 'bg-blue-600' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                    form.reminder_email ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
           </div>
 
           {/* 患者タグ */}
@@ -360,6 +531,79 @@ export default function PatientForm({ isOpen, onClose, onSaved, patient }: Patie
             </div>
           )}
         </form>
+      </Modal>
+
+      {/* LINE紐付けモーダル */}
+      <Modal
+        isOpen={showLineLinkModal}
+        onClose={() => setShowLineLinkModal(false)}
+        title="LINEアカウントの紐付け"
+      >
+        <div className="space-y-4">
+          {pendingLinks.length === 0 ? (
+            <div className="rounded-md bg-gray-50 p-4 text-center">
+              <p className="text-sm text-gray-500">
+                未紐付けのLINEアカウントはありません。
+              </p>
+              <p className="mt-1 text-xs text-gray-400">
+                患者さんに医院のLINE公式アカウントを友だち追加してもらってください。
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-gray-600">
+                友だち追加済み（未紐付け）のLINEアカウントを選択してください:
+              </p>
+              <div className="space-y-2">
+                {pendingLinks.map((link) => (
+                  <label
+                    key={link.id}
+                    className={`flex min-h-[44px] cursor-pointer items-center gap-3 rounded-md border-2 p-3 transition-colors ${
+                      selectedLinkId === link.id
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="lineLink"
+                      value={link.id}
+                      checked={selectedLinkId === link.id}
+                      onChange={() => setSelectedLinkId(link.id)}
+                      className="h-4 w-4 text-green-600"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-gray-900">
+                        {link.line_display_name || '(名前未取得)'}
+                      </span>
+                      <span className="ml-2 text-xs text-gray-400">
+                        {new Date(link.created_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })}追加
+                      </span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={() => setShowLineLinkModal(false)}
+                  className="flex-1"
+                >
+                  キャンセル
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleLineLink}
+                  disabled={!selectedLinkId || linkingLine}
+                  className="flex-1"
+                >
+                  {linkingLine ? '紐付け中...' : '紐付ける'}
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
       </Modal>
 
       <ConfirmDialog

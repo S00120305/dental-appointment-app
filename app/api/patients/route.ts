@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     const supabase = createServerClient()
     const body = await request.json()
 
-    const { chart_number, name, name_kana, phone, email, reminder_sms, reminder_email } = body
+    const { chart_number, name, name_kana, phone, email, reminder_sms, reminder_email, preferred_notification } = body
 
     // バリデーション
     if (!chart_number?.trim()) {
@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
         email: email?.trim() || null,
         reminder_sms: reminder_sms ?? false,
         reminder_email: reminder_email ?? false,
+        preferred_notification: preferred_notification || 'line',
       })
       .select()
       .single()
@@ -99,7 +100,7 @@ export async function PUT(request: NextRequest) {
 
     const {
       id, chart_number, name, name_kana, phone, email,
-      reminder_sms, reminder_email,
+      reminder_sms, reminder_email, preferred_notification, line_user_id,
       is_vip, caution_level, is_infection_alert,
       birth_date, memo,
     } = body
@@ -126,6 +127,8 @@ export async function PUT(request: NextRequest) {
       reminder_sms: reminder_sms ?? false,
       reminder_email: reminder_email ?? false,
     }
+    if (preferred_notification !== undefined) updateData.preferred_notification = preferred_notification
+    if (line_user_id !== undefined) updateData.line_user_id = line_user_id
     if (is_vip !== undefined) updateData.is_vip = is_vip
     if (caution_level !== undefined) updateData.caution_level = caution_level
     if (is_infection_alert !== undefined) updateData.is_infection_alert = is_infection_alert
