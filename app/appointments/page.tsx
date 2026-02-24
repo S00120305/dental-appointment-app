@@ -2,6 +2,8 @@
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
+import useSWR from 'swr'
 import AppLayout from '@/components/layout/AppLayout'
 import AppointmentListView from '@/components/appointments/AppointmentListView'
 import AppointmentModal from '@/components/calendar/AppointmentModal'
@@ -44,6 +46,14 @@ export default function AppointmentsPage() {
 
   const { visibleUnits, businessHours, staffColors, isLoading: settingsLoading } = useSettings()
   const { staffList } = useStaff()
+
+  // 承認待ち件数
+  const { data: pendingData } = useSWR<{ count: number }>(
+    '/api/appointments?status=pending&booking_source=web&count_only=true',
+    (url: string) => fetch(url).then(r => r.json()),
+    { refreshInterval: 30000 }
+  )
+  const pendingCount = pendingData?.count || 0
 
   // Shared state
   const [activeView, setActiveView] = useState<ActiveView>('calendar')
@@ -417,6 +427,19 @@ export default function AppointmentsPage() {
               カレンダー
             </button>
           </div>
+
+          {/* 承認待ちタブ */}
+          <Link
+            href="/appointments/pending"
+            className="flex min-h-[44px] items-center gap-1 rounded-md border border-amber-400 bg-white px-3 text-sm font-medium text-amber-700 hover:bg-amber-50"
+          >
+            承認待ち
+            {pendingCount > 0 && (
+              <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-xs font-bold text-white">
+                {pendingCount}
+              </span>
+            )}
+          </Link>
 
           {/* 日/週 切替 (カレンダー表示時のみ) */}
           {activeView === 'calendar' && (

@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react'
 import useSWR from 'swr'
+import Link from 'next/link'
 import AppLayout from '@/components/layout/AppLayout'
 import TodaySummary from '@/components/dashboard/TodaySummary'
 import LabOrderAlert from '@/components/dashboard/LabOrderAlert'
@@ -242,9 +243,17 @@ function WebBookingNotifications({
           Web予約通知
         </h3>
         {pendingCount > 0 && (
-          <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white">
-            {pendingCount}件 承認待ち
-          </span>
+          <>
+            <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white">
+              {pendingCount}件 承認待ち
+            </span>
+            <Link
+              href="/appointments/pending"
+              className="ml-auto rounded-md bg-amber-500 px-3 py-1 text-xs font-medium text-white hover:bg-amber-600"
+            >
+              確認する
+            </Link>
+          </>
         )}
         <span className="text-xs text-blue-600">（直近24時間）</span>
       </div>

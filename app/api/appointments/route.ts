@@ -13,6 +13,9 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('start_date') // YYYY-MM-DD
     const endDate = searchParams.get('end_date') // YYYY-MM-DD
     const unitNumber = searchParams.get('unit_number')
+    const status = searchParams.get('status') // e.g. 'pending'
+    const bookingSource = searchParams.get('booking_source') // e.g. 'web'
+    const countOnly = searchParams.get('count_only') === 'true'
 
     const selectQuery = `
       id, patient_id, unit_number, staff_id, start_time, duration_minutes,
@@ -67,6 +70,31 @@ export async function GET(request: NextRequest) {
     // ユニットフィルター
     if (unitNumber) {
       query = query.eq('unit_number', parseInt(unitNumber))
+    }
+
+    // ステータスフィルター
+    if (status) {
+      query = query.eq('status', status)
+    }
+
+    // 予約ソースフィルター
+    if (bookingSource) {
+      query = query.eq('booking_source', bookingSource)
+    }
+
+    // count_only: バッジ件数用（軽量）
+    if (countOnly) {
+      const { count, error: countError } = await supabase
+        .from('appointments')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_deleted', false)
+        .eq('status', status || 'pending')
+        .eq('booking_source', bookingSource || 'web')
+
+      if (countError) {
+        return NextResponse.json({ error: countError.message }, { status: 500 })
+      }
+      return NextResponse.json({ count: count || 0 })
     }
 
     const { data, error } = await query
