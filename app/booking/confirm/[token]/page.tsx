@@ -2,7 +2,6 @@
 
 import { useState, useEffect, use } from 'react'
 import Link from 'next/link'
-import { useToast } from '@/components/ui/Toast'
 
 type AppointmentData = {
   start_time: string
@@ -20,9 +19,10 @@ export default function BookingConfirmPage({
   params: Promise<{ token: string }>
 }) {
   const { token } = use(params)
-  const { showToast } = useToast()
   const [appointment, setAppointment] = useState<AppointmentData | null>(null)
   const [clinicPhone, setClinicPhone] = useState<string>('')
+  const [deadlineTime, setDeadlineTime] = useState<string>('18:00')
+  const [canChange, setCanChange] = useState(false)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
@@ -32,18 +32,27 @@ export default function BookingConfirmPage({
     setLoading(true)
     Promise.all([
       fetch(`/api/booking/confirm/${token}`).then((r) => r.json()),
-      fetch('/api/clinic-settings?keys=clinic_phone').then((r) => r.json()),
+      fetch('/api/booking/deadline').then((r) => r.json()),
     ])
-      .then(([confirmData, settingsData]) => {
+      .then(([confirmData, deadlineData]) => {
         if (confirmData.error || !confirmData.appointment) {
           setNotFound(true)
           return
         }
         setAppointment(confirmData.appointment)
+        setClinicPhone(deadlineData.clinic_phone || '')
+        setDeadlineTime(deadlineData.deadline_time || '18:00')
 
-        // Extract clinic_phone from settings
-        if (settingsData.settings?.clinic_phone) {
-          setClinicPhone(settingsData.settings.clinic_phone)
+        // 期限チェック
+        const appt = confirmData.appointment
+        if (appt.status === 'scheduled' || appt.status === 'pending') {
+          const dt = deadlineData.deadline_time || '18:00'
+          const [h, m] = dt.split(':').map(Number)
+          const apptDate = new Date(appt.start_time)
+          const deadline = new Date(apptDate)
+          deadline.setDate(deadline.getDate() - 1)
+          deadline.setHours(h, m, 0, 0)
+          setCanChange(new Date() < deadline)
         }
       })
       .catch(() => {
@@ -65,38 +74,18 @@ export default function BookingConfirmPage({
 
   const getStatusBadge = (status: string) => {
     if (status === 'scheduled') {
-      return {
-        label: '確定',
-        bg: '#2D8A4E1A',
-        color: '#2D8A4E',
-      }
+      return { label: '確定', bg: '#2D8A4E1A', color: '#2D8A4E' }
     }
     if (status === 'pending') {
-      return {
-        label: '承認待ち',
-        bg: '#D976061A',
-        color: '#D97706',
-      }
+      return { label: '承認待ち', bg: '#D976061A', color: '#D97706' }
     }
     if (status === 'cancelled') {
-      return {
-        label: 'キャンセル済み',
-        bg: '#DC26261A',
-        color: '#DC2626',
-      }
+      return { label: 'キャンセル済み', bg: '#DC26261A', color: '#DC2626' }
     }
     if (status === 'completed') {
-      return {
-        label: '完了',
-        bg: '#6B72801A',
-        color: '#6B7280',
-      }
+      return { label: '完了', bg: '#6B72801A', color: '#6B7280' }
     }
-    return {
-      label: status,
-      bg: '#6B72801A',
-      color: '#6B7280',
-    }
+    return { label: status, bg: '#6B72801A', color: '#6B7280' }
   }
 
   // Loading state
@@ -230,46 +219,48 @@ export default function BookingConfirmPage({
           </div>
         </div>
 
-        {/* Action buttons */}
+        {/* Action buttons - only for active appointments */}
         {(appointment.status === 'scheduled' || appointment.status === 'pending') && (
-          <div className="mt-6 space-y-3">
-            <button
-              onClick={() => showToast('この機能は現在準備中です', 'info')}
-              className="min-h-[48px] w-full rounded-lg border text-sm font-medium transition-colors"
-              style={{
-                borderColor: '#B8923A',
-                color: '#B8923A',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#B8923A'
-                e.currentTarget.style.color = '#FFFFFF'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent'
-                e.currentTarget.style.color = '#B8923A'
-              }}
-            >
-              変更する
-            </button>
-            <button
-              onClick={() => showToast('この機能は現在準備中です', 'info')}
-              className="min-h-[48px] w-full rounded-lg border text-sm font-medium transition-colors"
-              style={{
-                borderColor: '#DC2626',
-                color: '#DC2626',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#DC2626'
-                e.currentTarget.style.color = '#FFFFFF'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent'
-                e.currentTarget.style.color = '#DC2626'
-              }}
-            >
-              キャンセルする
-            </button>
-          </div>
+          canChange ? (
+            <div className="mt-6 space-y-3">
+              <Link
+                href={`/booking/change/${token}`}
+                className="flex min-h-[48px] w-full items-center justify-center rounded-lg border text-sm font-medium transition-colors"
+                style={{ borderColor: '#B8923A', color: '#B8923A' }}
+              >
+                予約を変更する
+              </Link>
+              <Link
+                href={`/booking/cancel/${token}`}
+                className="flex min-h-[48px] w-full items-center justify-center rounded-lg border text-sm font-medium transition-colors"
+                style={{ borderColor: '#DC2626', color: '#DC2626' }}
+              >
+                キャンセルする
+              </Link>
+              <p className="text-center text-xs" style={{ color: '#999999' }}>
+                変更・キャンセルは前日{deadlineTime}まで
+              </p>
+            </div>
+          ) : (
+            <div className="mt-6 rounded-lg p-3" style={{ backgroundColor: '#FEF2F2' }}>
+              <p className="text-center text-sm" style={{ color: '#DC2626' }}>
+                変更・キャンセルの受付期限を過ぎています。
+              </p>
+              {clinicPhone && (
+                <p className="mt-1 text-center text-sm" style={{ color: '#666666' }}>
+                  恐れ入りますが、お電話にてご連絡ください。
+                  <br />
+                  <a
+                    href={`tel:${clinicPhone.replace(/-/g, '')}`}
+                    className="font-medium"
+                    style={{ color: '#B8923A' }}
+                  >
+                    {clinicPhone}
+                  </a>
+                </p>
+              )}
+            </div>
+          )
         )}
       </div>
 

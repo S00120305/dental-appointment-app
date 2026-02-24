@@ -28,7 +28,7 @@ export async function GET(
     const { data, error } = await supabase
       .from('appointments')
       .select(`
-        id, start_time, duration_minutes, status, booking_source,
+        id, start_time, duration_minutes, status, booking_source, booking_type_id,
         patient:patients!patient_id(name),
         booking_type:booking_types!left(display_name, duration_minutes)
       `)
@@ -56,6 +56,7 @@ export async function GET(
         status: data.status,
         patient_name: patient?.name || '',
         booking_type_name: bookingType?.display_name || '',
+        booking_type_id: data.booking_type_id || '',
       },
     })
   } catch {

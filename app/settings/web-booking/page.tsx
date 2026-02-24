@@ -139,9 +139,9 @@ export default function WebBookingSettingsPage() {
             </div>
           </div>
 
-          {/* キャンセル期限 */}
+          {/* 変更・キャンセル期限 */}
           <div>
-            <h2 className="mb-3 text-sm font-bold text-gray-700">キャンセル期限</h2>
+            <h2 className="mb-3 text-sm font-bold text-gray-700">変更・キャンセル期限</h2>
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">前日</span>
               <select

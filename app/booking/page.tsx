@@ -2,33 +2,15 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ui/Toast'
-
-type PatientResult = {
-  patient_name: string
-  tokens: Array<{
-    token: string
-    booking_type_name: string
-    duration_minutes: number
-    staff_name: string | null
-    expires_at: string
-  }>
-  appointments: Array<{
-    id: string
-    start_time: string
-    duration_minutes: number
-    status: string
-    appointment_type: string
-    booking_token: string | null
-  }>
-}
 
 export default function BookingTopPage() {
   const { showToast } = useToast()
+  const router = useRouter()
   const [chartNumber, setChartNumber] = useState('')
   const [lookupPhone, setLookupPhone] = useState('')
   const [lookupLoading, setLookupLoading] = useState(false)
-  const [patientResult, setPatientResult] = useState<PatientResult | null>(null)
   const [tokenInput, setTokenInput] = useState('')
 
   const handleLookup = async (e: React.FormEvent) => {
@@ -38,13 +20,21 @@ export default function BookingTopPage() {
       return
     }
     setLookupLoading(true)
-    setPatientResult(null)
     try {
       const phone = lookupPhone.replace(/[-\s]/g, '')
-      const res = await fetch(`/api/booking-tokens/patient?chart_number=${encodeURIComponent(chartNumber.trim())}&phone=${encodeURIComponent(phone)}`)
+      const res = await fetch('/api/booking/mypage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chart_number: chartNumber.trim(), phone }),
+      })
       const data = await res.json()
       if (res.ok) {
-        setPatientResult(data)
+        // sessionStorage に認証情報を保持してマイページへ遷移
+        sessionStorage.setItem('booking_auth', JSON.stringify({
+          chart_number: chartNumber.trim(),
+          phone,
+        }))
+        router.push('/booking/mypage')
       } else {
         showToast(data.error || '該当する患者が見つかりません', 'error')
       }
@@ -62,23 +52,6 @@ export default function BookingTopPage() {
       return
     }
     window.location.href = `/booking/token/${tokenInput.trim()}`
-  }
-
-  const formatDateTime = (startTime: string) => {
-    const d = new Date(startTime)
-    const m = d.getMonth() + 1
-    const day = d.getDate()
-    const dow = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()]
-    const hours = String(d.getHours()).padStart(2, '0')
-    const minutes = String(d.getMinutes()).padStart(2, '0')
-    return `${m}/${day}(${dow}) ${hours}:${minutes}`
-  }
-
-  const formatExpiry = (expiresAt: string) => {
-    const d = new Date(expiresAt)
-    const m = d.getMonth() + 1
-    const day = d.getDate()
-    return `${m}/${day}まで`
   }
 
   return (
@@ -232,80 +205,9 @@ export default function BookingTopPage() {
                     e.currentTarget.style.color = '#B8923A'
                   }}
                 >
-                  {lookupLoading ? '検索中...' : '検索する'}
+                  {lookupLoading ? '確認中...' : '確認する'}
                 </button>
               </form>
-
-              {/* Patient lookup results */}
-              {patientResult && (
-                <div className="mt-4 space-y-3">
-                  <p className="text-sm font-medium" style={{ color: '#333333' }}>
-                    {patientResult.patient_name} 様
-                  </p>
-
-                  {/* Appointments */}
-                  {patientResult.appointments.length > 0 && (
-                    <div>
-                      <p className="text-xs font-medium" style={{ color: '#666666' }}>ご予約一覧</p>
-                      <div className="mt-1 space-y-1">
-                        {patientResult.appointments.map(a => (
-                          <div
-                            key={a.id}
-                            className="flex items-center justify-between rounded-md p-2 text-sm"
-                            style={{ backgroundColor: '#F8F5F0' }}
-                          >
-                            <span style={{ color: '#333333' }}>
-                              {formatDateTime(a.start_time)} {a.appointment_type}
-                            </span>
-                            {a.booking_token && (
-                              <Link
-                                href={`/booking/confirm/${a.booking_token}`}
-                                className="text-xs font-medium"
-                                style={{ color: '#B8923A' }}
-                              >
-                                確認
-                              </Link>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Unused tokens */}
-                  {patientResult.tokens.length > 0 && (
-                    <div>
-                      <p className="text-xs font-medium" style={{ color: '#666666' }}>次回予約のご案内（未予約）</p>
-                      <div className="mt-1 space-y-1">
-                        {patientResult.tokens.map(t => (
-                          <div
-                            key={t.token}
-                            className="flex items-center justify-between rounded-md p-2 text-sm"
-                            style={{ backgroundColor: '#F8F5F0' }}
-                          >
-                            <span style={{ color: '#333333' }}>
-                              {t.booking_type_name}（{t.duration_minutes}分）期限: {formatExpiry(t.expires_at)}
-                            </span>
-                            <Link
-                              href={`/booking/token/${t.token}`}
-                              className="text-xs font-medium"
-                              style={{ color: '#B8923A' }}
-                            >
-                              日時を選ぶ
-                            </Link>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {patientResult.appointments.length === 0 && patientResult.tokens.length === 0 && (
-                    <p className="text-sm" style={{ color: '#999999' }}>
-                      現在の予約・ご案内はありません
-                    </p>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         </div>
