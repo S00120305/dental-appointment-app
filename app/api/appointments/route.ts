@@ -16,10 +16,12 @@ export async function GET(request: NextRequest) {
 
     const selectQuery = `
       id, patient_id, unit_number, staff_id, start_time, duration_minutes,
-      appointment_type, status, memo, lab_order_id, is_deleted, created_at, updated_at,
+      appointment_type, status, memo, lab_order_id, booking_type_id,
+      web_booking_status, booking_token, is_deleted, created_at, updated_at,
       patient:patients!patient_id(id, chart_number, name, name_kana, is_vip, caution_level, is_infection_alert),
       staff:users!staff_id(id, name),
-      lab_order:lab_orders!left(id, status, item_type, tooth_info, due_date, set_date, lab:labs!left(id, name))
+      lab_order:lab_orders!left(id, status, item_type, tooth_info, due_date, set_date, lab:labs!left(id, name)),
+      booking_type:booking_types!left(id, display_name, internal_name, color)
     `
 
     // 単一予約取得（Realtime INSERT 後の詳細取得用）
@@ -79,13 +81,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST/PUT 用の SELECT クエリ（lab_order JOIN 付き）
+// POST/PUT 用の SELECT クエリ（lab_order + booking_type JOIN 付き）
 const selectQueryPost = `
   id, patient_id, unit_number, staff_id, start_time, duration_minutes,
-  appointment_type, status, memo, lab_order_id, is_deleted, created_at, updated_at,
+  appointment_type, status, memo, lab_order_id, booking_type_id,
+  web_booking_status, booking_token, is_deleted, created_at, updated_at,
   patient:patients!patient_id(id, chart_number, name, name_kana, is_vip, caution_level, is_infection_alert),
   staff:users!staff_id(id, name),
-  lab_order:lab_orders!left(id, status, item_type, tooth_info, due_date, set_date, lab:labs!left(id, name))
+  lab_order:lab_orders!left(id, status, item_type, tooth_info, due_date, set_date, lab:labs!left(id, name)),
+  booking_type:booking_types!left(id, display_name, internal_name, color)
 `
 
 // POST: 新規予約作成
@@ -103,6 +107,7 @@ export async function POST(request: NextRequest) {
       appointment_type,
       memo,
       lab_order_id,
+      booking_type_id,
     } = body
 
     // バリデーション
@@ -139,6 +144,7 @@ export async function POST(request: NextRequest) {
         appointment_type,
         memo: memo || null,
         lab_order_id: lab_order_id || null,
+        booking_type_id: booking_type_id || null,
         status: 'scheduled',
       })
       .select(selectQueryPost)
@@ -185,6 +191,7 @@ export async function PUT(request: NextRequest) {
       status,
       memo,
       lab_order_id,
+      booking_type_id,
       current_updated_at,
     } = body
 
@@ -241,6 +248,7 @@ export async function PUT(request: NextRequest) {
     if (status !== undefined) updateData.status = status
     if (memo !== undefined) updateData.memo = memo || null
     if (lab_order_id !== undefined) updateData.lab_order_id = lab_order_id || null
+    if (booking_type_id !== undefined) updateData.booking_type_id = booking_type_id || null
 
     const { data, error } = await supabase
       .from('appointments')

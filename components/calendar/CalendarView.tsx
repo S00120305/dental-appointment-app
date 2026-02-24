@@ -94,6 +94,7 @@ export default function CalendarView({
           staff_id: appt.staff_id,
           status: appt.status,
           staff_color: staffColor,
+          booking_type_color: appt.booking_type?.color || null,
           lab_order_status: appt.lab_order?.status || null,
           is_vip: appt.patient?.is_vip || false,
           caution_level: appt.patient?.caution_level || 0,

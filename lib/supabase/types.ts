@@ -32,6 +32,9 @@ export type Appointment = {
   appointment_type: string
   status: AppointmentStatus
   lab_order_id: string | null
+  booking_type_id: string | null
+  web_booking_status: string | null
+  booking_token: string | null
   memo: string | null
   is_deleted: boolean
   created_at: string
@@ -82,6 +85,30 @@ export type AppointmentWithRelations = Appointment & {
     set_date: string | null
     lab?: { id: string; name: string } | null
   } | null
+  booking_type?: {
+    id: string
+    display_name: string
+    internal_name: string
+    color: string
+  } | null
+}
+
+// 予約種別マスタ
+export type BookingType = {
+  id: string
+  display_name: string
+  internal_name: string
+  duration_minutes: number
+  confirmation_mode: 'instant' | 'approval'
+  is_web_bookable: boolean
+  is_token_only: boolean
+  description: string
+  notes: string
+  color: string
+  sort_order: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
 }
 
 // 予約枠ブロック

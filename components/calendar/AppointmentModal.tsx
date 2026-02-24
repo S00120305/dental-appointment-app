@@ -8,7 +8,7 @@ import StatusBadge from '@/components/calendar/StatusBadge'
 import LabOrderBadge from '@/components/calendar/LabOrderBadge'
 import { useToast } from '@/components/ui/Toast'
 import { getNextStatus, getPrevStatus, STATUS_TEXT, STATUS_LABELS } from '@/lib/constants/appointment'
-import type { AppointmentStatus, AppointmentWithRelations, LabOrderWithLab, Patient, Staff } from '@/lib/supabase/types'
+import type { AppointmentStatus, AppointmentWithRelations, BookingType, LabOrderWithLab, Patient, Staff } from '@/lib/supabase/types'
 
 type AppointmentModalProps = {
   isOpen: boolean
@@ -31,6 +31,7 @@ type FormData = {
   time: string
   duration_minutes: number
   appointment_type: string
+  booking_type_id: string
   memo: string
   lab_order_id: string
 }
@@ -72,8 +73,10 @@ export default function AppointmentModal({
   // Settings
   const [unitList, setUnitList] = useState<number[]>([1, 2, 3, 4, 5])
   const [appointmentTypes, setAppointmentTypes] = useState<string[]>([])
+  const [bookingTypes, setBookingTypes] = useState<BookingType[]>([])
   const [businessHours, setBusinessHours] = useState({ start: '09:00', end: '18:00' })
   const [staffList, setStaffList] = useState<Staff[]>([])
+  const [useCustomType, setUseCustomType] = useState(false)
 
   // Patient search
   const [patientQuery, setPatientQuery] = useState('')
@@ -96,6 +99,7 @@ export default function AppointmentModal({
     time: '09:00',
     duration_minutes: 30,
     appointment_type: '',
+    booking_type_id: '',
     memo: '',
     lab_order_id: '',
   })
@@ -105,11 +109,12 @@ export default function AppointmentModal({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
-  // Fetch settings and staff on mount
+  // Fetch settings, staff, and booking types on mount
   useEffect(() => {
     if (!isOpen) return
     fetchSettings()
     fetchStaff()
+    fetchBookingTypes()
   }, [isOpen])
 
   // Initialize form
@@ -131,11 +136,13 @@ export default function AppointmentModal({
         time: formatTimeLocal(startDate),
         duration_minutes: appointment.duration_minutes,
         appointment_type: appointment.appointment_type,
+        booking_type_id: appointment.booking_type_id || '',
         memo: appointment.memo || '',
         lab_order_id: appointment.lab_order_id || '',
       })
       setSelectedPatient(appointment.patient)
       setLabOrderEnabled(!!appointment.lab_order_id)
+      setUseCustomType(!appointment.booking_type_id)
       // 技工物紐付け済みの場合、技工物リストを取得
       if (appointment.lab_order_id && appointment.patient?.chart_number) {
         fetchLabOrders(appointment.patient.chart_number)
@@ -150,20 +157,28 @@ export default function AppointmentModal({
         time: defaultStartTime || '09:00',
         duration_minutes: defaultDuration || 30,
         appointment_type: '',
+        booking_type_id: '',
         memo: '',
         lab_order_id: '',
       })
       setSelectedPatient(null)
       setLabOrderEnabled(false)
+      setUseCustomType(false)
     }
   }, [isOpen, appointment, defaultDate, defaultUnitNumber, defaultStartTime, defaultDuration])
 
-  // Set default appointment type when types are loaded
+  // Set default booking type when types are loaded
   useEffect(() => {
-    if (appointmentTypes.length > 0 && !form.appointment_type && !appointment) {
-      setForm((prev) => ({ ...prev, appointment_type: appointmentTypes[0] }))
+    if (bookingTypes.length > 0 && !form.booking_type_id && !form.appointment_type && !appointment && !useCustomType) {
+      const first = bookingTypes[0]
+      setForm((prev) => ({
+        ...prev,
+        booking_type_id: first.id,
+        appointment_type: first.internal_name,
+        duration_minutes: defaultDuration || first.duration_minutes,
+      }))
     }
-  }, [appointmentTypes, form.appointment_type, appointment])
+  }, [bookingTypes, form.booking_type_id, form.appointment_type, appointment, useCustomType, defaultDuration])
 
   // Fetch lab orders when patient changes and toggle is ON
   useEffect(() => {
@@ -201,6 +216,14 @@ export default function AppointmentModal({
       const res = await fetch('/api/users')
       const data = await res.json()
       if (res.ok) setStaffList(data.users || [])
+    } catch { /* ignore */ }
+  }
+
+  async function fetchBookingTypes() {
+    try {
+      const res = await fetch('/api/booking-types')
+      const data = await res.json()
+      if (res.ok) setBookingTypes(data.booking_types || [])
     } catch { /* ignore */ }
   }
 
@@ -258,7 +281,7 @@ export default function AppointmentModal({
     if (!form.date) newErrors.date = '日付を選択してください'
     if (!form.time) newErrors.time = '開始時刻を選択してください'
     if (!form.duration_minutes) newErrors.duration_minutes = '所要時間を選択してください'
-    if (!form.appointment_type) newErrors.appointment_type = '予約種別を選択してください'
+    if (!form.booking_type_id && !form.appointment_type) newErrors.appointment_type = '予約種別を選択してください'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -271,28 +294,18 @@ export default function AppointmentModal({
     try {
       const startTime = `${form.date}T${form.time}:00+09:00`
       const method = isEdit ? 'PUT' : 'POST'
-      const body = isEdit
-        ? {
-            id: appointment!.id,
-            patient_id: form.patient_id,
-            unit_number: form.unit_number,
-            staff_id: form.staff_id,
-            start_time: startTime,
-            duration_minutes: form.duration_minutes,
-            appointment_type: form.appointment_type,
-            memo: form.memo,
-            lab_order_id: labOrderEnabled ? form.lab_order_id || null : null,
-          }
-        : {
-            patient_id: form.patient_id,
-            unit_number: form.unit_number,
-            staff_id: form.staff_id,
-            start_time: startTime,
-            duration_minutes: form.duration_minutes,
-            appointment_type: form.appointment_type,
-            memo: form.memo,
-            lab_order_id: labOrderEnabled ? form.lab_order_id || null : null,
-          }
+      const baseBody = {
+        patient_id: form.patient_id,
+        unit_number: form.unit_number,
+        staff_id: form.staff_id,
+        start_time: startTime,
+        duration_minutes: form.duration_minutes,
+        appointment_type: form.appointment_type,
+        booking_type_id: form.booking_type_id || null,
+        memo: form.memo,
+        lab_order_id: labOrderEnabled ? form.lab_order_id || null : null,
+      }
+      const body = isEdit ? { id: appointment!.id, ...baseBody } : baseBody
 
       const res = await fetch('/api/appointments', {
         method,
@@ -604,20 +617,75 @@ export default function AppointmentModal({
             <label className="mb-1 block text-sm font-medium text-gray-700">
               予約種別 <span className="text-red-500">*</span>
             </label>
-            <select
-              value={form.appointment_type}
-              onChange={(e) => setForm({ ...form, appointment_type: e.target.value })}
-              className={`w-full rounded-md border px-3 py-2 text-base ${
-                errors.appointment_type ? 'border-red-500' : 'border-gray-300'
-              }`}
-            >
-              <option value="">選択してください</option>
-              {appointmentTypes.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+            {!useCustomType ? (
+              <>
+                <select
+                  value={form.booking_type_id}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    if (val === '__custom__') {
+                      setUseCustomType(true)
+                      setForm(prev => ({ ...prev, booking_type_id: '', appointment_type: '' }))
+                      return
+                    }
+                    const bt = bookingTypes.find(b => b.id === val)
+                    setForm(prev => ({
+                      ...prev,
+                      booking_type_id: val,
+                      appointment_type: bt?.internal_name || '',
+                      duration_minutes: bt?.duration_minutes || prev.duration_minutes,
+                    }))
+                  }}
+                  className={`w-full rounded-md border px-3 py-2 text-base ${
+                    errors.appointment_type ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                >
+                  <option value="">選択してください</option>
+                  {bookingTypes.map(bt => (
+                    <option key={bt.id} value={bt.id}>
+                      {bt.display_name}（{bt.internal_name}）
+                    </option>
+                  ))}
+                  <option disabled>───</option>
+                  <option value="__custom__">カスタム入力...</option>
+                </select>
+                {form.booking_type_id && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    院内名: {bookingTypes.find(b => b.id === form.booking_type_id)?.internal_name}
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={form.appointment_type}
+                    onChange={(e) => setForm({ ...form, appointment_type: e.target.value })}
+                    className={`flex-1 rounded-md border px-3 py-2 text-base ${
+                      errors.appointment_type ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="種別名を入力"
+                    list="appointment-types-list"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUseCustomType(false)
+                      setForm(prev => ({ ...prev, appointment_type: '', booking_type_id: '' }))
+                    }}
+                    className="min-h-[44px] rounded-md border border-gray-300 px-3 text-sm text-gray-600 hover:bg-gray-50"
+                  >
+                    一覧に戻す
+                  </button>
+                </div>
+                <datalist id="appointment-types-list">
+                  {appointmentTypes.map(t => (
+                    <option key={t} value={t} />
+                  ))}
+                </datalist>
+              </div>
+            )}
             {errors.appointment_type && (
               <p className="mt-1 text-sm text-red-500">{errors.appointment_type}</p>
             )}

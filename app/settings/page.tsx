@@ -6,7 +6,8 @@ import AppLayout from '@/components/layout/AppLayout'
 const settingsItems = [
   { href: '/settings/staff', label: 'スタッフ管理', description: 'スタッフの追加・編集・PIN管理' },
   { href: '/settings/units', label: '診察室設定', description: '表示する診察室数の設定' },
-  { href: '/settings/appointment-types', label: '予約種別管理', description: '予約種別の追加・編集' },
+  { href: '/settings/booking-types', label: '予約種別管理', description: '予約種別の追加・編集・Web予約設定' },
+  { href: '/settings/web-booking', label: 'Web予約設定', description: '予約可能期間・締切・キャンセル期限の設定' },
   { href: '/settings/reminders', label: 'リマインド設定', description: 'SMS・メール通知のテンプレート設定' },
   { href: '/settings/import', label: 'CSVインポート', description: 'オプテックからの患者データ取り込み' },
   { href: '/settings/logs', label: '操作ログ', description: '予約・患者・設定の操作履歴を確認' },
