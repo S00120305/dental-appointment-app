@@ -15,7 +15,21 @@ export async function PUT(request: NextRequest) {
     const supabase = createServerClient()
     const body = await request.json()
 
-    const { appointment_id, action, reason, start_time, unit_number } = body
+    const {
+      appointment_id,
+      action,
+      reason,
+      reject_reason,
+      start_time,
+      new_start_time,
+      unit_number,
+      new_unit_number,
+    } = body
+
+    // 仕様書互換: reject_reason / new_start_time / new_unit_number も受け付ける
+    const effectiveReason = reason || reject_reason
+    const effectiveStartTime = start_time || new_start_time
+    const effectiveUnitNumber = unit_number || new_unit_number
 
     if (!appointment_id) {
       return NextResponse.json({ error: '予約IDは必須です' }, { status: 400 })
@@ -24,10 +38,10 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'action は approve / reject / modify_approve のいずれかです' }, { status: 400 })
     }
     if (action === 'modify_approve') {
-      if (!start_time) {
+      if (!effectiveStartTime) {
         return NextResponse.json({ error: '変更承認には start_time が必須です' }, { status: 400 })
       }
-      if (!unit_number) {
+      if (!effectiveUnitNumber) {
         return NextResponse.json({ error: '変更承認には unit_number が必須です' }, { status: 400 })
       }
     }
@@ -86,8 +100,8 @@ export async function PUT(request: NextRequest) {
       newStatus = 'scheduled'
       updateData = {
         status: 'scheduled',
-        start_time,
-        unit_number: parseInt(unit_number),
+        start_time: effectiveStartTime,
+        unit_number: parseInt(effectiveUnitNumber),
       }
     }
 
@@ -119,8 +133,8 @@ export async function PUT(request: NextRequest) {
         action,
         previous_status: 'pending',
         new_status: newStatus,
-        ...(reason ? { reason } : {}),
-        ...(action === 'modify_approve' ? { new_start_time: start_time, new_unit_number: unit_number } : {}),
+        ...(effectiveReason ? { reason: effectiveReason } : {}),
+        ...(action === 'modify_approve' ? { new_start_time: effectiveStartTime, new_unit_number: effectiveUnitNumber } : {}),
       },
     })
 
@@ -139,39 +153,44 @@ export async function PUT(request: NextRequest) {
         let emailSubject: string
         let notificationType: string
 
+        const clinicAddress = '〒921-8148 石川県金沢市額新保2-272番地'
+        const emailFooter = `\n\n金澤オーラルケアクリニック\n${clinicAddress}${clinicPhone ? `\nTEL: ${clinicPhone}` : ''}`
+
         if (action === 'approve') {
           const dateFormatted = formatDateJP(appointment.start_time)
           const time = formatTime(appointment.start_time)
 
           if (patient.preferred_notification === 'line' && patient.line_user_id) {
-            message = `🦷 金澤オーラルケアクリニック\n\nご予約が確定しました。\n\n📅 ${dateFormatted} ${time}〜\n📋 ${displayName}（${durationMinutes}分）\n\n▼ 予約の確認\n${confirmUrl}\n\n※変更・キャンセルは前日18:00まで`
+            message = `🦷 金澤オーラルケアクリニック\n\nご予約が確定しました。\n\n📅 ${dateFormatted} ${time}〜\n📋 ${displayName}（${durationMinutes}分）\n\n▼ 予約の確認\n${confirmUrl}\n\nお会いできることを楽しみにしております。`
           } else {
-            message = `${patientName}様\n\nご予約が確定いたしました。\n\n■ ご予約内容\n日時: ${dateFormatted} ${time}〜\n内容: ${displayName}（${durationMinutes}分）\n\n■ 予約の確認・変更\n${confirmUrl}\n\n※ 変更・キャンセルは前日18:00まで${clinicPhone ? `\n※ お電話: ${clinicPhone}` : ''}\n\n金澤オーラルケアクリニック`
+            message = `${patientName}様\n\nご予約が確定しましたのでお知らせいたします。\n\n■ ご予約内容\n日時: ${dateFormatted} ${time}〜\n内容: ${displayName}（${durationMinutes}分）\n\n■ 予約の確認・変更\n${confirmUrl}\n\n※ 変更・キャンセルは前日18:00まで${emailFooter}`
           }
           emailSubject = '【金澤オーラルケアクリニック】ご予約確定のお知らせ'
           notificationType = 'booking_approved'
 
         } else if (action === 'reject') {
-          const reasonText = reason ? `\n理由: ${reason}` : ''
-          const phoneText = clinicPhone ? `\nお電話: ${clinicPhone}` : ''
+          const reasonText = effectiveReason ? `\n${effectiveReason}` : ''
+          const phoneText = clinicPhone ? `\nTEL: ${clinicPhone}` : ''
+          const origDateFormatted = formatDateJP(appointment.start_time)
+          const origTime = formatTime(appointment.start_time)
 
           if (patient.preferred_notification === 'line' && patient.line_user_id) {
-            message = `🦷 金澤オーラルケアクリニック\n\n申し訳ございませんが、ご希望の日時でのご予約をお受けすることができませんでした。${reasonText}\n\nお手数ですが、別の日時でお申し込みいただくか、お電話にてご予約ください。${phoneText}`
+            message = `🦷 金澤オーラルケアクリニック\n\nご希望の日時でのご予約が承れませんでした。\n\nご希望日時: ${origDateFormatted} ${origTime}〜${reasonText ? `\n理由: ${reasonText}` : ''}\n\n恐れ入りますが、お電話にてご予約をお願いいたします。${phoneText}`
           } else {
-            message = `${patientName}様\n\n申し訳ございませんが、ご希望の日時でのご予約をお受けすることができませんでした。${reasonText}\n\nお手数ですが、別の日時でお申し込みいただくか、お電話にてご予約ください。${phoneText}\n\n金澤オーラルケアクリニック`
+            message = `${patientName}様\n\nご希望の日時でのご予約が承れませんでした。\n\nご希望日時: ${origDateFormatted} ${origTime}〜${reasonText ? `\n理由: ${reasonText}` : ''}\n\n恐れ入りますが、お電話にてご予約をお願いいたします。${phoneText}${emailFooter}`
           }
           emailSubject = '【金澤オーラルケアクリニック】ご予約リクエストについて'
           notificationType = 'booking_rejected'
 
         } else {
           // modify_approve
-          const dateFormatted = formatDateJP(start_time)
-          const time = formatTime(start_time)
+          const dateFormatted = formatDateJP(effectiveStartTime)
+          const time = formatTime(effectiveStartTime)
 
           if (patient.preferred_notification === 'line' && patient.line_user_id) {
-            message = `🦷 金澤オーラルケアクリニック\n\n日時を変更の上、ご予約が確定しました。\n\n📅 ${dateFormatted} ${time}〜\n📋 ${displayName}（${durationMinutes}分）\n\n▼ 予約の確認\n${confirmUrl}\n\n※変更・キャンセルは前日18:00まで`
+            message = `🦷 金澤オーラルケアクリニック\n\n日時を変更の上、ご予約を確定しました。\n\n📅 ${dateFormatted} ${time}〜\n📋 ${displayName}（${durationMinutes}分）\n\n▼ 予約の確認\n${confirmUrl}`
           } else {
-            message = `${patientName}様\n\n日時を変更の上、ご予約が確定いたしました。\n\n■ ご予約内容\n日時: ${dateFormatted} ${time}〜\n内容: ${displayName}（${durationMinutes}分）\n\n■ 予約の確認・変更\n${confirmUrl}\n\n※ 変更・キャンセルは前日18:00まで${clinicPhone ? `\n※ お電話: ${clinicPhone}` : ''}\n\n金澤オーラルケアクリニック`
+            message = `${patientName}様\n\n日時を変更の上、ご予約が確定しましたのでお知らせいたします。\n\n■ ご予約内容\n日時: ${dateFormatted} ${time}〜\n内容: ${displayName}（${durationMinutes}分）\n\n■ 予約の確認・変更\n${confirmUrl}\n\n※ 変更・キャンセルは前日18:00まで${emailFooter}`
           }
           emailSubject = '【金澤オーラルケアクリニック】ご予約確定のお知らせ（日時変更）'
           notificationType = 'booking_modified_approved'

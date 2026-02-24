@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       id, patient_id, unit_number, staff_id, start_time, duration_minutes,
       appointment_type, status, memo, lab_order_id, booking_type_id,
       web_booking_status, booking_token, is_deleted, created_at, updated_at,
-      patient:patients!patient_id(id, chart_number, name, name_kana, is_vip, caution_level, is_infection_alert),
+      patient:patients!patient_id(id, chart_number, name, name_kana, phone, is_vip, caution_level, is_infection_alert),
       staff:users!staff_id(id, name),
       lab_order:lab_orders!left(id, status, item_type, tooth_info, due_date, set_date, lab:labs!left(id, name)),
       booking_type:booking_types!left(id, display_name, internal_name, color)

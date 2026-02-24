@@ -16,6 +16,7 @@ type PendingAppointment = AppointmentWithRelations & {
     chart_number: string
     name: string
     name_kana: string | null
+    phone: string | null
     is_vip: boolean
     caution_level: number
     is_infection_alert: boolean
@@ -257,6 +258,11 @@ export default function PendingAppointmentsPage() {
                         <span className="font-medium text-gray-800">
                           {patient?.name || '不明'}
                         </span>
+                        {patient?.phone && (
+                          <span className="text-xs text-gray-500">
+                            Tel: {patient.phone}
+                          </span>
+                        )}
                         {patient?.chart_number && (
                           <span className="text-xs text-gray-400">{patient.chart_number}</span>
                         )}

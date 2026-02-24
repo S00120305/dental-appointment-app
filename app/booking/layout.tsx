@@ -56,7 +56,7 @@ export default function BookingLayout({
             KANAZAWA ORAL CARE CLINIC
           </p>
           <div className="mt-3 space-y-1 text-xs" style={{ color: '#666666' }}>
-            <p>〒920-0024 石川県金沢市西念3丁目1-32</p>
+            <p>〒921-8148 石川県金沢市額新保2-272番地</p>
             <p>TEL: 076-256-5566</p>
             <p>診療時間: 9:00〜12:30 / 14:00〜18:00（日曜・祝日休診）</p>
           </div>
