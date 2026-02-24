@@ -2,6 +2,7 @@ import type { AppointmentStatus } from '@/lib/supabase/types'
 
 // ステータス表示ラベル（内部値 → 画面表示）
 export const STATUS_LABELS: Record<AppointmentStatus, string> = {
+  pending: '承認待ち',
   scheduled: '未来院',
   checked_in: '受付済み',
   completed: '治療済み',
@@ -11,6 +12,7 @@ export const STATUS_LABELS: Record<AppointmentStatus, string> = {
 
 // ステータス別の背景色（カレンダーイベント用）
 export const STATUS_BG: Record<string, string> = {
+  pending: '#fef3c7',     // 黄（承認待ち）
   scheduled: '#e5e7eb',   // グレー
   checked_in: '#dbeafe',  // 青
   completed: '#f3f4f6',   // 薄グレー
@@ -20,6 +22,7 @@ export const STATUS_BG: Record<string, string> = {
 
 // ステータス別のテキスト色（カレンダーイベント用）
 export const STATUS_TEXT: Record<string, string> = {
+  pending: '#d97706',
   scheduled: '#374151',
   checked_in: '#1d4ed8',
   completed: '#9ca3af',
@@ -29,6 +32,7 @@ export const STATUS_TEXT: Record<string, string> = {
 
 // ステータス別の Tailwind bg クラス（StatusBadge 用）
 export const STATUS_BG_CLASS: Record<string, string> = {
+  pending: 'bg-amber-100 text-amber-700',
   scheduled: 'bg-gray-200 text-gray-700',
   checked_in: 'bg-blue-100 text-blue-800',
   completed: 'bg-gray-100 text-gray-400',
@@ -38,6 +42,7 @@ export const STATUS_BG_CLASS: Record<string, string> = {
 
 // ステータスアイコン（カレンダー予約ブロック用）
 export const STATUS_ICON: Record<AppointmentStatus, string> = {
+  pending: '\u23F3',         // ⏳
   scheduled: '\u25CB',      // ○
   checked_in: '\u2705',     // ✅
   completed: '\u2705\u2705', // ✅✅
@@ -47,6 +52,7 @@ export const STATUS_ICON: Record<AppointmentStatus, string> = {
 
 // ステータスアイコンの色（カレンダー予約ブロック用）
 export const STATUS_ICON_COLOR: Record<AppointmentStatus, string> = {
+  pending: '#f59e0b',    // オレンジ
   scheduled: '#9ca3af',  // グレー
   checked_in: '#2563eb', // 青
   completed: '#16a34a',  // 緑
@@ -56,6 +62,7 @@ export const STATUS_ICON_COLOR: Record<AppointmentStatus, string> = {
 
 // ステータス別左ボーダー色（カレンダー予約ブロック用）
 export const STATUS_BORDER_COLOR: Record<string, string> = {
+  pending: '#f59e0b',    // オレンジ（承認待ち）
   scheduled: '#d1d5db',  // グレー
   checked_in: '#3b82f6', // 青
   completed: '#22c55e',  // 緑
@@ -67,6 +74,7 @@ export const STATUS_BORDER_COLOR: Record<string, string> = {
 export const STATUS_FLOW: AppointmentStatus[] = ['scheduled', 'checked_in', 'completed']
 
 export function getNextStatus(current: AppointmentStatus): AppointmentStatus | null {
+  if (current === 'pending') return 'scheduled'
   if (current === 'cancelled' || current === 'no_show') return null
   const idx = STATUS_FLOW.indexOf(current)
   if (idx === -1 || idx === STATUS_FLOW.length - 1) return null
@@ -75,6 +83,7 @@ export function getNextStatus(current: AppointmentStatus): AppointmentStatus | n
 
 export function getPrevStatus(current: AppointmentStatus): AppointmentStatus | null {
   if (current === 'cancelled' || current === 'no_show') return 'scheduled'
+  if (current === 'pending') return null
   const idx = STATUS_FLOW.indexOf(current)
   if (idx <= 0) return null
   return STATUS_FLOW[idx - 1]

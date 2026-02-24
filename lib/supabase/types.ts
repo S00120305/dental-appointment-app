@@ -24,7 +24,7 @@ export type Patient = {
   updated_at: string
 }
 
-export type AppointmentStatus = 'scheduled' | 'checked_in' | 'completed' | 'cancelled' | 'no_show'
+export type AppointmentStatus = 'pending' | 'scheduled' | 'checked_in' | 'completed' | 'cancelled' | 'no_show'
 
 export type Appointment = {
   id: string
@@ -39,6 +39,7 @@ export type Appointment = {
   booking_type_id: string | null
   web_booking_status: string | null
   booking_token: string | null
+  booking_source: string
   memo: string | null
   is_deleted: boolean
   created_at: string
