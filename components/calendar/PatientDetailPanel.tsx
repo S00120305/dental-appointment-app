@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import TokenCreateModal from './TokenCreateModal'
 import StatusBadge from './StatusBadge'
 import LabOrderBadge from './LabOrderBadge'
 import { getPatientTagIcons } from '@/lib/constants/patient-tags'
@@ -103,6 +104,7 @@ export default function PatientDetailPanel({
   const [apptMemoSaving, setApptMemoSaving] = useState(false)
 
   const [statusChanging, setStatusChanging] = useState(false)
+  const [tokenModalOpen, setTokenModalOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
 
   const patientId = appointment.patient_id
@@ -486,6 +488,12 @@ export default function PatientDetailPanel({
                   予約変更
                 </button>
               </div>
+              <button
+                onClick={() => setTokenModalOpen(true)}
+                className="w-full min-h-[44px] rounded-md border border-amber-400 bg-white px-3 text-sm font-medium text-amber-700 hover:bg-amber-50"
+              >
+                次回予約案内を作成
+              </button>
             </div>
 
             {/* Right Column (2/5) */}
@@ -576,6 +584,15 @@ export default function PatientDetailPanel({
           </div>
         </div>
       </div>
+
+      {/* Token Create Modal */}
+      <TokenCreateModal
+        isOpen={tokenModalOpen}
+        onClose={() => setTokenModalOpen(false)}
+        patientId={patientId}
+        patientName={patient?.name || appointment.patient?.name || ''}
+        chartNumber={patient?.chart_number || appointment.patient?.chart_number || ''}
+      />
     </div>
   )
 }

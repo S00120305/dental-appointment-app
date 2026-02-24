@@ -30,6 +30,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'month の形式は YYYY-MM です' }, { status: 400 })
     }
 
+    // source=token の場合はトークン経由（is_web_bookable チェックをスキップ）
+    const source = searchParams.get('source')
+
     // 予約種別を取得
     const { data: bookingType, error: typeError } = await supabase
       .from('booking_types')
@@ -40,7 +43,10 @@ export async function GET(request: NextRequest) {
     if (typeError || !bookingType) {
       return NextResponse.json({ error: '予約種別が見つかりません' }, { status: 404 })
     }
-    if (!bookingType.is_web_bookable || !bookingType.is_active) {
+    if (!bookingType.is_active) {
+      return NextResponse.json({ error: 'この予約種別は現在利用できません' }, { status: 400 })
+    }
+    if (source !== 'token' && !bookingType.is_web_bookable) {
       return NextResponse.json({ error: 'この予約種別はWeb予約できません' }, { status: 400 })
     }
 

@@ -128,12 +128,28 @@ export async function POST(request: NextRequest) {
       else failed++
     }
 
+    // 期限切れトークンを expired に更新
+    let expiredTokens = 0
+    try {
+      const { data: expiredData } = await supabase
+        .from('booking_tokens')
+        .update({ status: 'expired', updated_at: new Date().toISOString() })
+        .eq('status', 'unused')
+        .lt('expires_at', new Date().toISOString())
+        .select('id')
+
+      expiredTokens = expiredData?.length || 0
+    } catch (e) {
+      console.error('トークン期限切れ更新エラー:', e)
+    }
+
     return NextResponse.json({
-      message: `リマインド通知完了: ${sent}件送信, ${skipped}件スキップ, ${failed}件失敗`,
+      message: `リマインド通知完了: ${sent}件送信, ${skipped}件スキップ, ${failed}件失敗, トークン期限切れ: ${expiredTokens}件`,
       sent,
       skipped,
       failed,
       total: appointments.length,
+      expired_tokens: expiredTokens,
     })
   } catch (e) {
     console.error('リマインド通知エラー:', e)
