@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import type { EventContentArg } from '@fullcalendar/core'
 import { STATUS_BG, STATUS_TEXT, STATUS_ICON, STATUS_ICON_COLOR, STATUS_BORDER_COLOR } from '@/lib/constants/appointment'
 import { getPatientTagIconString } from '@/lib/constants/patient-tags'
@@ -46,7 +47,7 @@ type AppointmentBlockProps = {
   onStatusClick?: (appointmentId: string) => void
 }
 
-export default function AppointmentBlock({ eventInfo, onStatusClick }: AppointmentBlockProps) {
+const AppointmentBlock = memo(function AppointmentBlock({ eventInfo, onStatusClick }: AppointmentBlockProps) {
   const { extendedProps } = eventInfo.event
   const patientName = extendedProps.patient_name || ''
   const appointmentType = extendedProps.appointment_type || ''
@@ -117,4 +118,6 @@ export default function AppointmentBlock({ eventInfo, onStatusClick }: Appointme
       )}
     </div>
   )
-}
+})
+
+export default AppointmentBlock

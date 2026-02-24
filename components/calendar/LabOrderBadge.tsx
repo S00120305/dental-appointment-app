@@ -1,5 +1,7 @@
 'use client'
 
+import { memo } from 'react'
+
 type LabOrderBadgeProps = {
   labOrderStatus: string
   size?: 'sm' | 'md'
@@ -17,7 +19,7 @@ export function getLabStatusConfig(status: string) {
   return LAB_STATUS_CONFIG[status] || LAB_STATUS_CONFIG['製作中']
 }
 
-export default function LabOrderBadge({ labOrderStatus, size = 'sm' }: LabOrderBadgeProps) {
+const LabOrderBadge = memo(function LabOrderBadge({ labOrderStatus, size = 'sm' }: LabOrderBadgeProps) {
   const config = getLabStatusConfig(labOrderStatus)
   const textSize = size === 'sm' ? 'text-[9px]' : 'text-xs'
 
@@ -30,4 +32,6 @@ export default function LabOrderBadge({ labOrderStatus, size = 'sm' }: LabOrderB
       <span className="truncate">{config.label}</span>
     </span>
   )
-}
+})
+
+export default LabOrderBadge

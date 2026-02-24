@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('blocked_slots')
-      .select('*')
+      .select('id, unit_number, start_time, end_time, reason, is_recurring, created_by, is_deleted, created_at, updated_at')
       .eq('is_deleted', false)
       .order('start_time', { ascending: true })
 

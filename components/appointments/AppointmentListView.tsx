@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { memo, useCallback, useMemo } from 'react'
 import StatusBadge from '@/components/calendar/StatusBadge'
 import LabOrderBadge from '@/components/calendar/LabOrderBadge'
 import { getPatientTagIcons } from '@/lib/constants/patient-tags'
@@ -19,7 +19,7 @@ type ListItem =
   | { type: 'appointment'; data: AppointmentWithRelations; time: Date }
   | { type: 'block'; data: BlockedSlot; time: Date }
 
-export default function AppointmentListView({
+const AppointmentListView = memo(function AppointmentListView({
   appointments,
   blockedSlots,
   loading,
@@ -31,7 +31,7 @@ export default function AppointmentListView({
     if (next) onStatusChange(appt.id, next)
   }, [onStatusChange])
 
-  const listItems: ListItem[] = [
+  const listItems: ListItem[] = useMemo(() => [
     ...appointments.map(a => ({
       type: 'appointment' as const,
       data: a,
@@ -42,7 +42,7 @@ export default function AppointmentListView({
       data: b,
       time: new Date(b.start_time),
     })),
-  ].sort((a, b) => a.time.getTime() - b.time.getTime())
+  ].sort((a, b) => a.time.getTime() - b.time.getTime()), [appointments, blockedSlots])
 
   if (loading) {
     return (
@@ -164,4 +164,6 @@ export default function AppointmentListView({
       </table>
     </div>
   )
-}
+})
+
+export default AppointmentListView

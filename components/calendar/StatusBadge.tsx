@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { STATUS_BG_CLASS, STATUS_LABELS } from '@/lib/constants/appointment'
 
 type StatusBadgeProps = {
@@ -13,7 +14,7 @@ const SIZE_CLASSES = {
   lg: 'text-sm px-3 py-1.5 font-medium',
 }
 
-export default function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
+const StatusBadge = memo(function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
   const colorClass = STATUS_BG_CLASS[status] || 'bg-gray-100 text-gray-600'
   const sizeClass = SIZE_CLASSES[size]
   const label = STATUS_LABELS[status as keyof typeof STATUS_LABELS] || status
@@ -23,4 +24,6 @@ export default function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
       {label}
     </span>
   )
-}
+})
+
+export default StatusBadge

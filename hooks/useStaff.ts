@@ -10,6 +10,7 @@ export type StaffMember = {
 export function useStaff() {
   const { data, error, isLoading } = useSWR('/api/users', fetcher, {
     revalidateOnFocus: false,
+    revalidateOnReconnect: false,
     dedupingInterval: 60000,
   })
 

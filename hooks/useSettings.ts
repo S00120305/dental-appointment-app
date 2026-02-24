@@ -41,6 +41,7 @@ export type BusinessHours = {
 export function useSettings() {
   const { data, error, isLoading, mutate } = useSWR('/api/settings', fetcher, {
     revalidateOnFocus: false,
+    revalidateOnReconnect: false,
     dedupingInterval: 60000,
   })
 
