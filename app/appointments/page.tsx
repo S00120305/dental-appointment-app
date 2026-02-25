@@ -17,6 +17,7 @@ import { useAppointments } from '@/hooks/useAppointments'
 import { useSettings } from '@/hooks/useSettings'
 import { useStaff } from '@/hooks/useStaff'
 import { useHolidays } from '@/hooks/useHolidays'
+import { useStaffHolidays, type StaffHoliday } from '@/hooks/useStaffHolidays'
 import { getNextStatus } from '@/lib/constants/appointment'
 import type { AppointmentWithRelations, BlockedSlot } from '@/lib/supabase/types'
 import type { CalendarResource } from '@/components/calendar/CalendarView'
@@ -67,6 +68,21 @@ export default function AppointmentsPage() {
   const [activeView, setActiveView] = useState<ActiveView>('calendar')
   const [selectedDate, setSelectedDate] = useState(formatDateLocal(new Date()))
   const [calendarViewType, setCalendarViewType] = useState<CalendarViewType>('resourceTimeGridDay')
+
+  // スタッフ休日: 選択日の月を取得
+  const selectedDateObj = useMemo(() => new Date(selectedDate + 'T00:00:00'), [selectedDate])
+  const { staffHolidays } = useStaffHolidays(selectedDateObj.getFullYear(), selectedDateObj.getMonth() + 1)
+
+  // スタッフ休日マップ: dateStr → { userId → StaffHoliday }
+  const getStaffHolidayMap = useCallback((dateStr: string): Record<string, StaffHoliday> => {
+    const map: Record<string, StaffHoliday> = {}
+    for (const h of staffHolidays) {
+      if (h.holiday_date === dateStr) {
+        map[h.user_id] = h
+      }
+    }
+    return map
+  }, [staffHolidays])
 
   // Appointment Modal
   const [modalOpen, setModalOpen] = useState(false)
@@ -634,6 +650,7 @@ export default function AppointmentsPage() {
         defaultDuration={defaultModalDuration}
         isHoliday={isHoliday}
         getHolidayLabel={getHolidayLabel}
+        getStaffHolidayMap={getStaffHolidayMap}
       />
 
       {/* 患者詳細パネル */}

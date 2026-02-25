@@ -7,6 +7,7 @@ const settingsItems = [
   { href: '/settings/clinic-info', label: '医院情報', description: '医院電話番号など基本情報の設定' },
   { href: '/settings/staff', label: 'スタッフ管理', description: 'スタッフの追加・編集・PIN管理' },
   { href: '/settings/holidays', label: '休診日設定', description: '定休曜日・祝日・特定休診日の管理' },
+  { href: '/settings/staff-holidays', label: 'スタッフ休日管理', description: 'スタッフごとの有給・公休・半休の管理' },
   { href: '/settings/units', label: '診察室設定', description: '表示する診察室数の設定' },
   { href: '/settings/booking-types', label: '予約種別管理', description: '予約種別の追加・編集・Web予約設定' },
   { href: '/settings/web-booking', label: 'Web予約設定', description: '予約可能期間・締切・キャンセル期限の設定' },

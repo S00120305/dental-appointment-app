@@ -10,6 +10,11 @@ import { useToast } from '@/components/ui/Toast'
 import { getNextStatus, getPrevStatus, STATUS_TEXT, STATUS_LABELS } from '@/lib/constants/appointment'
 import type { AppointmentStatus, AppointmentWithRelations, BookingType, LabOrderWithLab, Patient, Staff } from '@/lib/supabase/types'
 
+type StaffHolidayInfo = {
+  holiday_type: string
+  label: string | null
+}
+
 type AppointmentModalProps = {
   isOpen: boolean
   onClose: () => void
@@ -23,6 +28,7 @@ type AppointmentModalProps = {
   defaultDuration?: number // minutes
   isHoliday?: (dateStr: string) => boolean
   getHolidayLabel?: (dateStr: string) => string | null
+  getStaffHolidayMap?: (dateStr: string) => Record<string, StaffHolidayInfo>
 }
 
 type FormData = {
@@ -70,6 +76,7 @@ export default function AppointmentModal({
   defaultDuration,
   isHoliday,
   getHolidayLabel,
+  getStaffHolidayMap,
 }: AppointmentModalProps) {
   const { showToast } = useToast()
   const isEdit = !!appointment
@@ -565,12 +572,29 @@ export default function AppointmentModal({
                 }`}
               >
                 <option value="">選択してください</option>
-                {staffList.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
+                {staffList.map((s) => {
+                  const staffHolidayMap = form.date && getStaffHolidayMap ? getStaffHolidayMap(form.date) : {}
+                  const isOff = !!staffHolidayMap[s.id]
+                  return (
+                    <option key={s.id} value={s.id}>
+                      {s.name}{isOff ? ' [休み]' : ''}
+                    </option>
+                  )
+                })}
               </select>
+              {form.staff_id && form.date && getStaffHolidayMap && (() => {
+                const map = getStaffHolidayMap(form.date)
+                const info = map[form.staff_id]
+                if (!info) return null
+                const TYPE_LABELS: Record<string, string> = {
+                  paid_leave: '有給', day_off: '公休', half_day_am: '午前休', half_day_pm: '午後休', other: 'その他',
+                }
+                return (
+                  <div className="mt-1 rounded-md bg-amber-50 border border-amber-200 px-3 py-1.5 text-sm text-amber-700">
+                    {'\u26A0'} このスタッフは{TYPE_LABELS[info.holiday_type] || '休み'}です
+                  </div>
+                )
+              })()}
               {errors.staff_id && <p className="mt-1 text-sm text-red-500">{errors.staff_id}</p>}
             </div>
           </div>
