@@ -33,6 +33,7 @@ interface CalendarViewProps {
   businessHours: BusinessHours
   staffColors: Record<string, string>
   staffList: { id: string; name: string }[]
+  holidayDates: Record<string, string> // dateStr → label
   initialDate: string
   viewType: 'resourceTimeGridDay' | 'resourceTimeGridWeek'
   onDateSelect: (start: Date, end: Date, resourceId: string) => void
@@ -50,6 +51,7 @@ export default function CalendarView({
   businessHours,
   staffColors,
   staffList,
+  holidayDates,
   initialDate,
   viewType,
   onDateSelect,
@@ -136,8 +138,21 @@ export default function CalendarView({
       classNames: ['lunch-break'],
     }))
 
-    return [...appointmentEvents, ...blockedEvents, ...lunchEvents]
-  }, [appointments, blockedSlots, resources, businessHours, initialDate, staffColors, staffIndexMap])
+    // 休診日背景イベント（全リソースに全日背景を追加）
+    const holidayEvents = Object.keys(holidayDates).flatMap((dateStr) =>
+      resources.map((r) => ({
+        id: `holiday-${dateStr}-${r.id}`,
+        resourceId: r.id,
+        start: `${dateStr}T${businessHours.start}:00`,
+        end: `${dateStr}T${businessHours.end}:00`,
+        display: 'background' as const,
+        backgroundColor: '#e5e7eb',
+        classNames: ['holiday-bg'],
+      }))
+    )
+
+    return [...appointmentEvents, ...blockedEvents, ...lunchEvents, ...holidayEvents]
+  }, [appointments, blockedSlots, resources, businessHours, initialDate, staffColors, staffIndexMap, holidayDates])
 
   // Sync view type
   useEffect(() => {

@@ -16,6 +16,7 @@ import Skeleton from '@/components/ui/Skeleton'
 import { useAppointments } from '@/hooks/useAppointments'
 import { useSettings } from '@/hooks/useSettings'
 import { useStaff } from '@/hooks/useStaff'
+import { useHolidays } from '@/hooks/useHolidays'
 import { getNextStatus } from '@/lib/constants/appointment'
 import type { AppointmentWithRelations, BlockedSlot } from '@/lib/supabase/types'
 import type { CalendarResource } from '@/components/calendar/CalendarView'
@@ -51,6 +52,8 @@ export default function AppointmentsPage() {
   const staffColors = useMemo(() => {
     return { ...settingsStaffColors, ...userStaffColors }
   }, [settingsStaffColors, userStaffColors])
+
+  const { holidayDateMap, weeklyClosedDays, isHoliday, getHolidayLabel } = useHolidays()
 
   // 承認待ち件数
   const { data: pendingData } = useSWR<{ count: number }>(
@@ -125,6 +128,29 @@ export default function AppointmentsPage() {
       title: `診察室${n}`,
     }))
   }, [visibleUnits, filteredUnit])
+
+  // Compute holiday dates for the visible calendar range
+  const calendarHolidayDates = useMemo(() => {
+    const result: Record<string, string> = {}
+    // Determine date range: day view = single day, week view = 7 days
+    const start = new Date(selectedDate + 'T00:00:00')
+    const days = calendarViewType === 'resourceTimeGridWeek' ? 7 : 1
+    for (let i = 0; i < days; i++) {
+      const d = new Date(start)
+      d.setDate(d.getDate() + i)
+      const dateStr = formatDateLocal(d)
+      // Check specific/national holidays
+      if (holidayDateMap[dateStr]) {
+        result[dateStr] = holidayDateMap[dateStr]
+      }
+      // Check weekly closed days
+      else if (weeklyClosedDays.has(d.getDay())) {
+        const DOW = ['日', '月', '火', '水', '木', '金', '土']
+        result[dateStr] = `${DOW[d.getDay()]}曜定休`
+      }
+    }
+    return result
+  }, [selectedDate, calendarViewType, holidayDateMap, weeklyClosedDays])
 
   // Date range for calendar fetching (use ref to avoid re-render loops)
   const fetchRangeRef = useRef<string>('')
@@ -407,6 +433,11 @@ export default function AppointmentsPage() {
           {/* 日付表示 */}
           <span className="text-sm font-medium text-gray-700">
             {dateObj.getFullYear()}/{dateObj.getMonth() + 1}/{dateObj.getDate()}（{dayOfWeek}）
+            {isHoliday(selectedDate) && (
+              <span className="ml-1 inline-flex items-center rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700">
+                休診
+              </span>
+            )}
           </span>
 
           {/* ビュー切替: リスト / カレンダー */}
@@ -545,6 +576,7 @@ export default function AppointmentsPage() {
                   businessHours={businessHours}
                   staffColors={staffColors}
                   staffList={staffList}
+                  holidayDates={calendarHolidayDates}
                   initialDate={selectedDate}
                   viewType={calendarViewType}
                   onDateSelect={handleDateSelect}
@@ -600,6 +632,8 @@ export default function AppointmentsPage() {
         defaultUnitNumber={defaultModalUnit}
         defaultStartTime={defaultModalTime}
         defaultDuration={defaultModalDuration}
+        isHoliday={isHoliday}
+        getHolidayLabel={getHolidayLabel}
       />
 
       {/* 患者詳細パネル */}

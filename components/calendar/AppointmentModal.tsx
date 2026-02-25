@@ -21,6 +21,8 @@ type AppointmentModalProps = {
   defaultUnitNumber?: number
   defaultStartTime?: string // HH:mm
   defaultDuration?: number // minutes
+  isHoliday?: (dateStr: string) => boolean
+  getHolidayLabel?: (dateStr: string) => string | null
 }
 
 type FormData = {
@@ -66,6 +68,8 @@ export default function AppointmentModal({
   defaultUnitNumber,
   defaultStartTime,
   defaultDuration,
+  isHoliday,
+  getHolidayLabel,
 }: AppointmentModalProps) {
   const { showToast } = useToast()
   const isEdit = !!appointment
@@ -585,6 +589,11 @@ export default function AppointmentModal({
               }`}
             />
             {errors.date && <p className="mt-1 text-sm text-red-500">{errors.date}</p>}
+            {form.date && isHoliday?.(form.date) && (
+              <div className="mt-1 rounded-md bg-amber-50 border border-amber-200 px-3 py-1.5 text-sm text-amber-700">
+                {'\u26A0'} この日は休診日です（{getHolidayLabel?.(form.date) || '休診日'}）
+              </div>
+            )}
           </div>
 
           {/* 開始時刻 + 所要時間（横並び） */}

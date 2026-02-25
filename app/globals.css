@@ -93,6 +93,12 @@ body {
   opacity: 0.7;
 }
 
+/* 休診日の背景 */
+.fc-event.holiday-bg {
+  opacity: 0.6;
+  cursor: default;
+}
+
 /* ブロック枠（予約不可時間帯） */
 .blocked-slot-event {
   background-color: #D1D5DB !important;
