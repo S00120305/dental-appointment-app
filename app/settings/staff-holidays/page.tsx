@@ -183,14 +183,14 @@ export default function StaffHolidaysPage() {
                   onClick={() => { setSelectedStaffId(s.id); setPopoverDate(null) }}
                   className={`min-h-[44px] rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                     selectedStaffId === s.id
-                      ? 'bg-blue-600 text-white shadow-sm'
+                      ? 'bg-emerald-600 text-white shadow-sm'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
                   {s.name}
                   {summary[s.id] && (
                     <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-xs ${
-                      selectedStaffId === s.id ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'
+                      selectedStaffId === s.id ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-600'
                     }`}>
                       {summary[s.id].total || 0}
                     </span>
@@ -298,7 +298,7 @@ export default function StaffHolidaysPage() {
                         ['--tw-ring-color' as string]: HOLIDAY_TYPE_COLORS[holiday.holiday_type],
                       } : undefined}
                     >
-                      <span className={isToday ? 'rounded-full bg-blue-600 text-white px-1.5 py-0.5 text-xs' : ''}>
+                      <span className={isToday ? 'rounded-full bg-emerald-600 text-white px-1.5 py-0.5 text-xs' : ''}>
                         {day}
                       </span>
                       {holiday && (

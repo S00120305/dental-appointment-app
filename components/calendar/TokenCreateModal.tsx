@@ -140,7 +140,7 @@ export default function TokenCreateModal({ isOpen, onClose, patientId, patientNa
               </div>
               <div>
                 <span className="text-xs text-gray-500">予約ページ</span>
-                <p className="break-all text-xs text-blue-600">{result.url}</p>
+                <p className="break-all text-xs text-emerald-600">{result.url}</p>
               </div>
             </div>
 
@@ -182,7 +182,7 @@ export default function TokenCreateModal({ isOpen, onClose, patientId, patientNa
                 <select
                   value={bookingTypeId}
                   onChange={(e) => setBookingTypeId(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
                 >
                   <option value="">選択してください</option>
                   {bookingTypes.map(t => (
@@ -197,7 +197,7 @@ export default function TokenCreateModal({ isOpen, onClose, patientId, patientNa
                 <select
                   value={durationMinutes}
                   onChange={(e) => setDurationMinutes(parseInt(e.target.value))}
-                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
                 >
                   {durationOptions.map(d => (
                     <option key={d} value={d}>{d}分</option>
@@ -211,7 +211,7 @@ export default function TokenCreateModal({ isOpen, onClose, patientId, patientNa
                 <select
                   value={staffId}
                   onChange={(e) => setStaffId(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
                 >
                   <option value="">指定なし</option>
                   {staffList.map(s => (
@@ -226,7 +226,7 @@ export default function TokenCreateModal({ isOpen, onClose, patientId, patientNa
                 <select
                   value={expiresDays}
                   onChange={(e) => setExpiresDays(parseInt(e.target.value))}
-                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
                 >
                   <option value={7}>7日間</option>
                   <option value={14}>14日間</option>
@@ -242,7 +242,7 @@ export default function TokenCreateModal({ isOpen, onClose, patientId, patientNa
                   value={memo}
                   onChange={(e) => setMemo(e.target.value)}
                   placeholder="例: 次回は左上のクラウン"
-                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
                 />
               </div>
 

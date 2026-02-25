@@ -45,9 +45,9 @@ export default function TodaySummary({
             <div className="text-lg font-bold text-gray-500">{scheduledCount}</div>
             <div className="text-xs text-gray-400">未来院</div>
           </div>
-          <div className="rounded-md bg-blue-50 px-3 py-2 text-center">
-            <div className="text-lg font-bold text-blue-600">{checkedInCount}</div>
-            <div className="text-xs text-blue-500">受付済み</div>
+          <div className="rounded-md bg-emerald-50 px-3 py-2 text-center">
+            <div className="text-lg font-bold text-emerald-600">{checkedInCount}</div>
+            <div className="text-xs text-emerald-500">受付済み</div>
           </div>
           <div className="rounded-md bg-gray-50 px-3 py-2 text-center">
             <div className="text-lg font-bold text-gray-400">{completedCount}</div>
@@ -80,10 +80,10 @@ export default function TodaySummary({
 
         {/* 次の予約 */}
         {nextAppointment && (
-          <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2">
-            <div className="text-xs text-blue-600 font-medium">次の予約</div>
-            <div className="text-sm font-bold text-blue-900">{nextAppointment.patient_name}</div>
-            <div className="text-xs text-blue-700">
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2">
+            <div className="text-xs text-emerald-600 font-medium">次の予約</div>
+            <div className="text-sm font-bold text-emerald-900">{nextAppointment.patient_name}</div>
+            <div className="text-xs text-emerald-700">
               {new Date(nextAppointment.start_time).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
               {' '}診察室{nextAppointment.unit_number}
             </div>

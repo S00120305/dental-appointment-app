@@ -73,7 +73,7 @@ export default function PatientsPage() {
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="カルテNo / 氏名 / フリガナで検索"
-            className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
           />
         </div>
 

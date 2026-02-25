@@ -166,7 +166,7 @@ export default function RemindersSettingsPage() {
             <button
               type="button"
               onClick={() => setSmsTemplate(DEFAULT_SMS_TEMPLATE)}
-              className="mt-1 text-xs text-blue-600 hover:underline"
+              className="mt-1 text-xs text-emerald-600 hover:underline"
             >
               デフォルトに戻す
             </button>
@@ -185,7 +185,7 @@ export default function RemindersSettingsPage() {
             <button
               type="button"
               onClick={() => setEmailTemplate(DEFAULT_EMAIL_TEMPLATE)}
-              className="mt-1 text-xs text-blue-600 hover:underline"
+              className="mt-1 text-xs text-emerald-600 hover:underline"
             >
               デフォルトに戻す
             </button>
@@ -247,10 +247,10 @@ function TemplateHelp() {
   return (
     <div className="mb-2 rounded-md bg-gray-50 p-2 text-xs text-gray-500">
       使用できる変数:
-      <span className="ml-1 font-mono text-blue-600">{'{patient_name}'}</span> 患者名 /
-      <span className="ml-1 font-mono text-blue-600">{'{date}'}</span> 予約日 /
-      <span className="ml-1 font-mono text-blue-600">{'{time}'}</span> 予約時刻 /
-      <span className="ml-1 font-mono text-blue-600">{'{type}'}</span> 予約種別
+      <span className="ml-1 font-mono text-emerald-600">{'{patient_name}'}</span> 患者名 /
+      <span className="ml-1 font-mono text-emerald-600">{'{date}'}</span> 予約日 /
+      <span className="ml-1 font-mono text-emerald-600">{'{time}'}</span> 予約時刻 /
+      <span className="ml-1 font-mono text-emerald-600">{'{type}'}</span> 予約種別
     </div>
   )
 }

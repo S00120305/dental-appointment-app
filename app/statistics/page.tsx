@@ -153,7 +153,7 @@ export default function StatisticsPage() {
               onClick={() => setPeriod(p.key as PeriodType)}
               className={`min-h-[44px] rounded-md px-3 text-sm font-medium ${
                 period === p.key
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-emerald-600 text-white'
                   : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
@@ -190,7 +190,7 @@ export default function StatisticsPage() {
               onClick={() => setActiveTab(tab.key)}
               className={`min-h-[44px] whitespace-nowrap px-4 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab.key
-                  ? 'border-blue-600 text-blue-600'
+                  ? 'border-emerald-600 text-emerald-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -228,7 +228,7 @@ function AppointmentsTab({ data }: { data: Record<string, unknown> }) {
     <div className="space-y-6">
       {/* KPI カード */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiCard title="予約数" value={d.total} unit="件" color="text-blue-600"
+        <KpiCard title="予約数" value={d.total} unit="件" color="text-emerald-600"
           change={calcChange(d.total, d.prev.total)} />
         <KpiCard title="来院数" value={d.visited} unit="件" color="text-green-600"
           change={calcChange(d.visited, d.prev.visited)} />
@@ -302,7 +302,7 @@ function UtilizationTab({ data }: { data: Record<string, unknown> }) {
     <div className="space-y-6">
       {/* KPI カード */}
       <div className="grid grid-cols-2 gap-3">
-        <KpiCard title="全体稼働率" value={`${d.overallRate}%`} color="text-blue-600"
+        <KpiCard title="全体稼働率" value={`${d.overallRate}%`} color="text-emerald-600"
           change={calcChange(d.overallRate, d.prev.overallRate)} />
         <KpiCard title="平均予約数/日" value={d.avgPerDay} unit="件"
           change={calcChange(d.avgPerDay, d.prev.avgPerDay)} />
@@ -330,7 +330,7 @@ function UtilizationTab({ data }: { data: Record<string, unknown> }) {
                     <div className="flex items-center gap-2">
                       <div className="h-2 w-20 rounded-full bg-gray-200">
                         <div
-                          className="h-2 rounded-full bg-blue-500"
+                          className="h-2 rounded-full bg-emerald-500"
                           style={{ width: `${Math.min(u.rate, 100)}%` }}
                         />
                       </div>
@@ -435,7 +435,7 @@ function PatientTypeTab({ data }: { data: Record<string, unknown> }) {
     <div className="space-y-6">
       {/* KPI カード */}
       <div className="grid grid-cols-3 gap-3">
-        <KpiCard title="新患" value={d.newPatients} unit="人" color="text-blue-600"
+        <KpiCard title="新患" value={d.newPatients} unit="人" color="text-emerald-600"
           change={calcChange(d.newPatients, d.prev.newPatients)} />
         <KpiCard title="再初診" value={d.revisit} unit="人" color="text-amber-600" />
         <KpiCard title="再診" value={d.returning} unit="人" color="text-green-600" />
@@ -482,7 +482,7 @@ function PatientTypeTab({ data }: { data: Record<string, unknown> }) {
             </div>
             <div>
               <p className="text-sm text-gray-500">新患比率</p>
-              <p className="text-2xl font-bold text-blue-600">{newRate}%</p>
+              <p className="text-2xl font-bold text-emerald-600">{newRate}%</p>
             </div>
             <div>
               <p className="text-sm text-gray-500">再初診比率</p>

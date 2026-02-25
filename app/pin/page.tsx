@@ -146,7 +146,7 @@ export default function PinPage() {
 
           {isLoadingUsers ? (
             <div className="flex justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
             </div>
           ) : users.length === 0 ? (
             <div className="rounded-xl bg-white p-8 text-center shadow-sm">
@@ -161,10 +161,10 @@ export default function PinPage() {
                 <button
                   key={user.id}
                   onClick={() => handleSelectUser(user)}
-                  className="flex h-24 items-center justify-center rounded-xl bg-white p-4 shadow-sm transition-all hover:bg-blue-50 hover:shadow-md active:bg-blue-100"
+                  className="flex h-24 items-center justify-center rounded-xl bg-white p-4 shadow-sm transition-all hover:bg-emerald-50 hover:shadow-md active:bg-emerald-100"
                 >
                   <div className="text-center">
-                    <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-lg font-bold text-blue-600">
+                    <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-lg font-bold text-emerald-600">
                       {user.name.charAt(0)}
                     </div>
                     <span className="text-sm font-medium text-gray-800">
@@ -203,7 +203,7 @@ export default function PinPage() {
 
         {/* ユーザー情報 */}
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-2xl font-bold text-blue-600">
+          <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-2xl font-bold text-emerald-600">
             {selectedUser.name.charAt(0)}
           </div>
           <h2 className="text-xl font-bold text-gray-900">{selectedUser.name}</h2>
@@ -217,7 +217,7 @@ export default function PinPage() {
               key={i}
               className={`h-4 w-4 rounded-full transition-all ${
                 i < pin.length
-                  ? 'scale-110 bg-blue-600'
+                  ? 'scale-110 bg-emerald-600'
                   : 'bg-gray-300'
               }`}
             />

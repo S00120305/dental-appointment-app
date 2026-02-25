@@ -121,7 +121,7 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
               onClick={() => setActiveTab(tab.key)}
               className={`min-h-[44px] px-4 text-sm font-medium border-b-2 -mb-px ${
                 activeTab === tab.key
-                  ? 'border-blue-600 text-blue-600'
+                  ? 'border-emerald-600 text-emerald-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -170,7 +170,7 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
             {/* 今後の予約 */}
             {futureAppointments.length > 0 && (
               <div>
-                <h3 className="mb-2 text-sm font-bold text-blue-600">今後の予約</h3>
+                <h3 className="mb-2 text-sm font-bold text-emerald-600">今後の予約</h3>
                 <div className="space-y-2">
                   {futureAppointments.map(a => (
                     <AppointmentCard key={a.id} appointment={a} highlight />
@@ -235,7 +235,7 @@ function AppointmentCard({ appointment, highlight }: { appointment: AppointmentW
 
   return (
     <div className={`rounded-lg border bg-white px-4 py-3 shadow-sm ${
-      highlight ? 'border-blue-300 bg-blue-50' : 'border-gray-200'
+      highlight ? 'border-emerald-300 bg-emerald-50' : 'border-gray-200'
     }`}>
       <div className="flex items-center justify-between gap-2">
         <div>

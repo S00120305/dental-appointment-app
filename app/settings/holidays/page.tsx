@@ -294,7 +294,7 @@ export default function HolidaysSettingsPage() {
                 key={cell.dateStr}
                 type="button"
                 onClick={() => toggleSpecificDate(cell.dateStr)}
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs transition-colors ${bgClass} ${textClass} ${isToday ? 'ring-2 ring-blue-400' : ''}`}
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs transition-colors ${bgClass} ${textClass} ${isToday ? 'ring-2 ring-emerald-400' : ''}`}
                 title={title || undefined}
               >
                 {cell.day}
@@ -376,7 +376,7 @@ export default function HolidaysSettingsPage() {
             <button
               type="button"
               onClick={() => setAddDialogOpen(true)}
-              className="min-h-[44px] rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700"
+              className="min-h-[44px] rounded-md bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700"
             >
               + 休診日を追加
             </button>
@@ -572,7 +572,7 @@ export default function HolidaysSettingsPage() {
                 type="button"
                 onClick={handleAddSpecific}
                 disabled={!addDate || addSaving}
-                className="flex-1 min-h-[44px] rounded-md bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                className="flex-1 min-h-[44px] rounded-md bg-emerald-600 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
               >
                 {addSaving ? '保存中...' : '追加'}
               </button>

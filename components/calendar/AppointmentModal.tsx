@@ -476,15 +476,23 @@ export default function AppointmentModal({
             </div>
           )}
 
-          {/* バリデーションエラーサマリー */}
+          {/* バリデーションエラーサマリー（sticky で常時表示） */}
           {Object.keys(errors).filter(k => k !== 'overlap').length > 0 && (
-            <div id="error-summary" className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+            <div
+              id="error-summary"
+              className="sticky top-0 z-10 cursor-pointer rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700 shadow-sm"
+              onClick={() => {
+                const firstError = document.querySelector('[data-error]')
+                firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              }}
+            >
               <p className="font-medium">入力内容に{Object.keys(errors).filter(k => k !== 'overlap').length}件のエラーがあります</p>
               <ul className="mt-1 list-disc list-inside">
                 {Object.entries(errors).filter(([k]) => k !== 'overlap').map(([key, msg]) => (
                   <li key={key}>{msg}</li>
                 ))}
               </ul>
+              <p className="mt-1 text-xs text-red-400">タップでエラー箇所へ移動</p>
             </div>
           )}
 
@@ -531,7 +539,7 @@ export default function AppointmentModal({
                         key={p.id}
                         type="button"
                         onClick={() => handleSelectPatient(p)}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 min-h-[44px]"
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-emerald-50 min-h-[44px]"
                       >
                         <span className="mr-2 inline-flex items-center rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-800">
                           {p.chart_number}
@@ -762,7 +770,7 @@ export default function AppointmentModal({
                     }
                   }}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors min-h-[44px] min-w-[44px] ${
-                    labOrderEnabled ? 'bg-blue-600' : 'bg-gray-300'
+                    labOrderEnabled ? 'bg-emerald-600' : 'bg-gray-300'
                   }`}
                 >
                   <span
@@ -786,7 +794,7 @@ export default function AppointmentModal({
                           key={lo.id}
                           className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer min-h-[44px] ${
                             form.lab_order_id === lo.id
-                              ? 'border-blue-500 bg-blue-50'
+                              ? 'border-emerald-500 bg-emerald-50'
                               : 'border-gray-200 hover:bg-gray-50'
                           }`}
                         >

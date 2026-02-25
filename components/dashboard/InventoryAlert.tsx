@@ -24,7 +24,7 @@ export default function InventoryAlert({ alertCount }: InventoryAlertProps) {
               href="https://app.oralcare-kanazawa.clinic"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex min-h-[44px] items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="inline-flex min-h-[44px] items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
             >
               在庫管理アプリを開く →
             </a>

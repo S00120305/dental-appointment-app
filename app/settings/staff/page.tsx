@@ -61,7 +61,22 @@ export default function StaffSettingsPage() {
   return (
     <AppLayout>
       <div className="p-4 sm:p-6">
-        <h1 className="mb-6 text-2xl font-bold text-gray-900">スタッフ色設定</h1>
+        <h1 className="mb-4 text-2xl font-bold text-gray-900">スタッフ表示設定</h1>
+
+        <div className="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+          <p>
+            スタッフの追加・編集・PIN変更・無効化は{' '}
+            <a
+              href="https://app.oralcare-kanazawa.clinic/settings/staff"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium underline hover:text-emerald-900"
+            >
+              在庫管理アプリ
+            </a>
+            {' '}から行えます。
+          </p>
+        </div>
 
         <div className="space-y-4">
           {staffList.map((staff) => {

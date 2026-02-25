@@ -108,9 +108,9 @@ export default function ImportPage() {
         </p>
 
         {/* CSVフォーマット説明 */}
-        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
-          <p className="mb-2 text-sm font-medium text-blue-800">CSVフォーマット</p>
-          <code className="block whitespace-pre text-xs text-blue-700">
+        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+          <p className="mb-2 text-sm font-medium text-emerald-800">CSVフォーマット</p>
+          <code className="block whitespace-pre text-xs text-emerald-700">
             カルテNo,氏名,フリガナ,電話番号,メール{'\n'}
             1001,田中 太郎,タナカ タロウ,090-1234-5678,{'\n'}
             1002,佐藤 花子,サトウ ハナコ,,hanako@example.com
@@ -223,9 +223,9 @@ export default function ImportPage() {
                 <p className="text-2xl font-bold text-green-700">{result.inserted}</p>
                 <p className="text-sm text-green-600">新規登録</p>
               </div>
-              <div className="rounded-lg bg-blue-50 p-3">
-                <p className="text-2xl font-bold text-blue-700">{result.updated}</p>
-                <p className="text-sm text-blue-600">更新</p>
+              <div className="rounded-lg bg-emerald-50 p-3">
+                <p className="text-2xl font-bold text-emerald-700">{result.updated}</p>
+                <p className="text-sm text-emerald-600">更新</p>
               </div>
               <div className="rounded-lg bg-red-50 p-3">
                 <p className="text-2xl font-bold text-red-700">{result.errorCount}</p>

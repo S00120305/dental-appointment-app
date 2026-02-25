@@ -145,7 +145,7 @@ export default function AvailableSlotSearch({
         <div className="overflow-y-auto flex-1 p-4 space-y-4">
           {/* 患者プリセット表示 */}
           {preSelectedPatientId && preSelectedPatientName && (
-            <div className="rounded-md bg-blue-50 border border-blue-200 px-3 py-2 text-sm text-blue-700">
+            <div className="rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-700">
               {preSelectedPatientName} さんの次回予約
             </div>
           )}
@@ -216,7 +216,7 @@ export default function AvailableSlotSearch({
                     key={opt.value}
                     className={`flex min-h-[44px] flex-1 cursor-pointer items-center justify-center rounded-md border text-sm ${
                       timeRange === opt.value
-                        ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700 font-medium'
                         : 'border-gray-300 text-gray-700'
                     }`}
                   >
@@ -273,7 +273,7 @@ export default function AvailableSlotSearch({
                             <button
                               key={`${slot.unit_number}-${idx}`}
                               onClick={() => onSelectSlot(slot, durationMinutes)}
-                              className="flex w-full items-center justify-between rounded-md border border-gray-200 px-3 py-2 text-left text-sm hover:bg-blue-50 min-h-[44px]"
+                              className="flex w-full items-center justify-between rounded-md border border-gray-200 px-3 py-2 text-left text-sm hover:bg-emerald-50 min-h-[44px]"
                             >
                               <div className="flex items-center gap-2">
                                 <span className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600">
@@ -286,7 +286,7 @@ export default function AvailableSlotSearch({
                                   （{slot.duration_minutes}分）
                                 </span>
                               </div>
-                              <span className="text-blue-500 text-lg">&#x25B6;</span>
+                              <span className="text-emerald-500 text-lg">&#x25B6;</span>
                             </button>
                           ))}
                         </div>
@@ -306,7 +306,7 @@ export default function AvailableSlotSearch({
           {/* ローディング */}
           {searching && (
             <div className="flex items-center justify-center py-8">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
               <span className="ml-2 text-sm text-gray-500">検索中...</span>
             </div>
           )}

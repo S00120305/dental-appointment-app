@@ -462,7 +462,7 @@ export default function AppointmentsPage() {
               onClick={() => setActiveView('list')}
               className={`min-h-[44px] px-3 text-sm ${
                 activeView === 'list'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-emerald-600 text-white'
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               } rounded-l-md`}
             >
@@ -472,7 +472,7 @@ export default function AppointmentsPage() {
               onClick={() => setActiveView('calendar')}
               className={`min-h-[44px] px-3 text-sm ${
                 activeView === 'calendar'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-emerald-600 text-white'
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               } rounded-r-md border-l border-gray-300`}
             >
@@ -500,7 +500,7 @@ export default function AppointmentsPage() {
                 onClick={() => setCalendarViewType('resourceTimeGridDay')}
                 className={`min-h-[44px] px-3 text-sm ${
                   calendarViewType === 'resourceTimeGridDay'
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-emerald-600 text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-50'
                 } rounded-l-md`}
               >
@@ -510,7 +510,7 @@ export default function AppointmentsPage() {
                 onClick={() => setCalendarViewType('resourceTimeGridWeek')}
                 className={`min-h-[44px] px-3 text-sm ${
                   calendarViewType === 'resourceTimeGridWeek'
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-emerald-600 text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-50'
                 } rounded-r-md border-l border-gray-300`}
               >
@@ -532,7 +532,7 @@ export default function AppointmentsPage() {
               onClick={() => setFilteredUnit(null)}
               className={`min-h-[36px] flex-shrink-0 rounded-full px-3 text-xs font-medium ${
                 filteredUnit === null
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-emerald-600 text-white'
                   : 'bg-gray-100 text-gray-700'
               }`}
             >
@@ -544,7 +544,7 @@ export default function AppointmentsPage() {
                 onClick={() => setFilteredUnit(filteredUnit === n ? null : n)}
                 className={`min-h-[36px] flex-shrink-0 rounded-full px-3 text-xs font-medium ${
                   filteredUnit === n
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-emerald-600 text-white'
                     : 'bg-gray-100 text-gray-700'
                 }`}
               >
@@ -611,7 +611,7 @@ export default function AppointmentsPage() {
       {/* 空き枠検索フローティングボタン */}
       <button
         onClick={() => setSlotSearchOpen(true)}
-        className="fixed bottom-20 right-4 z-30 flex min-h-[48px] items-center gap-1.5 rounded-full bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg hover:bg-blue-700 active:bg-blue-800 safe-area-bottom"
+        className="fixed bottom-20 right-4 z-30 flex min-h-[48px] items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg hover:bg-emerald-700 active:bg-emerald-800 safe-area-bottom"
       >
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />

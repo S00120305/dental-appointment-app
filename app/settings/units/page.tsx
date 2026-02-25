@@ -90,7 +90,7 @@ export default function UnitsSettingsPage() {
                     key={n}
                     className={`flex min-h-[44px] cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors ${
                       checked
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
                         : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                     }`}
                   >
@@ -98,7 +98,7 @@ export default function UnitsSettingsPage() {
                       type="checkbox"
                       checked={checked}
                       onChange={() => toggleUnit(n)}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600"
+                      className="h-4 w-4 rounded border-gray-300 text-emerald-600"
                     />
                     診察室{n}
                   </label>

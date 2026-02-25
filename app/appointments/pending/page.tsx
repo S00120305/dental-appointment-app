@@ -306,7 +306,7 @@ export default function PendingAppointmentsPage() {
                     <button
                       onClick={() => openModifyModal(appt)}
                       disabled={isProcessing}
-                      className="min-h-[44px] rounded-md border border-blue-600 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 disabled:opacity-50"
+                      className="min-h-[44px] rounded-md border border-emerald-600 px-4 py-2 text-sm font-medium text-emerald-600 hover:bg-emerald-50 disabled:opacity-50"
                     >
                       変更して承認
                     </button>
@@ -337,7 +337,7 @@ export default function PendingAppointmentsPage() {
                 onChange={(e) => setRejectReason(e.target.value)}
                 placeholder="理由を入力（患者に通知されます）"
                 rows={3}
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
               />
             </div>
             <div className="mt-4 flex justify-end gap-2">
@@ -376,7 +376,7 @@ export default function PendingAppointmentsPage() {
                   type="date"
                   value={modifyDate}
                   onChange={(e) => setModifyDate(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
                 />
               </div>
               <div>
@@ -384,7 +384,7 @@ export default function PendingAppointmentsPage() {
                 <select
                   value={modifyTime}
                   onChange={(e) => setModifyTime(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
                 >
                   {timeOptions.map(t => (
                     <option key={t} value={t}>{t}</option>
@@ -396,7 +396,7 @@ export default function PendingAppointmentsPage() {
                 <select
                   value={modifyUnit}
                   onChange={(e) => setModifyUnit(parseInt(e.target.value))}
-                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none"
                 >
                   {visibleUnits.map(n => (
                     <option key={n} value={n}>診察室{n}</option>

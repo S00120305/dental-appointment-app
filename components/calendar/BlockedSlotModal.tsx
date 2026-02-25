@@ -157,7 +157,7 @@ export default function BlockedSlotModal({
               <div className="flex flex-wrap gap-2">
                 <label
                   className={`flex min-h-[44px] cursor-pointer items-center rounded-md border px-3 text-sm ${
-                    unitNumber === 0 ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 text-gray-700'
+                    unitNumber === 0 ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-300 text-gray-700'
                   }`}
                 >
                   <input
@@ -174,7 +174,7 @@ export default function BlockedSlotModal({
                   <label
                     key={n}
                     className={`flex min-h-[44px] cursor-pointer items-center rounded-md border px-3 text-sm ${
-                      unitNumber === n ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-300 text-gray-700'
+                      unitNumber === n ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-300 text-gray-700'
                     }`}
                   >
                     <input

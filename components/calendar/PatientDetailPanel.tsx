@@ -283,7 +283,7 @@ export default function PatientDetailPanel({
               {/* Phone */}
               {patient?.phone && (
                 <div>
-                  <a href={`tel:${patient.phone}`} className="text-sm text-blue-600 hover:underline">
+                  <a href={`tel:${patient.phone}`} className="text-sm text-emerald-600 hover:underline">
                     {'\u{1F4DE}'} {patient.phone}
                   </a>
                 </div>
@@ -326,7 +326,7 @@ export default function PatientDetailPanel({
                   {!patientMemoEditing && (
                     <button
                       onClick={() => setPatientMemoEditing(true)}
-                      className="text-xs text-blue-600 hover:underline min-h-[44px] px-2"
+                      className="text-xs text-emerald-600 hover:underline min-h-[44px] px-2"
                     >
                       編集
                     </button>
@@ -350,7 +350,7 @@ export default function PatientDetailPanel({
                       <button
                         onClick={savePatientMemo}
                         disabled={patientMemoSaving}
-                        className="min-h-[44px] rounded-md bg-blue-600 px-3 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+                        className="min-h-[44px] rounded-md bg-emerald-600 px-3 text-sm text-white hover:bg-emerald-700 disabled:opacity-50"
                       >
                         {patientMemoSaving ? '保存中...' : '保存'}
                       </button>
@@ -364,13 +364,13 @@ export default function PatientDetailPanel({
               </div>
 
               {/* Appointment Memo */}
-              <div className="rounded-lg border border-blue-100 bg-blue-50/30 p-3">
+              <div className="rounded-lg border border-emerald-100 bg-emerald-50/30 p-3">
                 <div className="flex items-center justify-between mb-1">
                   <h3 className="text-sm font-bold text-gray-700">予約メモ（今回のみ）</h3>
                   {!apptMemoEditing && (
                     <button
                       onClick={() => setApptMemoEditing(true)}
-                      className="text-xs text-blue-600 hover:underline min-h-[44px] px-2"
+                      className="text-xs text-emerald-600 hover:underline min-h-[44px] px-2"
                     >
                       編集
                     </button>
@@ -394,7 +394,7 @@ export default function PatientDetailPanel({
                       <button
                         onClick={saveApptMemo}
                         disabled={apptMemoSaving}
-                        className="min-h-[44px] rounded-md bg-blue-600 px-3 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+                        className="min-h-[44px] rounded-md bg-emerald-600 px-3 text-sm text-white hover:bg-emerald-700 disabled:opacity-50"
                       >
                         {apptMemoSaving ? '保存中...' : '保存'}
                       </button>
@@ -474,7 +474,7 @@ export default function PatientDetailPanel({
                     onNewAppointment(patientId, patient?.name || appointment.patient?.name || '')
                     onClose()
                   }}
-                  className="flex-1 min-h-[44px] rounded-md border border-blue-300 bg-white px-3 text-sm font-medium text-blue-600 hover:bg-blue-50"
+                  className="flex-1 min-h-[44px] rounded-md border border-emerald-300 bg-white px-3 text-sm font-medium text-emerald-600 hover:bg-emerald-50"
                 >
                   次回予約
                 </button>
@@ -545,7 +545,7 @@ export default function PatientDetailPanel({
                         <button
                           onClick={() => fetchAppointments(pastOffset)}
                           disabled={loadingAppointments}
-                          className="mt-2 w-full text-center text-xs text-blue-600 hover:underline min-h-[44px]"
+                          className="mt-2 w-full text-center text-xs text-emerald-600 hover:underline min-h-[44px]"
                         >
                           {loadingAppointments ? '読み込み中...' : 'もっと見る'}
                         </button>
@@ -625,10 +625,10 @@ function AppointmentRow({
         onClose()
       }}
       className={`w-full text-left px-2 py-1.5 rounded text-xs hover:bg-gray-50 min-h-[36px] flex items-center gap-1 ${
-        isCurrent ? 'bg-blue-50 font-bold' : ''
+        isCurrent ? 'bg-emerald-50 font-bold' : ''
       }`}
     >
-      {isCurrent && <span className="text-blue-600">●</span>}
+      {isCurrent && <span className="text-emerald-600">●</span>}
       <span className="text-gray-600">{dateStr}</span>
       <span className="text-gray-500">{timeStr}</span>
       <span className="text-gray-700 truncate">{staffName}</span>

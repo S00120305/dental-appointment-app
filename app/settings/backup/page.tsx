@@ -157,7 +157,7 @@ export default function BackupPage() {
             <button
               onClick={() => triggerBackup('full')}
               disabled={triggering || hasActiveBackup}
-              className="min-h-[44px] min-w-[44px] rounded-md bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 active:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-[44px] min-w-[44px] rounded-md bg-emerald-600 px-4 py-2 font-medium text-white transition-colors hover:bg-emerald-700 active:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {triggering ? '送信中...' : hasActiveBackup ? 'バックアップ実行中...' : '全体バックアップ（DB + 画像）'}
             </button>
@@ -179,9 +179,9 @@ export default function BackupPage() {
 
           {/* 実行中インジケーター */}
           {hasActiveBackup && (
-            <div className="mt-4 flex items-center gap-2 rounded-lg bg-blue-50 px-4 py-3">
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-              <span className="text-sm text-blue-800">
+            <div className="mt-4 flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
+              <span className="text-sm text-emerald-800">
                 NASでバックアップを実行中です...（5秒ごとに自動更新）
               </span>
             </div>
@@ -214,7 +214,7 @@ export default function BackupPage() {
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                       <span className={`rounded px-2 py-0.5 text-xs font-medium ${status.color}`}>
                         {backup.status === 'running' && (
-                          <span className="mr-1 inline-block h-2 w-2 animate-spin rounded-full border border-blue-600 border-t-transparent" />
+                          <span className="mr-1 inline-block h-2 w-2 animate-spin rounded-full border border-emerald-600 border-t-transparent" />
                         )}
                         {status.text}
                       </span>

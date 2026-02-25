@@ -49,7 +49,7 @@ export default function NumericKeypad({
         <button
           onClick={onSubmit}
           disabled={disabled}
-          className="flex h-16 w-full items-center justify-center rounded-xl bg-blue-600 text-lg font-medium text-white transition-colors hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50"
+          className="flex h-16 w-full items-center justify-center rounded-xl bg-emerald-600 text-lg font-medium text-white transition-colors hover:bg-emerald-700 active:bg-emerald-800 disabled:opacity-50"
         >
           OK
         </button>

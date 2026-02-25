@@ -140,7 +140,7 @@ export default function LogsPage() {
           <button
             onClick={handleSearch}
             disabled={loading}
-            className="mt-3 w-full rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 sm:w-auto"
+            className="mt-3 w-full rounded bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 sm:w-auto"
           >
             {loading ? '検索中...' : '検索'}
           </button>

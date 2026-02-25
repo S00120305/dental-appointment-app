@@ -334,7 +334,7 @@ export default function PatientForm({ isOpen, onClose, onSaved, patient }: Patie
                     onClick={() => setForm({ ...form, preferred_notification: opt.value })}
                     className={`flex-1 min-h-[44px] rounded-md border-2 text-sm font-medium transition-colors ${
                       form.preferred_notification === opt.value
-                        ? 'border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-200 ring-offset-1'
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-200 ring-offset-1'
                         : opt.disabled
                           ? 'border-gray-100 text-gray-300 cursor-not-allowed'
                           : 'border-gray-200 text-gray-600 hover:border-gray-300'
@@ -393,7 +393,7 @@ export default function PatientForm({ isOpen, onClose, onSaved, patient }: Patie
                 aria-checked={form.reminder_sms}
                 onClick={() => setForm({ ...form, reminder_sms: !form.reminder_sms })}
                 className={`relative inline-flex h-7 w-12 min-w-[48px] items-center rounded-full transition-colors ${
-                  form.reminder_sms ? 'bg-blue-600' : 'bg-gray-300'
+                  form.reminder_sms ? 'bg-emerald-600' : 'bg-gray-300'
                 }`}
               >
                 <span
@@ -412,7 +412,7 @@ export default function PatientForm({ isOpen, onClose, onSaved, patient }: Patie
                 aria-checked={form.reminder_email}
                 onClick={() => setForm({ ...form, reminder_email: !form.reminder_email })}
                 className={`relative inline-flex h-7 w-12 min-w-[48px] items-center rounded-full transition-colors ${
-                  form.reminder_email ? 'bg-blue-600' : 'bg-gray-300'
+                  form.reminder_email ? 'bg-emerald-600' : 'bg-gray-300'
                 }`}
               >
                 <span

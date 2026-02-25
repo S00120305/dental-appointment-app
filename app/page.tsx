@@ -47,9 +47,9 @@ export default function MasterPasswordPage() {
         <div className="rounded-2xl bg-white p-8 shadow-lg">
           {/* ロゴ・タイトル */}
           <div className="mb-8 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
               <svg
-                className="h-8 w-8 text-blue-600"
+                className="h-8 w-8 text-emerald-600"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -63,7 +63,7 @@ export default function MasterPasswordPage() {
               </svg>
             </div>
             <h1 className="text-xl font-bold text-gray-900">
-              予約・来院管理
+              予約管理
             </h1>
             <p className="mt-1 text-sm text-gray-500">
               マスターパスワードを入力してください
@@ -81,7 +81,7 @@ export default function MasterPasswordPage() {
                   setError('')
                 }}
                 placeholder="マスターパスワード"
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
                 autoFocus
                 disabled={isLoading}
               />
@@ -96,7 +96,7 @@ export default function MasterPasswordPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full rounded-lg bg-blue-600 px-4 py-3 text-base font-medium text-white transition-colors hover:bg-blue-700 active:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-lg bg-emerald-600 px-4 py-3 text-base font-medium text-white transition-colors hover:bg-emerald-700 active:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">

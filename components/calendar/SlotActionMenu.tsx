@@ -68,9 +68,9 @@ export default function SlotActionMenu({
           onSelectAppointment()
           onClose()
         }}
-        className="flex w-full items-center gap-2 px-4 min-h-[44px] text-sm text-gray-700 hover:bg-blue-50"
+        className="flex w-full items-center gap-2 px-4 min-h-[44px] text-sm text-gray-700 hover:bg-emerald-50"
       >
-        <span className="text-blue-500">+</span>
+        <span className="text-emerald-500">+</span>
         予約を作成
       </button>
       <button

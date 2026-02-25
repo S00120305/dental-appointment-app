@@ -17,8 +17,8 @@ export default function Header() {
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-2 px-3 sm:gap-4 sm:px-4">
         <div className="min-w-0 flex-1">
-          <Link href="/dashboard" className="block truncate text-sm font-bold text-gray-900 transition-colors hover:text-blue-600 sm:text-lg">
-            予約・来院管理
+          <Link href="/dashboard" className="block truncate text-sm font-bold text-gray-900 transition-colors hover:text-emerald-600 sm:text-lg">
+            予約管理
           </Link>
         </div>
 
