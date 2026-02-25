@@ -36,7 +36,7 @@ type FormData = {
   lab_order_id: string
 }
 
-const DURATION_OPTIONS = [10, 15, 20, 30, 45, 60, 90, 120]
+const DURATION_OPTIONS = [10, 20, 30, 40, 50, 60, 90, 120]
 
 function generateTimeSlots(start: string, end: string): string[] {
   const slots: string[] = []
@@ -46,7 +46,7 @@ function generateTimeSlots(start: string, end: string): string[] {
   let m = startM
   while (h < endH || (h === endH && m <= endM)) {
     slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
-    m += 5
+    m += 10
     if (m >= 60) {
       h++
       m = 0
@@ -288,7 +288,10 @@ export default function AppointmentModal({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!validate()) return
+    if (!validate()) {
+      document.getElementById('error-summary')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      return
+    }
 
     setSaving(true)
     try {
@@ -452,6 +455,18 @@ export default function AppointmentModal({
           {errors.overlap && (
             <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
               {errors.overlap}
+            </div>
+          )}
+
+          {/* バリデーションエラーサマリー */}
+          {Object.keys(errors).filter(k => k !== 'overlap').length > 0 && (
+            <div id="error-summary" className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+              <p className="font-medium">入力内容に{Object.keys(errors).filter(k => k !== 'overlap').length}件のエラーがあります</p>
+              <ul className="mt-1 list-disc list-inside">
+                {Object.entries(errors).filter(([k]) => k !== 'overlap').map(([key, msg]) => (
+                  <li key={key}>{msg}</li>
+                ))}
+              </ul>
             </div>
           )}
 

@@ -224,6 +224,7 @@ export default function CalendarView({
         slotMinTime={businessHours.start + ':00'}
         slotMaxTime={businessHours.end + ':00'}
         slotDuration="00:10:00"
+        snapDuration="00:10:00"
         slotLabelInterval="00:30:00"
         slotLabelFormat={{
           hour: 'numeric',

@@ -137,6 +137,7 @@ export type Staff = {
   is_active: boolean
   is_admin: boolean
   sort_order: number | null
+  color: string | null
 }
 
 // 通知ログ

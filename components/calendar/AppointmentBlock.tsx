@@ -23,13 +23,17 @@ export function getStaffColor(
 
 export function getEventStyle(
   status: string,
-  _staffColor: string,
+  staffColor: string,
   bookingTypeColor?: string | null
 ): React.CSSProperties {
-  const bg = STATUS_BG[status] || STATUS_BG['scheduled']
   const textColor = STATUS_TEXT[status] || STATUS_TEXT['scheduled']
   const borderColor = bookingTypeColor || STATUS_BORDER_COLOR[status] || STATUS_BORDER_COLOR['scheduled']
   const isCancelledOrNoShow = status === 'cancelled' || status === 'no_show'
+
+  // スタッフ色がある場合は薄い背景色として使用、なければステータスの背景色
+  const bg = staffColor
+    ? staffColor + '20' // hex alpha ~12% opacity
+    : (STATUS_BG[status] || STATUS_BG['scheduled'])
 
   return {
     backgroundColor: bg,
@@ -63,8 +67,9 @@ const AppointmentBlock = memo(function AppointmentBlock({ eventInfo, onStatusCli
     is_infection_alert: isInfectionAlert,
   })
 
+  const staffColor = (extendedProps.staff_color as string) || ''
   const bookingTypeColor = extendedProps.booking_type_color as string | null | undefined
-  const style = getEventStyle(status, '', bookingTypeColor)
+  const style = getEventStyle(status, staffColor, bookingTypeColor)
 
   const statusIcon = STATUS_ICON[status] || '\u25CB'
   const statusIconColor = STATUS_ICON_COLOR[status] || '#9ca3af'

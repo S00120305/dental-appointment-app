@@ -44,8 +44,13 @@ export default function AppointmentsPage() {
     removeAppointment,
   } = useAppointments()
 
-  const { visibleUnits, businessHours, staffColors, isLoading: settingsLoading } = useSettings()
-  const { staffList } = useStaff()
+  const { visibleUnits, businessHours, staffColors: settingsStaffColors, isLoading: settingsLoading } = useSettings()
+  const { staffList, staffColors: userStaffColors } = useStaff()
+
+  // users.color ベースの色を優先し、fallback として settings の色を使う
+  const staffColors = useMemo(() => {
+    return { ...settingsStaffColors, ...userStaffColors }
+  }, [settingsStaffColors, userStaffColors])
 
   // 承認待ち件数
   const { data: pendingData } = useSWR<{ count: number }>(
