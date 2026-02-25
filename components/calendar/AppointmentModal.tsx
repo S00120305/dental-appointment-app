@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
@@ -9,6 +9,7 @@ import LabOrderBadge from '@/components/calendar/LabOrderBadge'
 import { useToast } from '@/components/ui/Toast'
 import { getNextStatus, getPrevStatus, STATUS_TEXT, STATUS_LABELS } from '@/lib/constants/appointment'
 import type { AppointmentStatus, AppointmentWithRelations, BookingType, LabOrderWithLab, Patient, Staff } from '@/lib/supabase/types'
+import { BOOKING_CATEGORIES } from '@/lib/supabase/types'
 
 type StaffHolidayInfo = {
   holiday_type: string
@@ -392,6 +393,25 @@ export default function AppointmentModal({
     }
   }
 
+  // カテゴリ別にグルーピング
+  const bookingTypeGroups = useMemo(() => {
+    const groups: { category: string; items: BookingType[] }[] = []
+    for (const cat of BOOKING_CATEGORIES) {
+      const items = bookingTypes.filter((bt) => bt.category === cat.name)
+      if (items.length > 0) {
+        groups.push({ category: cat.name, items })
+      }
+    }
+    // 未分類
+    const uncategorized = bookingTypes.filter(
+      (bt) => !bt.category || !BOOKING_CATEGORIES.some((c) => c.name === bt.category)
+    )
+    if (uncategorized.length > 0) {
+      groups.push({ category: '未分類', items: uncategorized })
+    }
+    return groups
+  }, [bookingTypes])
+
   const timeSlots = generateTimeSlots(businessHours.start, businessHours.end)
 
   // ステータス遷移ボタンの情報
@@ -704,10 +724,14 @@ export default function AppointmentModal({
                   }`}
                 >
                   <option value="">選択してください</option>
-                  {bookingTypes.map(bt => (
-                    <option key={bt.id} value={bt.id}>
-                      {bt.display_name}（{bt.internal_name}）
-                    </option>
+                  {bookingTypeGroups.map(group => (
+                    <optgroup key={group.category} label={group.category}>
+                      {group.items.map(bt => (
+                        <option key={bt.id} value={bt.id}>
+                          {bt.internal_name}（{bt.duration_minutes}分）
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                   <option disabled>───</option>
                   <option value="__custom__">カスタム入力...</option>

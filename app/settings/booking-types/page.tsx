@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import AppLayout from '@/components/layout/AppLayout'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import type { BookingType } from '@/lib/supabase/types'
+import { BOOKING_CATEGORIES } from '@/lib/supabase/types'
 
 const DURATION_OPTIONS = [10, 15, 20, 30, 45, 60, 90, 120]
 
@@ -25,6 +26,7 @@ type FormData = {
   description: string
   notes: string
   color: string
+  category: string
   sort_order: number
 }
 
@@ -38,6 +40,7 @@ const defaultForm: FormData = {
   description: '',
   notes: '',
   color: '#3B82F6',
+  category: '',
   sort_order: 0,
 }
 
@@ -80,9 +83,19 @@ export default function BookingTypesPage() {
       description: bt.description,
       notes: bt.notes,
       color: bt.color,
+      category: bt.category || '',
       sort_order: bt.sort_order,
     })
     setModalOpen(true)
+  }
+
+  function handleCategoryChange(categoryName: string) {
+    const cat = BOOKING_CATEGORIES.find(c => c.name === categoryName)
+    setForm(prev => ({
+      ...prev,
+      category: categoryName,
+      color: cat?.color || prev.color,
+    }))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -155,6 +168,24 @@ export default function BookingTypesPage() {
   const activeTypes = bookingTypes.filter(bt => bt.is_active)
   const inactiveTypes = bookingTypes.filter(bt => !bt.is_active)
 
+  // カテゴリ別グルーピング
+  const activeGroups = useMemo(() => {
+    const groups: { category: string; color: string; items: BookingType[] }[] = []
+    for (const cat of BOOKING_CATEGORIES) {
+      const items = activeTypes.filter(bt => bt.category === cat.name)
+      if (items.length > 0) {
+        groups.push({ category: cat.name, color: cat.color, items })
+      }
+    }
+    const uncategorized = activeTypes.filter(
+      bt => !bt.category || !BOOKING_CATEGORIES.some(c => c.name === bt.category)
+    )
+    if (uncategorized.length > 0) {
+      groups.push({ category: '未分類', color: '#9CA3AF', items: uncategorized })
+    }
+    return groups
+  }, [activeTypes])
+
   return (
     <AppLayout>
       <div className="p-4 sm:p-6">
@@ -170,37 +201,53 @@ export default function BookingTypesPage() {
             ))}
           </div>
         ) : (
-          <div className="space-y-2">
-            {activeTypes.map(bt => (
-              <div
-                key={bt.id}
-                className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="h-4 w-4 rounded-full shrink-0"
-                      style={{ backgroundColor: bt.color }}
-                    />
-                    <div>
-                      <h3 className="font-medium text-gray-900">{bt.display_name}</h3>
-                      <p className="mt-0.5 text-sm text-gray-500">
-                        院内名: {bt.internal_name} | {bt.duration_minutes}分 |{' '}
-                        {bt.confirmation_mode === 'instant' ? '即時確定' : '承認制'} |{' '}
-                        {bt.is_token_only
-                          ? 'トークン専用'
-                          : bt.is_web_bookable
-                            ? 'Web予約 ○'
-                            : '院内のみ'}
-                      </p>
+          <div className="space-y-6">
+            {activeGroups.map(group => (
+              <div key={group.category}>
+                <div className="mb-2 flex items-center gap-2">
+                  <span
+                    className="inline-block h-3 w-3 rounded-full"
+                    style={{ backgroundColor: group.color }}
+                  />
+                  <h3 className="text-sm font-semibold text-gray-600">
+                    {group.category}
+                    <span className="ml-1 text-xs font-normal text-gray-400">({group.items.length})</span>
+                  </h3>
+                </div>
+                <div className="space-y-1">
+                  {group.items.map(bt => (
+                    <div
+                      key={bt.id}
+                      className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="h-3 w-3 rounded-full shrink-0"
+                            style={{ backgroundColor: bt.color }}
+                          />
+                          <div>
+                            <span className="font-medium text-gray-900">{bt.internal_name}</span>
+                            {bt.internal_name !== bt.display_name && (
+                              <span className="ml-2 text-sm text-gray-400">({bt.display_name})</span>
+                            )}
+                            <span className="ml-3 text-sm text-gray-500">{bt.duration_minutes}分</span>
+                            {bt.is_web_bookable && (
+                              <span className="ml-2 inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                                Web予約
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleEdit(bt)}
+                          className="min-h-[44px] min-w-[44px] rounded-md border border-gray-300 px-3 text-sm text-gray-700 hover:bg-gray-50"
+                        >
+                          編集
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <button
-                    onClick={() => handleEdit(bt)}
-                    className="min-h-[44px] min-w-[44px] rounded-md border border-gray-300 px-3 text-sm text-gray-700 hover:bg-gray-50"
-                  >
-                    編集
-                  </button>
+                  ))}
                 </div>
               </div>
             ))}
@@ -248,6 +295,20 @@ export default function BookingTypesPage() {
         title={editingId ? '予約種別の編集' : '予約種別の追加'}
       >
         <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">カテゴリ</label>
+            <select
+              value={form.category}
+              onChange={e => handleCategoryChange(e.target.value)}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-base"
+            >
+              <option value="">選択してください</option>
+              {BOOKING_CATEGORIES.map(cat => (
+                <option key={cat.name} value={cat.name}>{cat.name}</option>
+              ))}
+            </select>
+          </div>
+
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">
               患者向け名称 <span className="text-red-500">*</span>

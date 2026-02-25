@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       patient:patients!patient_id(id, chart_number, name, name_kana, phone, is_vip, caution_level, is_infection_alert),
       staff:users!staff_id(id, name),
       lab_order:lab_orders!left(id, status, item_type, tooth_info, due_date, set_date, lab:labs!left(id, name)),
-      booking_type:booking_types!left(id, display_name, internal_name, color)
+      booking_type:booking_types!left(id, display_name, internal_name, color, category)
     `
 
     // 単一予約取得（Realtime INSERT 後の詳細取得用）
@@ -117,7 +117,7 @@ const selectQueryPost = `
   patient:patients!patient_id(id, chart_number, name, name_kana, is_vip, caution_level, is_infection_alert),
   staff:users!staff_id(id, name),
   lab_order:lab_orders!left(id, status, item_type, tooth_info, due_date, set_date, lab:labs!left(id, name)),
-  booking_type:booking_types!left(id, display_name, internal_name, color)
+  booking_type:booking_types!left(id, display_name, internal_name, color, category)
 `
 
 // POST: 新規予約作成

@@ -15,7 +15,7 @@ export async function PUT(
     const {
       display_name, internal_name, duration_minutes,
       confirmation_mode, is_web_bookable, is_token_only,
-      description, notes, color, sort_order,
+      description, notes, color, category, sort_order,
     } = body
 
     if (!display_name?.trim()) {
@@ -37,6 +37,7 @@ export async function PUT(
         description: description ?? '',
         notes: notes ?? '',
         color: color || '#3B82F6',
+        category: category?.trim() || null,
         sort_order: sort_order ?? 0,
         updated_at: new Date().toISOString(),
       })

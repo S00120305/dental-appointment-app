@@ -95,6 +95,7 @@ export type AppointmentWithRelations = Appointment & {
     display_name: string
     internal_name: string
     color: string
+    category: string | null
   } | null
 }
 
@@ -110,11 +111,28 @@ export type BookingType = {
   description: string
   notes: string
   color: string
+  category: string | null
   sort_order: number
   is_active: boolean
   created_at: string
   updated_at: string
 }
+
+// 予約種別カテゴリ定数
+export const BOOKING_CATEGORIES = [
+  { name: '診察', color: '#6B7280' },
+  { name: 'C処置', color: '#10B981' },
+  { name: '根治', color: '#92400E' },
+  { name: 'DH・衛生士', color: '#3B82F6' },
+  { name: '歯周病', color: '#EC4899' },
+  { name: 'CrBr・補綴', color: '#8B5CF6' },
+  { name: 'デンチャー・義歯', color: '#D97706' },
+  { name: '手術', color: '#EF4444' },
+  { name: 'インプラント', color: '#047857' },
+  { name: '矯正', color: '#EAB308' },
+  { name: '審美・ホワイトニング', color: '#06B6D4' },
+  { name: 'その他', color: '#9CA3AF' },
+] as const
 
 // 予約枠ブロック
 export type BlockedSlot = {
