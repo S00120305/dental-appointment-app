@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcrypt'
 import { createServerClient } from '@/lib/supabase/server'
 import { DEVICE_AUTH_COOKIE, DEVICE_AUTH_MAX_AGE } from '@/lib/auth/device'
+import { appendLegacyCookieDelete } from '@/lib/auth/cookie-utils'
 
 // IPベースのレート制限
 const failedAttempts = new Map<string, { count: number; lockedUntil: number }>()
@@ -101,14 +102,6 @@ export async function POST(request: NextRequest) {
 
     const response = NextResponse.json({ success: true })
 
-    // 古いCookie（domainなし）を削除してから新しいCookie（domain付き）を設定
-    response.cookies.set(DEVICE_AUTH_COOKIE, '', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 0,
-      path: '/',
-    })
     response.cookies.set(DEVICE_AUTH_COOKIE, 'authenticated', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -117,6 +110,8 @@ export async function POST(request: NextRequest) {
       path: '/',
       domain: process.env.COOKIE_DOMAIN || undefined,
     })
+    // 古いCookie（domainなし）を削除（cookies.set()の後に呼ぶこと）
+    appendLegacyCookieDelete(response, DEVICE_AUTH_COOKIE)
 
     return response
   } catch {

@@ -6,6 +6,7 @@ import {
   PIN_SESSION_COOKIE,
   PIN_SESSION_MAX_AGE,
 } from '@/lib/auth/session-token'
+import { appendLegacyCookieDelete } from '@/lib/auth/cookie-utils'
 
 export async function POST(request: NextRequest) {
   try {
@@ -123,14 +124,6 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // 古いCookie（domainなし）を削除してから新しいCookie（domain付き）を設定
-    response.cookies.set(PIN_SESSION_COOKIE, '', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 0,
-      path: '/',
-    })
     response.cookies.set(PIN_SESSION_COOKIE, sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -139,6 +132,8 @@ export async function POST(request: NextRequest) {
       path: '/',
       domain: process.env.COOKIE_DOMAIN || undefined,
     })
+    // 古いCookie（domainなし）を削除（cookies.set()の後に呼ぶこと）
+    appendLegacyCookieDelete(response, PIN_SESSION_COOKIE)
 
     return response
   } catch {
