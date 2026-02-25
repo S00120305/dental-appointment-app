@@ -123,6 +123,14 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // 古いCookie（domainなし）を削除してから新しいCookie（domain付き）を設定
+    response.cookies.set(PIN_SESSION_COOKIE, '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 0,
+      path: '/',
+    })
     response.cookies.set(PIN_SESSION_COOKIE, sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
