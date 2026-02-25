@@ -10,6 +10,7 @@ export async function POST() {
       sameSite: 'strict',
       maxAge: 0,
       path: '/',
+      domain: process.env.COOKIE_DOMAIN || undefined,
     })
     return response
   } catch {

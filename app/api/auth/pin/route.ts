@@ -129,6 +129,7 @@ export async function POST(request: NextRequest) {
       sameSite: 'strict',
       maxAge: PIN_SESSION_MAX_AGE,
       path: '/',
+      domain: process.env.COOKIE_DOMAIN || undefined,
     })
 
     return response
