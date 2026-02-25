@@ -63,8 +63,9 @@ export default function MasterPasswordPage() {
               </svg>
             </div>
             <h1 className="text-xl font-bold text-gray-900">
-              予約管理
+              金澤オーラルケアクリニック
             </h1>
+            <p className="text-sm text-gray-500">予約管理</p>
             <p className="mt-1 text-sm text-gray-500">
               マスターパスワードを入力してください
             </p>
