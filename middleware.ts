@@ -4,8 +4,17 @@ import type { NextRequest } from 'next/server'
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // / (マスターPW画面) と /api/ は middleware では何もしない
-  if (pathname === '/' || pathname.startsWith('/api/')) {
+  // /api/ は middleware では何もしない
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.next()
+  }
+
+  // / (マスターPW画面): device_auth があれば /pin へスキップ
+  if (pathname === '/') {
+    const deviceAuth = request.cookies.get('device_auth')
+    if (deviceAuth) {
+      return NextResponse.redirect(new URL('/pin', request.url))
+    }
     return NextResponse.next()
   }
 
