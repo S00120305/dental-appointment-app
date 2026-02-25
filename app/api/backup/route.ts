@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 
-// backup_requests はDB型定義に含まれないため、anyで扱う
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type SupabaseAny = any
-
 // GET: バックアップ履歴の取得
 export async function GET(request: NextRequest) {
   try {
@@ -12,8 +8,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '20')
 
-    const { data, error } = await (supabase
-      .from('backup_requests') as SupabaseAny)
+    const { data, error } = await supabase
+      .from('backup_requests')
       .select('*, users:requested_by(name)')
       .order('created_at', { ascending: false })
       .limit(limit)
@@ -40,8 +36,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 既にpending/runningのリクエストがないか確認
-    const { data: existing } = await (supabase
-      .from('backup_requests') as SupabaseAny)
+    const { data: existing } = await supabase
+      .from('backup_requests')
       .select('id, status')
       .in('status', ['pending', 'running'])
       .limit(1)
@@ -53,8 +49,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { data, error } = await (supabase
-      .from('backup_requests') as SupabaseAny)
+    const { data, error } = await supabase
+      .from('backup_requests')
       .insert({
         requested_by: userId,
         request_type: 'manual',

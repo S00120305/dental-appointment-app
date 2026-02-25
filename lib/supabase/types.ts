@@ -161,6 +161,22 @@ export type LinePendingLink = {
   created_at: string
 }
 
+// バックアップリクエスト
+export type BackupRequest = {
+  id: string
+  request_type: string
+  backup_type: string
+  status: string
+  requested_by: string | null
+  started_at: string | null
+  completed_at: string | null
+  file_size_mb: number | null
+  error_message: string | null
+  notes: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
 // 操作ログ
 export type AppointmentLog = {
   id: string
