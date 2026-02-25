@@ -145,8 +145,8 @@ export async function POST(request: NextRequest) {
     if (!start_time) return NextResponse.json({ error: '開始時刻は必須です' }, { status: 400 })
     if (!duration_minutes) return NextResponse.json({ error: '所要時間は必須です' }, { status: 400 })
     if (!appointment_type) return NextResponse.json({ error: '予約種別は必須です' }, { status: 400 })
-    if (duration_minutes % 5 !== 0) {
-      return NextResponse.json({ error: '所要時間は5分単位で指定してください' }, { status: 400 })
+    if (duration_minutes % 10 !== 0) {
+      return NextResponse.json({ error: '所要時間は10分単位で指定してください' }, { status: 400 })
     }
 
     // 重複チェック
@@ -246,8 +246,8 @@ export async function PUT(request: NextRequest) {
     const isStatusOnly = status && !unit_number && !start_time && !duration_minutes
 
     if (!isStatusOnly) {
-      if (duration_minutes && duration_minutes % 5 !== 0) {
-        return NextResponse.json({ error: '所要時間は5分単位で指定してください' }, { status: 400 })
+      if (duration_minutes && duration_minutes % 10 !== 0) {
+        return NextResponse.json({ error: '所要時間は10分単位で指定してください' }, { status: 400 })
       }
 
       // 時間/ユニット変更時の重複チェック（自分自身を除外）

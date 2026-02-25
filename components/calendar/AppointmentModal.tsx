@@ -44,7 +44,7 @@ type FormData = {
   lab_order_id: string
 }
 
-const DURATION_OPTIONS = [10, 20, 30, 40, 50, 60, 90, 120]
+const DURATION_OPTIONS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 120]
 
 function generateTimeSlots(start: string, end: string): string[] {
   const slots: string[] = []
@@ -300,7 +300,14 @@ export default function AppointmentModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!validate()) {
-      document.getElementById('error-summary')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      // まずエラーサマリーへスクロール、なければ最初のエラーフィールドへ
+      const summary = document.getElementById('error-summary')
+      if (summary) {
+        summary.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      } else {
+        const firstError = document.querySelector('[data-error]')
+        firstError?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
       return
     }
 
@@ -482,7 +489,7 @@ export default function AppointmentModal({
           )}
 
           {/* 患者検索 */}
-          <div>
+          <div data-error={errors.patient_id ? true : undefined}>
             <label className="mb-1 block text-sm font-medium text-gray-700">
               患者 <span className="text-red-500">*</span>
             </label>
@@ -560,7 +567,7 @@ export default function AppointmentModal({
                 ))}
               </select>
             </div>
-            <div>
+            <div data-error={errors.staff_id ? true : undefined}>
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 担当スタッフ <span className="text-red-500">*</span>
               </label>
@@ -600,7 +607,7 @@ export default function AppointmentModal({
           </div>
 
           {/* 日付 */}
-          <div>
+          <div data-error={errors.date ? true : undefined}>
             <label className="mb-1 block text-sm font-medium text-gray-700">
               日付 <span className="text-red-500">*</span>
             </label>
@@ -661,7 +668,7 @@ export default function AppointmentModal({
           </div>
 
           {/* 予約種別 */}
-          <div>
+          <div data-error={errors.appointment_type ? true : undefined}>
             <label className="mb-1 block text-sm font-medium text-gray-700">
               予約種別 <span className="text-red-500">*</span>
             </label>

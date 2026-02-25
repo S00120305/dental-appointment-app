@@ -21,12 +21,23 @@ export function getStaffColor(
   return staffColors[staffId] || DEFAULT_STAFF_COLORS[staffIndex % DEFAULT_STAFF_COLORS.length]
 }
 
+// 背景色の明度を計算してテキスト色を自動判定
+function getContrastTextColor(hexColor: string): string {
+  const hex = hexColor.replace('#', '')
+  if (hex.length < 6) return '#1f2937'
+  const r = parseInt(hex.slice(0, 2), 16)
+  const g = parseInt(hex.slice(2, 4), 16)
+  const b = parseInt(hex.slice(4, 6), 16)
+  // W3C relative luminance
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return luminance > 0.6 ? '#1f2937' : '#ffffff'
+}
+
 export function getEventStyle(
   status: string,
   staffColor: string,
   bookingTypeColor?: string | null
 ): React.CSSProperties {
-  const textColor = STATUS_TEXT[status] || STATUS_TEXT['scheduled']
   const borderColor = bookingTypeColor || STATUS_BORDER_COLOR[status] || STATUS_BORDER_COLOR['scheduled']
   const isCancelledOrNoShow = status === 'cancelled' || status === 'no_show'
 
@@ -34,6 +45,11 @@ export function getEventStyle(
   const bg = staffColor
     ? staffColor + '20' // hex alpha ~12% opacity
     : (STATUS_BG[status] || STATUS_BG['scheduled'])
+
+  // テキスト色: スタッフ色がある場合はコントラスト自動判定、なければステータス色
+  const textColor = staffColor
+    ? getContrastTextColor(staffColor)
+    : (STATUS_TEXT[status] || STATUS_TEXT['scheduled'])
 
   return {
     backgroundColor: bg,
