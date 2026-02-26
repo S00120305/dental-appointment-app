@@ -72,6 +72,18 @@ const menuGroups: MenuGroup[] = [
         ),
       },
       {
+        label: '診療時間設定',
+        description: '午前・午後の診療時間と昼休みの設定',
+        href: '/settings/business-hours',
+        iconBg: 'bg-teal-100',
+        iconColor: 'text-teal-600',
+        icon: (
+          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        ),
+      },
+      {
         label: '注意事項タグ',
         description: '予約に付ける注意フラグの管理',
         href: '/settings/appointment-tags',

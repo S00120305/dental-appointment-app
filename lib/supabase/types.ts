@@ -114,6 +114,8 @@ export type AppointmentWithRelations = Appointment & {
 }
 
 // 予約種別マスタ
+export type UnitType = 'hygienist' | 'doctor' | 'any'
+
 export type BookingType = {
   id: string
   display_name: string
@@ -126,6 +128,7 @@ export type BookingType = {
   notes: string
   color: string
   category: string | null
+  unit_type: UnitType
   sort_order: number
   is_active: boolean
   created_at: string

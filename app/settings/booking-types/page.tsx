@@ -27,6 +27,7 @@ type FormData = {
   notes: string
   color: string
   category: string
+  unit_type: 'hygienist' | 'doctor' | 'any'
   sort_order: number
 }
 
@@ -41,7 +42,14 @@ const defaultForm: FormData = {
   notes: '',
   color: '#3B82F6',
   category: '',
+  unit_type: 'any',
   sort_order: 0,
+}
+
+const UNIT_TYPE_LABEL: Record<string, string> = {
+  hygienist: 'DH',
+  doctor: 'Dr',
+  any: '共通',
 }
 
 export default function BookingTypesPage() {
@@ -84,6 +92,7 @@ export default function BookingTypesPage() {
       notes: bt.notes,
       color: bt.color,
       category: bt.category || '',
+      unit_type: bt.unit_type || 'any',
       sort_order: bt.sort_order,
     })
     setModalOpen(true)
@@ -232,6 +241,13 @@ export default function BookingTypesPage() {
                               <span className="ml-2 text-sm text-gray-400">({bt.display_name})</span>
                             )}
                             <span className="ml-3 text-sm text-gray-500">{bt.duration_minutes}分</span>
+                            {bt.unit_type && bt.unit_type !== 'any' && (
+                              <span className={`ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                                bt.unit_type === 'hygienist' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
+                              }`}>
+                                {UNIT_TYPE_LABEL[bt.unit_type]}
+                              </span>
+                            )}
                             {bt.is_web_bookable && (
                               <span className="ml-2 inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
                                 Web予約
@@ -376,6 +392,20 @@ export default function BookingTypesPage() {
                 <span className="text-sm">承認制</span>
               </label>
             </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">診察室タイプ</label>
+            <select
+              value={form.unit_type}
+              onChange={e => setForm({ ...form, unit_type: e.target.value as 'hygienist' | 'doctor' | 'any' })}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-base"
+            >
+              <option value="hygienist">衛生士用 (hygienist)</option>
+              <option value="doctor">Dr用 (doctor)</option>
+              <option value="any">どちらも (any)</option>
+            </select>
+            <p className="mt-1 text-xs text-gray-500">Web予約時に自動割当される診察室を制限します</p>
           </div>
 
           <div>

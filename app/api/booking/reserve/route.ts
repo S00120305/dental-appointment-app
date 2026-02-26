@@ -51,10 +51,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '電話番号の形式が正しくありません' }, { status: 400 })
     }
 
-    // 予約種別を取得
+    // 予約種別を取得（unit_type含む）
     const { data: bookingType, error: typeError } = await supabase
       .from('booking_types')
-      .select('id, display_name, duration_minutes, confirmation_mode, is_web_bookable, is_active')
+      .select('id, display_name, duration_minutes, confirmation_mode, is_web_bookable, is_active, unit_type')
       .eq('id', booking_type_id)
       .single()
 
@@ -72,17 +72,33 @@ export async function POST(request: NextRequest) {
     const { data: settingsData } = await supabase
       .from('appointment_settings')
       .select('key, value')
-      .in('key', ['visible_units', 'unit_count'])
+      .in('key', ['visible_units', 'unit_count', 'unit_types'])
 
     let visibleUnitsRaw = ''
     let unitCountRaw = ''
+    let unitTypesMap: Record<string, string> = {}
     if (settingsData) {
       for (const row of settingsData) {
         if (row.key === 'visible_units') visibleUnitsRaw = row.value
         if (row.key === 'unit_count') unitCountRaw = row.value
+        if (row.key === 'unit_types') {
+          try { unitTypesMap = JSON.parse(row.value) } catch { /* ignore */ }
+        }
       }
     }
-    const allUnits = parseUnits(visibleUnitsRaw || unitCountRaw || '5')
+    let allUnits = parseUnits(visibleUnitsRaw || unitCountRaw || '5')
+
+    // Phase 3: unit_type フィルタ
+    const btUnitType: string = bookingType.unit_type || 'any'
+    if (btUnitType !== 'any') {
+      allUnits = allUnits.filter(u => unitTypesMap[String(u)] === btUnitType)
+      if (allUnits.length === 0) {
+        return NextResponse.json(
+          { error: 'この予約種別に対応する診察室がありません。' },
+          { status: 409 }
+        )
+      }
+    }
 
     // 空きユニットを検索（二重予約防止）
     const newStart = new Date(startTime)

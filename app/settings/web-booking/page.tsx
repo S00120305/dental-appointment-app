@@ -21,6 +21,7 @@ export default function WebBookingSettingsPage() {
   const [deadlineTime, setDeadlineTime] = useState('18:00')
   const [cancelDeadlineTime, setCancelDeadlineTime] = useState('18:00')
   const [maxActiveBookings, setMaxActiveBookings] = useState('3')
+  const [minGapMinutes, setMinGapMinutes] = useState('40')
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -33,6 +34,7 @@ export default function WebBookingSettingsPage() {
         if (s.web_booking_deadline_time) setDeadlineTime(s.web_booking_deadline_time)
         if (s.web_cancel_deadline_time) setCancelDeadlineTime(s.web_cancel_deadline_time)
         if (s.web_max_active_bookings) setMaxActiveBookings(s.web_max_active_bookings)
+        if (s.web_booking_min_gap_minutes) setMinGapMinutes(s.web_booking_min_gap_minutes)
       }
     } catch { /* ignore */ }
     finally { setLoading(false) }
@@ -58,6 +60,7 @@ export default function WebBookingSettingsPage() {
         saveSetting('web_booking_deadline_time', deadlineTime),
         saveSetting('web_cancel_deadline_time', cancelDeadlineTime),
         saveSetting('web_max_active_bookings', maxActiveBookings),
+        saveSetting('web_booking_min_gap_minutes', minGapMinutes),
       ])
       showToast('設定を保存しました', 'success')
     } catch {
@@ -173,6 +176,25 @@ export default function WebBookingSettingsPage() {
               </select>
               <span className="text-sm text-gray-600">件</span>
             </div>
+          </div>
+
+          {/* 最小間隔 */}
+          <div>
+            <h2 className="mb-3 text-sm font-bold text-gray-700">Web予約の最小間隔</h2>
+            <div className="flex items-center gap-2">
+              <select
+                value={minGapMinutes}
+                onChange={e => setMinGapMinutes(e.target.value)}
+                className="rounded-md border border-gray-300 px-3 py-2 text-base"
+              >
+                {[10, 20, 30, 40, 60].map(n => (
+                  <option key={n} value={String(n)}>{n}分</option>
+                ))}
+              </select>
+            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              既存予約との間にこの時間未満の隙間しかできない枠は、Web予約候補から除外されます。
+            </p>
           </div>
 
           <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">

@@ -61,17 +61,43 @@ export async function POST(
     const { data: settingsData } = await supabase
       .from('appointment_settings')
       .select('key, value')
-      .in('key', ['visible_units', 'unit_count'])
+      .in('key', ['visible_units', 'unit_count', 'unit_types'])
 
     let visibleUnitsRaw = ''
     let unitCountRaw = ''
+    let unitTypesMap: Record<string, string> = {}
     if (settingsData) {
       for (const row of settingsData) {
         if (row.key === 'visible_units') visibleUnitsRaw = row.value
         if (row.key === 'unit_count') unitCountRaw = row.value
+        if (row.key === 'unit_types') {
+          try { unitTypesMap = JSON.parse(row.value) } catch { /* ignore */ }
+        }
       }
     }
-    const allUnits = parseUnits(visibleUnitsRaw || unitCountRaw || '5')
+    let allUnits = parseUnits(visibleUnitsRaw || unitCountRaw || '5')
+
+    // Phase 3: unit_type フィルタ
+    const btForType = tokenData.booking_type && !Array.isArray(tokenData.booking_type)
+      ? (tokenData.booking_type as { id: string; display_name: string; duration_minutes: number })
+      : null
+    if (btForType) {
+      const { data: btTypeData } = await supabase
+        .from('booking_types')
+        .select('unit_type')
+        .eq('id', btForType.id)
+        .single()
+      const btUnitType = btTypeData?.unit_type || 'any'
+      if (btUnitType !== 'any') {
+        allUnits = allUnits.filter(u => unitTypesMap[String(u)] === btUnitType)
+        if (allUnits.length === 0) {
+          return NextResponse.json(
+            { error: 'この予約種別に対応する診察室がありません。' },
+            { status: 409 }
+          )
+        }
+      }
+    }
 
     // 空きユニット検索
     const newStart = new Date(startTime)

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
-type OccupiedInterval = { start: number; end: number }
+type OccupiedInterval = { start: number; end: number; type: 'appointment' | 'lunch' | 'blocked' | 'boundary' }
 
 const DAY_NAMES = ['日', '月', '火', '水', '木', '金', '土']
 
@@ -33,10 +33,10 @@ export async function GET(request: NextRequest) {
     // source=token の場合はトークン経由（is_web_bookable チェックをスキップ）
     const source = searchParams.get('source')
 
-    // 予約種別を取得
+    // 予約種別を取得（unit_type含む）
     const { data: bookingType, error: typeError } = await supabase
       .from('booking_types')
-      .select('id, duration_minutes, is_web_bookable, is_active')
+      .select('id, duration_minutes, is_web_bookable, is_active, unit_type')
       .eq('id', typeId)
       .single()
 
@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
     }
 
     const durationMinutes = bookingType.duration_minutes
+    const btUnitType: string = bookingType.unit_type || 'any'
 
     // 設定取得
     const { data: settingsData } = await supabase
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
       .select('key, value')
       .in('key', [
         'business_hours', 'visible_units', 'unit_count',
-        'closed_days',
+        'closed_days', 'unit_types', 'web_booking_min_gap_minutes',
         'web_booking_min_days_ahead', 'web_booking_max_days_ahead',
       ])
 
@@ -69,6 +70,8 @@ export async function GET(request: NextRequest) {
     let closedDays: string[] = ['日', '祝']
     let visibleUnitsRaw = ''
     let unitCountRaw = ''
+    let unitTypesMap: Record<string, string> = {}
+    let minGapMinutes = 40
     let minDaysAhead = 1
     let maxDaysAhead = 90
 
@@ -88,12 +91,24 @@ export async function GET(request: NextRequest) {
         if (row.key === 'closed_days') {
           try { closedDays = JSON.parse(row.value) } catch { /* ignore */ }
         }
+        if (row.key === 'unit_types') {
+          try { unitTypesMap = JSON.parse(row.value) } catch { /* ignore */ }
+        }
+        if (row.key === 'web_booking_min_gap_minutes') minGapMinutes = parseInt(row.value) || 40
         if (row.key === 'web_booking_min_days_ahead') minDaysAhead = parseInt(row.value) || 1
         if (row.key === 'web_booking_max_days_ahead') maxDaysAhead = parseInt(row.value) || 90
       }
     }
 
-    const allUnits = parseUnits(visibleUnitsRaw || unitCountRaw || '5')
+    let allUnits = parseUnits(visibleUnitsRaw || unitCountRaw || '5')
+
+    // Phase 3: unit_type フィルタ — booking_type の unit_type に一致するユニットのみ
+    if (btUnitType !== 'any') {
+      allUnits = allUnits.filter(u => unitTypesMap[String(u)] === btUnitType)
+      if (allUnits.length === 0) {
+        return NextResponse.json({ date, slots: [], duration_minutes: durationMinutes })
+      }
+    }
 
     // 日付バリデーション
     const targetDate = new Date(date + 'T00:00:00+09:00')
@@ -106,20 +121,38 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'この日は予約可能期間外です', slots: [] }, { status: 400 })
     }
 
-    // 休診日チェック
+    // 休診日チェック（曜日）
     const dayOfWeek = DAY_NAMES[targetDate.getUTCDay()]
     if (closedDays.includes(dayOfWeek)) {
       return NextResponse.json({ error: 'この日は休診日です', slots: [] }, { status: 400 })
     }
 
-    // 対象日の予約・ブロック枠を取得
+    // Phase 5: clinic_holidays テーブルからの休診日チェック
+    const { data: holidays } = await supabase
+      .from('clinic_holidays')
+      .select('holiday_type, day_of_week, specific_date, is_active')
+      .eq('is_active', true)
+
+    if (holidays) {
+      const jstDow = targetDate.getUTCDay() // 0=日,1=月,...
+      for (const h of holidays) {
+        if (h.holiday_type === 'weekly' && h.day_of_week === jstDow) {
+          return NextResponse.json({ error: 'この日は休診日です', slots: [] }, { status: 400 })
+        }
+        if ((h.holiday_type === 'specific' || h.holiday_type === 'national') && h.specific_date === date) {
+          return NextResponse.json({ error: 'この日は休診日です', slots: [] }, { status: 400 })
+        }
+      }
+    }
+
+    // 対象日の予約・ブロック枠を取得（slide_from_id も取得）
     const dayStart = `${date}T00:00:00+09:00`
     const dayEnd = `${date}T23:59:59+09:00`
 
     const [appointmentsRes, blockedSlotsRes] = await Promise.all([
       supabase
         .from('appointments')
-        .select('unit_number, start_time, duration_minutes')
+        .select('id, unit_number, start_time, duration_minutes, slide_from_id')
         .eq('is_deleted', false)
         .not('status', 'in', '("cancelled","no_show")')
         .gte('start_time', dayStart)
@@ -135,15 +168,30 @@ export async function GET(request: NextRequest) {
     const appointments = appointmentsRes.data || []
     const blockedSlots = blockedSlotsRes.data || []
 
-    // ユニットごとにインデックス
+    // スライドペアのIDセットを構築
+    const slidePairIds = new Set<string>()
+    for (const appt of appointments) {
+      if (appt.slide_from_id) {
+        slidePairIds.add(appt.id)
+        slidePairIds.add(appt.slide_from_id)
+      }
+    }
+
+    // ユニットごとにインデックス（type付き）
     const occupiedByUnit = new Map<number, OccupiedInterval[]>()
+    // 予約IDとインターバルのマッピング（スライドペア判定用）
+    const apptIntervalMap = new Map<string, { unit: number; interval: OccupiedInterval }>()
+
     for (const appt of appointments) {
       const s = new Date(appt.start_time).getTime()
-      if (!occupiedByUnit.has(appt.unit_number)) occupiedByUnit.set(appt.unit_number, [])
-      occupiedByUnit.get(appt.unit_number)!.push({
+      const interval: OccupiedInterval = {
         start: s,
         end: s + appt.duration_minutes * 60 * 1000,
-      })
+        type: 'appointment',
+      }
+      if (!occupiedByUnit.has(appt.unit_number)) occupiedByUnit.set(appt.unit_number, [])
+      occupiedByUnit.get(appt.unit_number)!.push(interval)
+      apptIntervalMap.set(appt.id, { unit: appt.unit_number, interval })
     }
     for (const block of blockedSlots) {
       const affectedUnits = block.unit_number === 0 ? allUnits : [block.unit_number]
@@ -152,6 +200,7 @@ export async function GET(request: NextRequest) {
         occupiedByUnit.get(u)!.push({
           start: new Date(block.start_time).getTime(),
           end: new Date(block.end_time).getTime(),
+          type: 'blocked',
         })
       }
     }
@@ -161,6 +210,10 @@ export async function GET(request: NextRequest) {
     const windowEnd = parseTimeToTimestamp(date, bhEnd)
     const lunchS = parseTimeToTimestamp(date, lunchStart)
     const lunchE = parseTimeToTimestamp(date, lunchEnd)
+
+    // Phase 4: 最小間隔の有効値
+    const effectiveGap = Math.min(durationMinutes, minGapMinutes)
+    const effectiveGapMs = effectiveGap * 60 * 1000
 
     // 全ユニットの空き時間をマージして、ユニーク時間枠を返す
     const availableTimesSet = new Set<number>()
@@ -172,16 +225,28 @@ export async function GET(request: NextRequest) {
       ]
       // 昼休み
       if (lunchS < windowEnd && lunchE > windowStart) {
-        occupied.push({ start: lunchS, end: lunchE })
+        occupied.push({ start: lunchS, end: lunchE, type: 'lunch' })
       }
+
+      // ソート済みのoccupied intervals（mergeなし、個別に保持してgapチェック用）
+      const sortedOccupied = [...occupied]
+        .filter(o => o.end > windowStart && o.start < windowEnd)
+        .sort((a, b) => a.start - b.start)
 
       const freeIntervals = findFreeSlots(windowStart, windowEnd, occupied, durationMinutes)
 
-      // 空き区間を30分刻みのスロットに分割
+      // 空き区間を30分刻みのスロットに分割 + 最小間隔チェック
       for (const interval of freeIntervals) {
         let cursor = interval.start
         while (cursor + slotMs <= interval.end) {
-          availableTimesSet.add(cursor)
+          const slotStart = cursor
+          const slotEnd = cursor + slotMs
+
+          // Phase 4: 最小間隔チェック
+          if (passesMinGapCheck(slotStart, slotEnd, sortedOccupied, windowStart, windowEnd, effectiveGapMs, unit, appointments, slidePairIds)) {
+            availableTimesSet.add(cursor)
+          }
+
           cursor += 30 * 60 * 1000 // 30分刻み
         }
       }
@@ -209,17 +274,86 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Phase 4: 最小間隔チェック
+function passesMinGapCheck(
+  slotStart: number,
+  slotEnd: number,
+  sortedOccupied: OccupiedInterval[],
+  windowStart: number,
+  windowEnd: number,
+  effectiveGapMs: number,
+  unit: number,
+  appointments: { id: string; unit_number: number; start_time: string; duration_minutes: number; slide_from_id: string | null }[],
+  slidePairIds: Set<string>,
+): boolean {
+  // 直前・直後の占有区間を探す
+  let prevOcc: OccupiedInterval | null = null
+  let nextOcc: OccupiedInterval | null = null
+
+  for (const occ of sortedOccupied) {
+    if (occ.end <= slotStart) {
+      prevOcc = occ
+    } else if (occ.start >= slotEnd && !nextOcc) {
+      nextOcc = occ
+      break
+    }
+  }
+
+  // 前の隙間チェック
+  if (prevOcc) {
+    const isBoundary = prevOcc.type === 'lunch' || prevOcc.type === 'blocked' || prevOcc.type === 'boundary'
+    // スライドペア間はスキップ
+    const isSlideRelated = isSlidePairGap(prevOcc, slotStart, slotEnd, unit, appointments, slidePairIds)
+
+    if (!isBoundary && !isSlideRelated) {
+      const gap = slotStart - prevOcc.end
+      if (gap > 0 && gap < effectiveGapMs) return false
+    }
+  } else {
+    // 直前が診療開始（境界）→ チェック不要
+  }
+
+  // 後の隙間チェック
+  if (nextOcc) {
+    const isBoundary = nextOcc.type === 'lunch' || nextOcc.type === 'blocked' || nextOcc.type === 'boundary'
+    const isSlideRelated = isSlidePairGap(nextOcc, slotStart, slotEnd, unit, appointments, slidePairIds)
+
+    if (!isBoundary && !isSlideRelated) {
+      const gap = nextOcc.start - slotEnd
+      if (gap > 0 && gap < effectiveGapMs) return false
+    }
+  } else {
+    // 直後が診療終了（境界）→ チェック不要
+  }
+
+  return true
+}
+
+// スライドペア間のギャップかどうか判定
+function isSlidePairGap(
+  _occ: OccupiedInterval,
+  _slotStart: number,
+  _slotEnd: number,
+  _unit: number,
+  _appointments: { id: string; unit_number: number; slide_from_id: string | null }[],
+  _slidePairIds: Set<string>,
+): boolean {
+  // スライドは同一患者のユニット移動なので、基本的に同一ユニット内では関係ない
+  // 将来的に必要になったら拡張
+  return false
+}
+
 function findFreeSlots(
   windowStart: number,
   windowEnd: number,
   occupied: OccupiedInterval[],
   minDurationMinutes: number
-): OccupiedInterval[] {
+): { start: number; end: number }[] {
   const sorted = [...occupied]
     .filter(o => o.end > windowStart && o.start < windowEnd)
     .sort((a, b) => a.start - b.start)
 
-  const merged: OccupiedInterval[] = []
+  const merged: { start: number; end: number }[] = []
   for (const interval of sorted) {
     const clipped = {
       start: Math.max(interval.start, windowStart),
@@ -232,7 +366,7 @@ function findFreeSlots(
     }
   }
 
-  const freeSlots: OccupiedInterval[] = []
+  const freeSlots: { start: number; end: number }[] = []
   const minMs = minDurationMinutes * 60 * 1000
   let cursor = windowStart
 

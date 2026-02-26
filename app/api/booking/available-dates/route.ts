@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
-type OccupiedInterval = { start: number; end: number }
+type OccupiedInterval = { start: number; end: number; type: 'appointment' | 'lunch' | 'blocked' }
 
 const DAY_NAMES = ['日', '月', '火', '水', '木', '金', '土']
 
@@ -33,10 +33,10 @@ export async function GET(request: NextRequest) {
     // source=token の場合はトークン経由（is_web_bookable チェックをスキップ）
     const source = searchParams.get('source')
 
-    // 予約種別を取得
+    // 予約種別を取得（unit_type含む）
     const { data: bookingType, error: typeError } = await supabase
       .from('booking_types')
-      .select('id, duration_minutes, is_web_bookable, is_active')
+      .select('id, duration_minutes, is_web_bookable, is_active, unit_type')
       .eq('id', typeId)
       .single()
 
@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
     }
 
     const durationMinutes = bookingType.duration_minutes
+    const btUnitType: string = bookingType.unit_type || 'any'
 
     // 設定取得
     const { data: settingsData } = await supabase
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
       .select('key, value')
       .in('key', [
         'business_hours', 'visible_units', 'unit_count',
-        'closed_days',
+        'closed_days', 'unit_types', 'web_booking_min_gap_minutes',
         'web_booking_min_days_ahead', 'web_booking_max_days_ahead',
       ])
 
@@ -69,6 +70,8 @@ export async function GET(request: NextRequest) {
     let closedDays: string[] = ['日', '祝']
     let visibleUnitsRaw = ''
     let unitCountRaw = ''
+    let unitTypesMap: Record<string, string> = {}
+    let minGapMinutes = 40
     let minDaysAhead = 1
     let maxDaysAhead = 90
 
@@ -88,12 +91,50 @@ export async function GET(request: NextRequest) {
         if (row.key === 'closed_days') {
           try { closedDays = JSON.parse(row.value) } catch { /* ignore */ }
         }
+        if (row.key === 'unit_types') {
+          try { unitTypesMap = JSON.parse(row.value) } catch { /* ignore */ }
+        }
+        if (row.key === 'web_booking_min_gap_minutes') minGapMinutes = parseInt(row.value) || 40
         if (row.key === 'web_booking_min_days_ahead') minDaysAhead = parseInt(row.value) || 1
         if (row.key === 'web_booking_max_days_ahead') maxDaysAhead = parseInt(row.value) || 90
       }
     }
 
-    const allUnits = parseUnits(visibleUnitsRaw || unitCountRaw || '5')
+    let allUnits = parseUnits(visibleUnitsRaw || unitCountRaw || '5')
+
+    // Phase 3: unit_type フィルタ
+    if (btUnitType !== 'any') {
+      allUnits = allUnits.filter(u => unitTypesMap[String(u)] === btUnitType)
+      if (allUnits.length === 0) {
+        // ユニットが存在しない場合は全日 unavailable
+        const [year, mon] = month.split('-').map(Number)
+        const monthEnd = new Date(year, mon, 0)
+        const dates: { date: string; available: boolean }[] = []
+        for (let d = 1; d <= monthEnd.getDate(); d++) {
+          dates.push({ date: `${month}-${String(d).padStart(2, '0')}`, available: false })
+        }
+        return NextResponse.json({ dates })
+      }
+    }
+
+    // Phase 5: clinic_holidays テーブル取得
+    const { data: holidays } = await supabase
+      .from('clinic_holidays')
+      .select('holiday_type, day_of_week, specific_date, is_active')
+      .eq('is_active', true)
+
+    const weeklyClosedDows = new Set<number>()
+    const specificClosedDates = new Set<string>()
+    if (holidays) {
+      for (const h of holidays) {
+        if (h.holiday_type === 'weekly' && h.day_of_week !== null) {
+          weeklyClosedDows.add(h.day_of_week)
+        }
+        if ((h.holiday_type === 'specific' || h.holiday_type === 'national') && h.specific_date) {
+          specificClosedDates.add(h.specific_date)
+        }
+      }
+    }
 
     // 月の範囲を計算
     const [year, mon] = month.split('-').map(Number)
@@ -139,6 +180,7 @@ export async function GET(request: NextRequest) {
       appointmentsByDayUnit.get(key)!.push({
         start: apptStart.getTime(),
         end: apptStart.getTime() + appt.duration_minutes * 60 * 1000,
+        type: 'appointment',
       })
     }
 
@@ -154,9 +196,15 @@ export async function GET(request: NextRequest) {
         blockedByDayUnit.get(key)!.push({
           start: blockStart.getTime(),
           end: blockEnd.getTime(),
+          type: 'blocked',
         })
       }
     }
+
+    // Phase 4: 最小間隔の有効値
+    const effectiveGap = Math.min(durationMinutes, minGapMinutes)
+    const effectiveGapMs = effectiveGap * 60 * 1000
+    const slotMs = durationMinutes * 60 * 1000
 
     // 各日の空き判定
     const dates: { date: string; available: boolean }[] = []
@@ -175,9 +223,17 @@ export async function GET(request: NextRequest) {
         continue
       }
 
-      // 休診日チェック（曜日）
+      // 休診日チェック（曜日 — appointment_settings）
       const dayOfWeek = DAY_NAMES[dayDate.getDay()]
       if (closedDays.includes(dayOfWeek)) {
+        dates.push({ date: dayStr, available: false })
+        currentDate.setDate(currentDate.getDate() + 1)
+        continue
+      }
+
+      // Phase 5: clinic_holidays チェック
+      const dow = dayDate.getDay()
+      if (weeklyClosedDows.has(dow) || specificClosedDates.has(dayStr)) {
         dates.push({ date: dayStr, available: false })
         currentDate.setDate(currentDate.getDate() + 1)
         continue
@@ -197,10 +253,11 @@ export async function GET(request: NextRequest) {
         ]
         // 昼休み
         if (lunchS < windowEnd && lunchE > windowStart) {
-          occupied.push({ start: lunchS, end: lunchE })
+          occupied.push({ start: lunchS, end: lunchE, type: 'lunch' })
         }
 
-        if (hasFreeSlot(windowStart, windowEnd, occupied, durationMinutes)) {
+        // Phase 4: 最小間隔を考慮した空き判定
+        if (hasFreeSlotWithGap(windowStart, windowEnd, occupied, durationMinutes, slotMs, effectiveGapMs)) {
           available = true
           break
         }
@@ -216,18 +273,21 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// 空き枠が1つでもあるか判定
-function hasFreeSlot(
+// Phase 4: 最小間隔を考慮した空き枠判定
+function hasFreeSlotWithGap(
   windowStart: number,
   windowEnd: number,
   occupied: OccupiedInterval[],
-  minDurationMinutes: number
+  minDurationMinutes: number,
+  slotMs: number,
+  effectiveGapMs: number,
 ): boolean {
   const sorted = [...occupied]
     .filter(o => o.end > windowStart && o.start < windowEnd)
     .sort((a, b) => a.start - b.start)
 
-  const merged: OccupiedInterval[] = []
+  // マージして空き区間を求める
+  const merged: { start: number; end: number }[] = []
   for (const interval of sorted) {
     const clipped = {
       start: Math.max(interval.start, windowStart),
@@ -241,14 +301,55 @@ function hasFreeSlot(
   }
 
   const minMs = minDurationMinutes * 60 * 1000
+  const freeSlots: { start: number; end: number }[] = []
   let cursor = windowStart
 
   for (const occ of merged) {
-    if (occ.start > cursor && occ.start - cursor >= minMs) return true
+    if (occ.start > cursor && occ.start - cursor >= minMs) {
+      freeSlots.push({ start: cursor, end: occ.start })
+    }
     cursor = Math.max(cursor, occ.end)
   }
+  if (windowEnd > cursor && windowEnd - cursor >= minMs) {
+    freeSlots.push({ start: cursor, end: windowEnd })
+  }
 
-  if (windowEnd > cursor && windowEnd - cursor >= minMs) return true
+  // 各空き区間内の30分刻みスロットに対して最小間隔チェック
+  for (const interval of freeSlots) {
+    let slotCursor = interval.start
+    while (slotCursor + slotMs <= interval.end) {
+      const slotStart = slotCursor
+      const slotEnd = slotCursor + slotMs
+
+      // 直前・直後の占有区間を探す
+      let prevEnd: { end: number; type: string } | null = null
+      let nextStart: { start: number; type: string } | null = null
+
+      for (const occ of sorted) {
+        if (occ.end <= slotStart) prevEnd = { end: occ.end, type: occ.type }
+        else if (occ.start >= slotEnd && !nextStart) { nextStart = { start: occ.start, type: occ.type }; break }
+      }
+
+      let valid = true
+
+      // 前の隙間チェック（境界は除外）
+      if (prevEnd && prevEnd.type === 'appointment') {
+        const gap = slotStart - prevEnd.end
+        if (gap > 0 && gap < effectiveGapMs) valid = false
+      }
+
+      // 後の隙間チェック（境界は除外）
+      if (valid && nextStart && nextStart.type === 'appointment') {
+        const gap = nextStart.start - slotEnd
+        if (gap > 0 && gap < effectiveGapMs) valid = false
+      }
+
+      if (valid) return true
+
+      slotCursor += 30 * 60 * 1000
+    }
+  }
+
   return false
 }
 

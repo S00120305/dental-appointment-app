@@ -1,17 +1,38 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import AppLayout from '@/components/layout/AppLayout'
 import Button from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { useSettings } from '@/hooks/useSettings'
 
+const UNIT_TYPE_OPTIONS = [
+  { value: 'hygienist', label: '衛生士用' },
+  { value: 'doctor', label: 'Dr用' },
+]
+
 export default function UnitsSettingsPage() {
   const { showToast } = useToast()
   const { visibleUnits, mutate, isLoading } = useSettings()
   const [selectedUnits, setSelectedUnits] = useState<number[]>([1, 2, 3, 4])
+  const [unitTypes, setUnitTypes] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const initialized = useRef(false)
+
+  // 診察室タイプ設定を取得
+  const fetchUnitTypes = useCallback(async () => {
+    try {
+      const res = await fetch('/api/settings')
+      const data = await res.json()
+      if (res.ok && data.settings?.unit_types) {
+        try {
+          setUnitTypes(JSON.parse(data.settings.unit_types))
+        } catch { /* ignore */ }
+      }
+    } catch { /* ignore */ }
+  }, [])
+
+  useEffect(() => { fetchUnitTypes() }, [fetchUnitTypes])
 
   useEffect(() => {
     if (!isLoading && visibleUnits.length > 0 && !initialized.current) {
@@ -23,7 +44,6 @@ export default function UnitsSettingsPage() {
   function toggleUnit(n: number) {
     setSelectedUnits(prev => {
       if (prev.includes(n)) {
-        // 最低1つは必要
         if (prev.length <= 1) return prev
         return prev.filter(u => u !== n).sort((a, b) => a - b)
       }
@@ -31,7 +51,9 @@ export default function UnitsSettingsPage() {
     })
   }
 
-  const hasChanged = JSON.stringify(selectedUnits) !== JSON.stringify(visibleUnits)
+  function setUnitType(unit: number, type: string) {
+    setUnitTypes(prev => ({ ...prev, [String(unit)]: type }))
+  }
 
   async function handleSave() {
     if (selectedUnits.length === 0) {
@@ -40,16 +62,18 @@ export default function UnitsSettingsPage() {
     }
     setSaving(true)
     try {
-      const res = await fetch('/api/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: 'visible_units', value: selectedUnits.join(',') }),
-      })
-      if (!res.ok) {
-        const data = await res.json()
-        showToast(data.error || 'エラーが発生しました', 'error')
-        return
-      }
+      await Promise.all([
+        fetch('/api/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'visible_units', value: selectedUnits.join(',') }),
+        }),
+        fetch('/api/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'unit_types', value: JSON.stringify(unitTypes) }),
+        }),
+      ])
       showToast('診察室設定を更新しました', 'success')
       initialized.current = false
       mutate()
@@ -110,9 +134,35 @@ export default function UnitsSettingsPage() {
             </p>
           </div>
 
+          {/* 診察室タイプ設定 */}
+          <div className="mb-6">
+            <label className="mb-3 block text-sm font-medium text-gray-700">
+              診察室タイプ（Web予約の自動割当に使用）
+            </label>
+            <div className="space-y-2">
+              {selectedUnits.map(n => (
+                <div key={n} className="flex items-center gap-3">
+                  <span className="w-20 text-sm font-medium text-gray-700">診察室{n}</span>
+                  <select
+                    value={unitTypes[String(n)] || 'doctor'}
+                    onChange={e => setUnitType(n, e.target.value)}
+                    className="min-h-[44px] rounded-md border border-gray-300 px-3 py-2 text-base"
+                  >
+                    {UNIT_TYPE_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-sm text-gray-500">
+              衛生士用の種別は衛生士用の診察室に、Dr用の種別はDr用の診察室に自動割当されます。
+            </p>
+          </div>
+
           <Button
             onClick={handleSave}
-            disabled={saving || !hasChanged}
+            disabled={saving}
           >
             {saving ? '保存中...' : '保存'}
           </Button>

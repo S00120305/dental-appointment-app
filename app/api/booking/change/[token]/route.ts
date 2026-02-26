@@ -57,22 +57,26 @@ export async function PUT(
       return NextResponse.json({ error: 'この予約は変更できません' }, { status: 400 })
     }
 
-    // 期限チェック
+    // 期限チェック + unit_types設定取得
     const { data: settingsData } = await supabase
       .from('appointment_settings')
       .select('key, value')
-      .in('key', ['web_cancel_deadline_time', 'clinic_phone', 'visible_units', 'unit_count'])
+      .in('key', ['web_cancel_deadline_time', 'clinic_phone', 'visible_units', 'unit_count', 'unit_types'])
 
     let cancelDeadlineTime = '18:00'
     let clinicPhone = ''
     let visibleUnitsRaw = ''
     let unitCountRaw = ''
+    let unitTypesMap: Record<string, string> = {}
     if (settingsData) {
       for (const row of settingsData) {
         if (row.key === 'web_cancel_deadline_time') cancelDeadlineTime = row.value
         if (row.key === 'clinic_phone') clinicPhone = row.value
         if (row.key === 'visible_units') visibleUnitsRaw = row.value
         if (row.key === 'unit_count') unitCountRaw = row.value
+        if (row.key === 'unit_types') {
+          try { unitTypesMap = JSON.parse(row.value) } catch { /* ignore */ }
+        }
       }
     }
 
@@ -90,7 +94,26 @@ export async function PUT(
     const newStartTime = `${new_date}T${new_time}:00+09:00`
 
     // 空きユニットを検索（変更元の予約は除外して検証）
-    const allUnits = parseUnits(visibleUnitsRaw || unitCountRaw || '5')
+    let allUnits = parseUnits(visibleUnitsRaw || unitCountRaw || '5')
+
+    // Phase 3: booking_type の unit_type に基づくフィルタ
+    if (appointment.booking_type_id) {
+      const { data: btData } = await supabase
+        .from('booking_types')
+        .select('unit_type')
+        .eq('id', appointment.booking_type_id)
+        .single()
+      const btUnitType = btData?.unit_type || 'any'
+      if (btUnitType !== 'any') {
+        allUnits = allUnits.filter(u => unitTypesMap[String(u)] === btUnitType)
+        if (allUnits.length === 0) {
+          return NextResponse.json(
+            { error: 'この予約種別に対応する診察室がありません。' },
+            { status: 409 }
+          )
+        }
+      }
+    }
     const newStart = new Date(newStartTime)
     const newEnd = new Date(newStart.getTime() + durationMinutes * 60 * 1000)
     const dayStart = `${new_date}T00:00:00+09:00`
@@ -192,11 +215,11 @@ export async function PUT(
     const patient = appointment.patient && !Array.isArray(appointment.patient)
       ? (appointment.patient as { id: string; name: string; email: string | null; phone: string | null; preferred_notification: string; line_user_id: string | null })
       : null
-    const bookingType = appointment.booking_type && !Array.isArray(appointment.booking_type)
+    const btInfo = appointment.booking_type && !Array.isArray(appointment.booking_type)
       ? (appointment.booking_type as { display_name: string; duration_minutes: number })
       : null
 
-    const typeName = bookingType?.display_name || appointment.appointment_type
+    const typeName = btInfo?.display_name || appointment.appointment_type
     const newDateFormatted = formatDateJP(newStartTime)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://appo.oralcare-kanazawa.clinic'
     const confirmUrl = `${appUrl}/booking/confirm/${token}`

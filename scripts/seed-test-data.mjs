@@ -53,7 +53,10 @@ const STAFF = [
 const DR_STAFF = [STAFF[0], STAFF[2]]
 const DH_STAFF = [STAFF[1]]
 
-const UNITS = [2, 3, 4, 5]
+// ユニット: 1-3=衛生士用, 4-5=Dr用
+const HYGIENIST_UNITS = [1, 2, 3]
+const DOCTOR_UNITS = [4, 5]
+const ALL_UNITS = [...HYGIENIST_UNITS, ...DOCTOR_UNITS]
 
 const LABS = [
   { id: '044975b2-93a7-41b2-bc35-fd9baaa776da', name: '院内製作' },
@@ -64,43 +67,43 @@ const LABS = [
 
 // 代表的なbooking_types（IDは実DB値）
 const BT = {
-  // Dr系
-  初診: { id: 'f3560590-468f-4365-a124-d5775c761881', dur: 60, name: '初診' },
-  再診: { id: '7118044a-3c97-42e4-80f3-ab06f3a113d0', dur: 30, name: '再診' },
-  急患: { id: 'e8262ae9-b5f4-4fd2-b37d-92eebb82e41d', dur: 30, name: '急患' },
-  C処: { id: '1a5f20c7-dbe9-4141-be4a-2e614fdea535', dur: 40, name: 'C処' },
-  CR: { id: '7e8fe35a-ec13-4d90-9c5d-00ce1292a1ce', dur: 30, name: 'CR' },
-  Imp: { id: '90089b05-f017-4e58-be7d-209c2d8d32ba', dur: 40, name: 'Imp' },
-  Set: { id: '7d0fdc2e-9577-46d8-a875-8708b62225f7', dur: 40, name: 'Set' },
-  除去: { id: '4c08b727-e1b8-4871-a03f-7148636d9b82', dur: 40, name: '除去' },
-  Sp: { id: '22d814dd-81af-41fa-a542-9742848e62a6', dur: 20, name: 'Sp' },
-  抜髄: { id: '464e8f6d-196d-41a1-b4b3-8b52bd6beb34', dur: 50, name: '抜髄' },
-  RCT: { id: 'a7b97e92-9875-44dd-8c3b-d8c68f4e90ae', dur: 40, name: 'RCT' },
-  RCF: { id: '64723811-3595-4721-ba18-0e5330e907f8', dur: 30, name: 'RCF' },
-  抜歯: { id: 'c7339e0b-f05a-45cf-83f0-649cea35263e', dur: 50, name: '抜歯' },
-  抜糸: { id: 'd13f4362-86b5-4f02-b528-df14b4350f1a', dur: 20, name: '抜糸' },
-  Kp: { id: 'bf4a215b-4acb-4f22-9eac-cb42ae609ce8', dur: 40, name: 'Kp' },
-  PZImp: { id: 'd267348d-b3f5-4f74-a529-9f8c6f72896a', dur: 50, name: 'PZ Imp' },
-  試適: { id: 'cf43f587-c6b2-450f-8c25-dad47a788a58', dur: 30, name: '試適' },
-  BrImp: { id: 'edd729f3-8ac7-419d-9806-79ffbc9a18d5', dur: 60, name: 'Br Imp' },
-  BrSet: { id: 'a967e494-d9e0-4913-94c4-b07964ea5cec', dur: 50, name: 'Br Set' },
-  TEK: { id: 'ae33668b-1c5d-4d3e-a502-5699e0696f69', dur: 30, name: 'TEK' },
-  コア築造: { id: 'd2769b2b-b135-400c-b69e-cfe2367d0a11', dur: 40, name: 'コア築造' },
-  義歯Imp: { id: '020b66c2-91ea-469b-8089-fb09c8de9950', dur: 30, name: '義歯Imp' },
-  義歯Set: { id: 'a8ea441f-c0b0-4a8f-98b3-a94a5b2464c1', dur: 50, name: '義歯Set' },
-  義歯調整: { id: '6581022e-18e3-4a28-86a5-c5cd708e30b4', dur: 40, name: '義歯調整' },
-  // DH系
-  SC: { id: '5e25f372-997c-4647-939c-4c2f28cbcc78', dur: 30, name: 'SC' },
-  SRP: { id: '96a8d8b8-b618-478b-a7da-f16f709e5987', dur: 40, name: 'SRP' },
-  TBI: { id: '2904d46d-5f16-4fbb-9cac-232c1a43aa23', dur: 30, name: 'TBI' },
-  PMTC: { id: 'c4984693-17b0-48a7-adb3-a812a62306eb', dur: 40, name: 'PMTC' },
-  SPT: { id: '6039447e-eed7-42d7-8f52-5862c76aa844', dur: 40, name: 'SPT' },
-  フッ素: { id: '6be84383-f678-40ce-8d66-53e05006bb1f', dur: 30, name: 'フッ素' },
-  リコール: { id: '29ee062f-305f-4dc4-8c8a-4315d2fd426a', dur: 40, name: 'リコール' },
-  P基検: { id: 'f0d0c3d4-105d-4654-a100-09d25bbd4b3c', dur: 30, name: 'P基検' },
-  P精検: { id: '5621015f-8fdc-4826-baeb-a1e27fff064f', dur: 30, name: 'P精検' },
-  // その他
-  レントゲン: { id: 'c4b930fd-3f05-4e54-a2cc-de0086234021', dur: 20, name: 'レントゲン' },
+  // Dr系 (unit_type: doctor)
+  初診: { id: 'f3560590-468f-4365-a124-d5775c761881', dur: 60, name: '初診', unitType: 'doctor' },
+  再診: { id: '7118044a-3c97-42e4-80f3-ab06f3a113d0', dur: 30, name: '再診', unitType: 'doctor' },
+  急患: { id: 'e8262ae9-b5f4-4fd2-b37d-92eebb82e41d', dur: 30, name: '急患', unitType: 'doctor' },
+  C処: { id: '1a5f20c7-dbe9-4141-be4a-2e614fdea535', dur: 40, name: 'C処', unitType: 'doctor' },
+  CR: { id: '7e8fe35a-ec13-4d90-9c5d-00ce1292a1ce', dur: 30, name: 'CR', unitType: 'doctor' },
+  Imp: { id: '90089b05-f017-4e58-be7d-209c2d8d32ba', dur: 40, name: 'Imp', unitType: 'doctor' },
+  Set: { id: '7d0fdc2e-9577-46d8-a875-8708b62225f7', dur: 40, name: 'Set', unitType: 'doctor' },
+  除去: { id: '4c08b727-e1b8-4871-a03f-7148636d9b82', dur: 40, name: '除去', unitType: 'doctor' },
+  Sp: { id: '22d814dd-81af-41fa-a542-9742848e62a6', dur: 20, name: 'Sp', unitType: 'doctor' },
+  抜髄: { id: '464e8f6d-196d-41a1-b4b3-8b52bd6beb34', dur: 50, name: '抜髄', unitType: 'doctor' },
+  RCT: { id: 'a7b97e92-9875-44dd-8c3b-d8c68f4e90ae', dur: 40, name: 'RCT', unitType: 'doctor' },
+  RCF: { id: '64723811-3595-4721-ba18-0e5330e907f8', dur: 30, name: 'RCF', unitType: 'doctor' },
+  抜歯: { id: 'c7339e0b-f05a-45cf-83f0-649cea35263e', dur: 50, name: '抜歯', unitType: 'doctor' },
+  抜糸: { id: 'd13f4362-86b5-4f02-b528-df14b4350f1a', dur: 20, name: '抜糸', unitType: 'doctor' },
+  Kp: { id: 'bf4a215b-4acb-4f22-9eac-cb42ae609ce8', dur: 40, name: 'Kp', unitType: 'doctor' },
+  PZImp: { id: 'd267348d-b3f5-4f74-a529-9f8c6f72896a', dur: 50, name: 'PZ Imp', unitType: 'doctor' },
+  試適: { id: 'cf43f587-c6b2-450f-8c25-dad47a788a58', dur: 30, name: '試適', unitType: 'doctor' },
+  BrImp: { id: 'edd729f3-8ac7-419d-9806-79ffbc9a18d5', dur: 60, name: 'Br Imp', unitType: 'doctor' },
+  BrSet: { id: 'a967e494-d9e0-4913-94c4-b07964ea5cec', dur: 50, name: 'Br Set', unitType: 'doctor' },
+  TEK: { id: 'ae33668b-1c5d-4d3e-a502-5699e0696f69', dur: 30, name: 'TEK', unitType: 'doctor' },
+  コア築造: { id: 'd2769b2b-b135-400c-b69e-cfe2367d0a11', dur: 40, name: 'コア築造', unitType: 'doctor' },
+  義歯Imp: { id: '020b66c2-91ea-469b-8089-fb09c8de9950', dur: 30, name: '義歯Imp', unitType: 'doctor' },
+  義歯Set: { id: 'a8ea441f-c0b0-4a8f-98b3-a94a5b2464c1', dur: 50, name: '義歯Set', unitType: 'doctor' },
+  義歯調整: { id: '6581022e-18e3-4a28-86a5-c5cd708e30b4', dur: 40, name: '義歯調整', unitType: 'doctor' },
+  // DH系 (unit_type: hygienist)
+  SC: { id: '5e25f372-997c-4647-939c-4c2f28cbcc78', dur: 30, name: 'SC', unitType: 'hygienist' },
+  SRP: { id: '96a8d8b8-b618-478b-a7da-f16f709e5987', dur: 40, name: 'SRP', unitType: 'hygienist' },
+  TBI: { id: '2904d46d-5f16-4fbb-9cac-232c1a43aa23', dur: 30, name: 'TBI', unitType: 'hygienist' },
+  PMTC: { id: 'c4984693-17b0-48a7-adb3-a812a62306eb', dur: 40, name: 'PMTC', unitType: 'hygienist' },
+  SPT: { id: '6039447e-eed7-42d7-8f52-5862c76aa844', dur: 40, name: 'SPT', unitType: 'hygienist' },
+  フッ素: { id: '6be84383-f678-40ce-8d66-53e05006bb1f', dur: 30, name: 'フッ素', unitType: 'hygienist' },
+  リコール: { id: '29ee062f-305f-4dc4-8c8a-4315d2fd426a', dur: 40, name: 'リコール', unitType: 'hygienist' },
+  P基検: { id: 'f0d0c3d4-105d-4654-a100-09d25bbd4b3c', dur: 30, name: 'P基検', unitType: 'doctor' },
+  P精検: { id: '5621015f-8fdc-4826-baeb-a1e27fff064f', dur: 30, name: 'P精検', unitType: 'doctor' },
+  // その他 (unit_type: any)
+  レントゲン: { id: 'c4b930fd-3f05-4e54-a2cc-de0086234021', dur: 20, name: 'レントゲン', unitType: 'any' },
 }
 
 // Dr向け予約種別（重み付き）
@@ -131,13 +134,37 @@ const TAGS = {
   VIP: 'fef69851-1cf6-489f-8acf-f3ee877f820e',
 }
 
-// 休診日: 日曜(0), 月曜(1), 春分の日(2026-03-20)
-const HOLIDAY_DATES = new Set(['2026-03-20'])
+// 休診日判定: clinic_holidays テーブルから取得した情報を使用
+let WEEKLY_CLOSED_DOWS = new Set([0, 1]) // デフォルト: 日(0), 月(1)
+let SPECIFIC_CLOSED_DATES = new Set()
+
+async function loadHolidays() {
+  const { data } = await supabase
+    .from('clinic_holidays')
+    .select('holiday_type, day_of_week, specific_date')
+    .eq('is_active', true)
+
+  if (data) {
+    const weeklyDows = new Set()
+    const specificDates = new Set()
+    for (const h of data) {
+      if (h.holiday_type === 'weekly' && h.day_of_week !== null) {
+        weeklyDows.add(h.day_of_week)
+      }
+      if ((h.holiday_type === 'specific' || h.holiday_type === 'national') && h.specific_date) {
+        specificDates.add(h.specific_date)
+      }
+    }
+    if (weeklyDows.size > 0) WEEKLY_CLOSED_DOWS = weeklyDows
+    SPECIFIC_CLOSED_DATES = specificDates
+  }
+}
+
 function isHoliday(date) {
   const d = new Date(date + 'T00:00:00+09:00')
   const dow = d.getDay()
-  if (dow === 0 || dow === 1) return true
-  return HOLIDAY_DATES.has(date)
+  if (WEEKLY_CLOSED_DOWS.has(dow)) return true
+  return SPECIFIC_CLOSED_DATES.has(date)
 }
 
 // ============================
@@ -296,7 +323,7 @@ function generateLabOrders(patients, startDate, dayCount) {
     const setDate = addDays(dueDate, setDayOffset)
 
     // ステータスは日付ベースで決定
-    const today = '2026-02-26'
+    const today = '2026-02-27'
     let status = '製作中'
     if (dueDate < today) {
       status = rand(['納品済み', 'セット完了', 'セット完了'])
@@ -326,15 +353,18 @@ function generateLabOrders(patients, startDate, dayCount) {
 // 予約生成
 // ============================
 
-// 診療時間枠: 9:00-12:30, 14:00-18:00（10分刻み）
+// 診療時間枠: 9:30-13:00, 14:00-18:00（10分刻み）
 const MORNING_SLOTS = []
-for (let h = 9; h < 12; h++) for (let m = 0; m < 60; m += 10) MORNING_SLOTS.push(`${pad2(h)}:${pad2(m)}`)
-MORNING_SLOTS.push('12:00', '12:10', '12:20') // 12:30ギリギリまで
+for (let h = 9; h < 13; h++) {
+  const startMin = h === 9 ? 30 : 0
+  for (let m = startMin; m < 60; m += 10) {
+    if (h === 12 && m >= 50) break // 12:50まで（13:00は昼休み）
+    MORNING_SLOTS.push(`${pad2(h)}:${pad2(m)}`)
+  }
+}
 
 const AFTERNOON_SLOTS = []
 for (let h = 14; h < 18; h++) for (let m = 0; m < 60; m += 10) AFTERNOON_SLOTS.push(`${pad2(h)}:${pad2(m)}`)
-
-const ALL_SLOTS = [...MORNING_SLOTS, ...AFTERNOON_SLOTS]
 
 function generateAppointments(patients, labOrders, startDate, dayCount) {
   const appointments = []
@@ -345,15 +375,14 @@ function generateAppointments(patients, labOrders, startDate, dayCount) {
     const dateStr = addDays(startDate, dayOff)
     if (isHoliday(dateStr)) continue
 
-    // 1日あたりの予約数: ユニット4つ × 各ユニット8-12枠 ≒ 32-48件/日
-    // 月20営業日で640-960件/月
-
-    for (const unit of UNITS) {
+    for (const unit of ALL_UNITS) {
       const occupiedSlots = new Set() // この日このユニットの使用済みスロット
 
-      // 午前: 3-5件
+      // ユニットタイプに基づく予約種別・スタッフ選択
+      const isHygienistUnit = HYGIENIST_UNITS.includes(unit)
+
+      // 午前: 3-5件, 午後: 4-7件
       const morningCount = randInt(3, 5)
-      // 午後: 4-7件
       const afternoonCount = randInt(4, 7)
 
       const dayAppointments = []
@@ -361,9 +390,8 @@ function generateAppointments(patients, labOrders, startDate, dayCount) {
       // 午前の予約生成
       let nextSlotIdx = 0
       for (let j = 0; j < morningCount && nextSlotIdx < MORNING_SLOTS.length; j++) {
-        const isDH = unit === 5 || (unit === 4 && Math.random() < 0.5)
-        const bt = isDH ? weightedRand(DH_TYPES) : weightedRand(DR_TYPES)
-        const staff = isDH ? rand(DH_STAFF) : rand(DR_STAFF)
+        const bt = isHygienistUnit ? weightedRand(DH_TYPES) : weightedRand(DR_TYPES)
+        const staff = isHygienistUnit ? rand(DH_STAFF) : rand(DR_STAFF)
         const patient = rand(patients)
 
         const time = MORNING_SLOTS[nextSlotIdx]
@@ -385,7 +413,7 @@ function generateAppointments(patients, labOrders, startDate, dayCount) {
         const startTime = `${dateStr}T${time}:00+09:00`
 
         // ステータス決定（過去の予約は completed 多め）
-        const today = '2026-02-26'
+        const today = '2026-02-27'
         let status = 'scheduled'
         if (dateStr < today) {
           const r = Math.random()
@@ -440,9 +468,8 @@ function generateAppointments(patients, labOrders, startDate, dayCount) {
       // 午後の予約生成
       nextSlotIdx = 0
       for (let j = 0; j < afternoonCount && nextSlotIdx < AFTERNOON_SLOTS.length; j++) {
-        const isDH = unit === 5 || (unit === 4 && Math.random() < 0.5)
-        const bt = isDH ? weightedRand(DH_TYPES) : weightedRand(DR_TYPES)
-        const staff = isDH ? rand(DH_STAFF) : rand(DR_STAFF)
+        const bt = isHygienistUnit ? weightedRand(DH_TYPES) : weightedRand(DR_TYPES)
+        const staff = isHygienistUnit ? rand(DH_STAFF) : rand(DR_STAFF)
         const patient = rand(patients)
 
         const time = AFTERNOON_SLOTS[nextSlotIdx]
@@ -463,7 +490,7 @@ function generateAppointments(patients, labOrders, startDate, dayCount) {
 
         const startTime = `${dateStr}T${time}:00+09:00`
 
-        const today = '2026-02-26'
+        const today = '2026-02-27'
         let status = 'scheduled'
         if (dateStr < today) {
           const r = Math.random()
@@ -516,7 +543,7 @@ function generateAppointments(patients, labOrders, startDate, dayCount) {
       appointments.push(...dayAppointments)
     }
 
-    // スライドペア生成（1日5%の確率で1-2組）
+    // スライドペア生成（1日15%の確率で1ペア）
     const todayAppts = appointments.filter(a => a._dateStr === dateStr && a.status !== 'cancelled' && a.status !== 'no_show')
     if (Math.random() < 0.15 && todayAppts.length >= 4) {
       // 同じ患者の予約がある場合にスライド
@@ -545,36 +572,69 @@ function generateAppointments(patients, labOrders, startDate, dayCount) {
 
 async function main() {
   console.log('=== テストデータ生成開始 ===')
-  const startDate = '2026-02-16' // 約10日前から
-  const endDate = '2026-03-20' // 約3週間後まで
+
+  // clinic_holidays から休診日を読み込み
+  await loadHolidays()
+  console.log(`休診曜日: ${[...WEEKLY_CLOSED_DOWS].map(d => ['日','月','火','水','木','金','土'][d]).join(', ')}`)
+  console.log(`特定休診日: ${SPECIFIC_CLOSED_DATES.size}件`)
+
+  const startDate = '2026-02-17' // 約10日前から
   const dayCount = 33
 
-  // 1. 患者生成
-  console.log('\n[1/5] 患者 300名を作成中...')
+  // 0. 既存予約を論理削除
+  console.log('\n[0/5] 既存予約を論理削除中...')
+  const { error: deleteError } = await supabase
+    .from('appointments')
+    .update({ is_deleted: true })
+    .eq('is_deleted', false)
+  if (deleteError) console.error('  論理削除エラー:', deleteError.message)
+  else console.log('  完了')
+
+  // 1. 患者生成（既存があれば再利用）
+  console.log('\n[1/5] 患者を準備中...')
   const patientData = generatePatients(300, 100) // カルテNo: 00100〜00399
 
-  // バッチinsert（50件ずつ）
-  const createdPatients = []
-  for (let i = 0; i < patientData.length; i += 50) {
-    const batch = patientData.slice(i, i + 50)
-    const { data, error } = await supabase
-      .from('patients')
-      .insert(batch)
-      .select('id, chart_number, name')
+  // まず既存患者を確認
+  const { data: existingPatients } = await supabase
+    .from('patients')
+    .select('id, chart_number, name, is_vip, caution_level, is_infection_alert')
+    .gte('chart_number', '00100')
+    .lte('chart_number', '00399')
+    .eq('is_active', true)
 
-    if (error) {
-      console.error(`  患者バッチ ${i}-${i + 50} エラー:`, error.message)
-      continue
+  let createdPatients = existingPatients || []
+
+  if (createdPatients.length >= 200) {
+    console.log(`  既存患者 ${createdPatients.length}名を再利用`)
+  } else {
+    // 新規作成
+    createdPatients = []
+    for (let i = 0; i < patientData.length; i += 50) {
+      const batch = patientData.slice(i, i + 50)
+      const { data, error } = await supabase
+        .from('patients')
+        .insert(batch)
+        .select('id, chart_number, name')
+
+      if (error) {
+        console.error(`  患者バッチ ${i}-${i + 50} エラー:`, error.message)
+        continue
+      }
+      createdPatients.push(...(data || []))
+      process.stdout.write(`  ${createdPatients.length}/${patientData.length}\r`)
     }
-    createdPatients.push(...(data || []))
-    process.stdout.write(`  ${createdPatients.length}/${patientData.length}\r`)
+    console.log(`  完了: ${createdPatients.length}名作成`)
   }
-  console.log(`  完了: ${createdPatients.length}名作成`)
 
   // _id をマッピング
-  const patientsWithIds = patientData.map((p, idx) => {
+  const patientsWithIds = patientData.map((p) => {
     const created = createdPatients.find(c => c.chart_number === p.chart_number)
-    return { ...p, _id: created?.id || null }
+    return {
+      ...p,
+      _id: created?.id || null,
+      is_vip: created?.is_vip ?? p.is_vip,
+      is_infection_alert: created?.is_infection_alert ?? p.is_infection_alert,
+    }
   }).filter(p => p._id)
 
   // 2. 技工物生成
@@ -699,7 +759,8 @@ async function main() {
   console.log(`タグ紐付け: ${tagInserts.length}件`)
   console.log(`スライドペア: ${slidePairs.length}件`)
   console.log(`期間: ${startDate} 〜 ${addDays(startDate, dayCount - 1)}`)
-  console.log(`休診日: 日曜・月曜 + 祝日`)
+  console.log(`ユニット: 1-3(衛生士), 4-5(Dr)`)
+  console.log(`診療時間: 9:30-13:00 / 14:00-18:00`)
 }
 
 main().catch(console.error)
