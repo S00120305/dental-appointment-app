@@ -81,9 +81,9 @@ export default function CalendarView({
     return set
   }, [appointments])
 
-  // Convert appointments to FullCalendar events
-  const events = useMemo(() => {
-    const appointmentEvents = appointments.map((appt) => {
+  // 予約イベント（予約データ・スタッフ色・スライド情報に依存）
+  const appointmentEvents = useMemo(() =>
+    appointments.map((appt) => {
       const startDate = new Date(appt.start_time)
       const endDate = new Date(startDate.getTime() + appt.duration_minutes * 60 * 1000)
       const staffColor = getStaffColor(
@@ -117,10 +117,12 @@ export default function CalendarView({
           has_slide_to: slideToSet.has(appt.id),
         },
       }
-    })
+    }),
+  [appointments, staffColors, staffIndexMap, slideToSet])
 
-    // ブロック枠イベント
-    const blockedEvents = blockedSlots.flatMap((slot) => {
+  // ブロック枠イベント（ブロック枠・リソースに依存）
+  const blockedEvents = useMemo(() =>
+    blockedSlots.flatMap((slot) => {
       const resourceIds = slot.unit_number === 0
         ? resources.map((r) => r.id)
         : [String(slot.unit_number)]
@@ -139,9 +141,11 @@ export default function CalendarView({
           reason: slot.reason,
         },
       }))
-    })
+    }),
+  [blockedSlots, resources])
 
-    // 昼休み背景イベント
+  // 背景イベント（昼休み + 休診日、リソース・営業時間・日付に依存）
+  const backgroundEvents = useMemo(() => {
     const lunchEvents = resources.map((r) => ({
       id: `lunch-${r.id}`,
       resourceId: r.id,
@@ -152,7 +156,6 @@ export default function CalendarView({
       classNames: ['lunch-break'],
     }))
 
-    // 休診日背景イベント（全リソースに全日背景を追加）
     const holidayEvents = Object.keys(holidayDates).flatMap((dateStr) =>
       resources.map((r) => ({
         id: `holiday-${dateStr}-${r.id}`,
@@ -165,8 +168,13 @@ export default function CalendarView({
       }))
     )
 
-    return [...appointmentEvents, ...blockedEvents, ...lunchEvents, ...holidayEvents]
-  }, [appointments, blockedSlots, resources, businessHours, initialDate, staffColors, staffIndexMap, holidayDates, slideToSet])
+    return [...lunchEvents, ...holidayEvents]
+  }, [resources, businessHours, initialDate, holidayDates])
+
+  // 全イベント結合
+  const events = useMemo(() =>
+    [...appointmentEvents, ...blockedEvents, ...backgroundEvents],
+  [appointmentEvents, blockedEvents, backgroundEvents])
 
   // Sync view type
   useEffect(() => {

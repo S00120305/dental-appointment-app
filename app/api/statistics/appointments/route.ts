@@ -15,27 +15,7 @@ export async function GET(request: NextRequest) {
     const rangeStart = `${startDate}T00:00:00+09:00`
     const rangeEnd = `${endDate}T23:59:59+09:00`
 
-    // 当期間
-    const { data: current, error } = await supabase
-      .from('appointments')
-      .select('id, status, start_time, duration_minutes, booking_source')
-      .eq('is_deleted', false)
-      .gte('start_time', rangeStart)
-      .lte('start_time', rangeEnd)
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    const appointments = current || []
-
-    // KPI
-    const total = appointments.filter(a => a.status !== 'cancelled' && a.status !== 'no_show').length
-    const visited = appointments.filter(a => a.status === 'checked_in' || a.status === 'completed').length
-    const cancelled = appointments.filter(a => a.status === 'cancelled').length
-    const noShow = appointments.filter(a => a.status === 'no_show').length
-
-    // 前期間比較用: 同じ日数分遡る
+    // 前期間の範囲を先に計算
     const startD = new Date(startDate + 'T00:00:00')
     const endD = new Date(endDate + 'T00:00:00')
     const daysDiff = Math.round((endD.getTime() - startD.getTime()) / (1000 * 60 * 60 * 24)) + 1
@@ -44,14 +24,35 @@ export async function GET(request: NextRequest) {
     const prevStart = formatDate(prevStartD)
     const prevEnd = formatDate(prevEndD)
 
-    const { data: prev } = await supabase
-      .from('appointments')
-      .select('id, status')
-      .eq('is_deleted', false)
-      .gte('start_time', `${prevStart}T00:00:00+09:00`)
-      .lte('start_time', `${prevEnd}T23:59:59+09:00`)
+    // 当期間 + 前期間を並列取得
+    const [currentResult, prevResult] = await Promise.all([
+      supabase
+        .from('appointments')
+        .select('id, status, start_time, duration_minutes, booking_source')
+        .eq('is_deleted', false)
+        .gte('start_time', rangeStart)
+        .lte('start_time', rangeEnd),
+      supabase
+        .from('appointments')
+        .select('id, status')
+        .eq('is_deleted', false)
+        .gte('start_time', `${prevStart}T00:00:00+09:00`)
+        .lte('start_time', `${prevEnd}T23:59:59+09:00`),
+    ])
 
-    const prevAppts = prev || []
+    if (currentResult.error) {
+      return NextResponse.json({ error: currentResult.error.message }, { status: 500 })
+    }
+
+    const appointments = currentResult.data || []
+
+    // KPI
+    const total = appointments.filter(a => a.status !== 'cancelled' && a.status !== 'no_show').length
+    const visited = appointments.filter(a => a.status === 'checked_in' || a.status === 'completed').length
+    const cancelled = appointments.filter(a => a.status === 'cancelled').length
+    const noShow = appointments.filter(a => a.status === 'no_show').length
+
+    const prevAppts = prevResult.data || []
     const prevTotal = prevAppts.filter(a => a.status !== 'cancelled' && a.status !== 'no_show').length
     const prevVisited = prevAppts.filter(a => a.status === 'checked_in' || a.status === 'completed').length
     const prevCancelled = prevAppts.filter(a => a.status === 'cancelled').length

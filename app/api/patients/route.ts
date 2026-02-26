@@ -9,9 +9,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')?.trim() || ''
 
+    const limit = parseInt(searchParams.get('limit') || '50')
+    const offset = parseInt(searchParams.get('offset') || '0')
+
     let query = supabase
       .from('patients')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('is_active', true)
       .order('chart_number', { ascending: true })
 
@@ -21,13 +24,13 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const { data, error } = await query
+    const { data, error, count } = await query.range(offset, offset + limit - 1)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ patients: data })
+    return NextResponse.json({ patients: data, total: count })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
