@@ -137,11 +137,12 @@ export default function AppointmentsPage() {
   // Resources
   const resources: CalendarResource[] = useMemo(() => {
     if (filteredUnit) {
-      return [{ id: String(filteredUnit), title: `診察室${filteredUnit}` }]
+      return [{ id: String(filteredUnit), title: `診察室${filteredUnit}`, order: 0 }]
     }
-    return visibleUnits.map(n => ({
+    return visibleUnits.map((n, idx) => ({
       id: String(n),
       title: `診察室${n}`,
+      order: idx,
     }))
   }, [visibleUnits, filteredUnit])
 

@@ -24,6 +24,7 @@ export type BusinessHours = {
 export type CalendarResource = {
   id: string
   title: string
+  order: number
 }
 
 interface CalendarViewProps {
@@ -259,6 +260,7 @@ export default function CalendarView({
         schedulerLicenseKey="GPL-My-Project-Is-Open-Source"
         // Resources（横軸：ユニット）
         resources={resources}
+        resourceOrder="order"
         // 時間設定（縦軸：時間）
         slotMinTime={businessHours.start + ':00'}
         slotMaxTime={businessHours.end + ':00'}
