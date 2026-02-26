@@ -82,6 +82,20 @@ export async function POST(request: NextRequest) {
       .gt('expires_at', now)
       .order('expires_at', { ascending: true })
 
+    // booking_token が未設定の予約にトークンを自動付与
+    const needToken = (upcomingAppointments || []).filter(a => !a.booking_token)
+    const tokenMap = new Map<string, string>()
+    if (needToken.length > 0) {
+      await Promise.all(needToken.map(a => {
+        const token = crypto.randomUUID()
+        tokenMap.set(a.id, token)
+        return supabase
+          .from('appointments')
+          .update({ booking_token: token })
+          .eq('id', a.id)
+      }))
+    }
+
     // 変更・キャンセル期限を取得
     const { data: settingsData } = await supabase
       .from('appointment_settings')
@@ -108,7 +122,7 @@ export async function POST(request: NextRequest) {
         duration_minutes: a.duration_minutes,
         status: a.status,
         appointment_type: bt?.display_name || a.appointment_type,
-        booking_token: a.booking_token,
+        booking_token: a.booking_token || tokenMap.get(a.id) || null,
         can_change: isWithinDeadline(a.start_time, cancelDeadlineTime),
       }
     })
