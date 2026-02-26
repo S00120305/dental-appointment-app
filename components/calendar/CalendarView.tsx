@@ -70,6 +70,17 @@ export default function CalendarView({
     return map
   }, [staffList])
 
+  // Compute slide_to map: appointment id → true if another appointment references it as slide_from_id
+  const slideToSet = useMemo(() => {
+    const set = new Set<string>()
+    for (const appt of appointments) {
+      if (appt.slide_from_id) {
+        set.add(appt.slide_from_id)
+      }
+    }
+    return set
+  }, [appointments])
+
   // Convert appointments to FullCalendar events
   const events = useMemo(() => {
     const appointmentEvents = appointments.map((appt) => {
@@ -102,6 +113,8 @@ export default function CalendarView({
           caution_level: appt.patient?.caution_level || 0,
           is_infection_alert: appt.patient?.is_infection_alert || false,
           appointment_tag_icons: (appt.tags || []).map(t => t.icon).filter(Boolean).join(''),
+          has_slide_from: !!appt.slide_from_id,
+          has_slide_to: slideToSet.has(appt.id),
         },
       }
     })
@@ -153,7 +166,7 @@ export default function CalendarView({
     )
 
     return [...appointmentEvents, ...blockedEvents, ...lunchEvents, ...holidayEvents]
-  }, [appointments, blockedSlots, resources, businessHours, initialDate, staffColors, staffIndexMap, holidayDates])
+  }, [appointments, blockedSlots, resources, businessHours, initialDate, staffColors, staffIndexMap, holidayDates, slideToSet])
 
   // Sync view type
   useEffect(() => {

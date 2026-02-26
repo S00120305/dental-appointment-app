@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { getSessionUser, recordLog } from '@/lib/log'
 
-// tag_links をフラットな tags 配列に変換するヘルパー
-function flattenTags(appointment: Record<string, unknown>) {
+// tag_links をフラットな tags 配列に変換 + slide_from を整形するヘルパー
+function transformAppointment(appointment: Record<string, unknown>) {
   const tagLinks = appointment.tag_links as { tag: { id: string; name: string; icon: string | null; color: string | null } | null }[] | null
   const tags = tagLinks
     ? tagLinks.map(link => link.tag).filter((t): t is NonNullable<typeof t> => t !== null)
@@ -29,13 +29,14 @@ export async function GET(request: NextRequest) {
 
     const selectQuery = `
       id, patient_id, unit_number, staff_id, start_time, duration_minutes,
-      appointment_type, status, memo, lab_order_id, booking_type_id,
+      appointment_type, status, memo, lab_order_id, booking_type_id, slide_from_id,
       web_booking_status, booking_token, is_deleted, created_at, updated_at,
       patient:patients!patient_id(id, chart_number, name, name_kana, phone, is_vip, caution_level, is_infection_alert),
       staff:users!staff_id(id, name),
       lab_order:lab_orders!left(id, status, item_type, tooth_info, due_date, set_date, lab:labs!left(id, name)),
       booking_type:booking_types!left(id, display_name, internal_name, color, category),
-      tag_links:appointment_tag_links(tag:appointment_tags(id, name, icon, color))
+      tag_links:appointment_tag_links(tag:appointment_tags(id, name, icon, color)),
+      slide_from:appointments!slide_from_id(id, unit_number, appointment_type, start_time, duration_minutes, staff:users!staff_id(id, name))
     `
 
     // 単一予約取得（Realtime INSERT 後の詳細取得用）
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 })
       }
-      return NextResponse.json({ appointment: flattenTags(data as Record<string, unknown>) })
+      return NextResponse.json({ appointment: transformAppointment(data as Record<string, unknown>) })
     }
 
     let query = supabase
@@ -114,23 +115,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    const appointments = (data || []).map(d => flattenTags(d as Record<string, unknown>))
+    const appointments = (data || []).map(d => transformAppointment(d as Record<string, unknown>))
     return NextResponse.json({ appointments })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
-// POST/PUT 用の SELECT クエリ（lab_order + booking_type JOIN 付き）
+// POST/PUT 用の SELECT クエリ（lab_order + booking_type + slide_from JOIN 付き）
 const selectQueryPost = `
   id, patient_id, unit_number, staff_id, start_time, duration_minutes,
-  appointment_type, status, memo, lab_order_id, booking_type_id,
+  appointment_type, status, memo, lab_order_id, booking_type_id, slide_from_id,
   web_booking_status, booking_token, is_deleted, created_at, updated_at,
   patient:patients!patient_id(id, chart_number, name, name_kana, is_vip, caution_level, is_infection_alert),
   staff:users!staff_id(id, name),
   lab_order:lab_orders!left(id, status, item_type, tooth_info, due_date, set_date, lab:labs!left(id, name)),
   booking_type:booking_types!left(id, display_name, internal_name, color, category),
-  tag_links:appointment_tag_links(tag:appointment_tags(id, name, icon, color))
+  tag_links:appointment_tag_links(tag:appointment_tags(id, name, icon, color)),
+  slide_from:appointments!slide_from_id(id, unit_number, appointment_type, start_time, duration_minutes, staff:users!staff_id(id, name))
 `
 
 // POST: 新規予約作成
@@ -149,6 +151,7 @@ export async function POST(request: NextRequest) {
       memo,
       lab_order_id,
       booking_type_id,
+      slide_from_id,
       tag_ids,
     } = body
 
@@ -187,6 +190,7 @@ export async function POST(request: NextRequest) {
         memo: memo || null,
         lab_order_id: lab_order_id || null,
         booking_type_id: booking_type_id || null,
+        slide_from_id: slide_from_id || null,
         status: 'scheduled',
       })
       .select(selectQueryPost)
@@ -228,7 +232,7 @@ export async function POST(request: NextRequest) {
       details: { patient_id, unit_number, staff_id, start_time, duration_minutes, appointment_type },
     })
 
-    return NextResponse.json({ appointment: flattenTags(responseData as Record<string, unknown>) }, { status: 201 })
+    return NextResponse.json({ appointment: transformAppointment(responseData as Record<string, unknown>) }, { status: 201 })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
@@ -252,6 +256,7 @@ export async function PUT(request: NextRequest) {
       memo,
       lab_order_id,
       booking_type_id,
+      slide_from_id,
       current_updated_at,
       tag_ids,
     } = body
@@ -310,6 +315,15 @@ export async function PUT(request: NextRequest) {
     if (memo !== undefined) updateData.memo = memo || null
     if (lab_order_id !== undefined) updateData.lab_order_id = lab_order_id || null
     if (booking_type_id !== undefined) updateData.booking_type_id = booking_type_id || null
+    if (slide_from_id !== undefined) updateData.slide_from_id = slide_from_id || null
+
+    // キャンセル/無断キャンセル時、この予約をスライド元として参照している予約のslide_from_idをクリア
+    if (status === 'cancelled' || status === 'no_show') {
+      await supabase
+        .from('appointments')
+        .update({ slide_from_id: null })
+        .eq('slide_from_id', id)
+    }
 
     const { data, error } = await supabase
       .from('appointments')
@@ -392,7 +406,7 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ appointment: flattenTags(responseData as Record<string, unknown>) })
+    return NextResponse.json({ appointment: transformAppointment(responseData as Record<string, unknown>) })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
@@ -413,6 +427,12 @@ export async function DELETE(request: NextRequest) {
       .select('unit_number, start_time, patient:patients!patient_id(name)')
       .eq('id', id)
       .single()
+
+    // この予約をスライド元として参照している予約の slide_from_id をクリア
+    await supabase
+      .from('appointments')
+      .update({ slide_from_id: null })
+      .eq('slide_from_id', id)
 
     const { error } = await supabase
       .from('appointments')

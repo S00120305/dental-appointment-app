@@ -43,7 +43,17 @@ type FormData = {
   booking_type_id: string
   memo: string
   lab_order_id: string
+  slide_from_id: string
   tag_ids: string[]
+}
+
+type SameDayAppointment = {
+  id: string
+  unit_number: number
+  appointment_type: string
+  start_time: string
+  duration_minutes: number
+  staff: { id: string; name: string } | null
 }
 
 const DURATION_OPTIONS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 120]
@@ -104,6 +114,11 @@ export default function AppointmentModal({
   const [labOrders, setLabOrders] = useState<LabOrderWithLab[]>([])
   const [labOrdersLoading, setLabOrdersLoading] = useState(false)
 
+  // Slide
+  const [slideEnabled, setSlideEnabled] = useState(false)
+  const [sameDayAppointments, setSameDayAppointments] = useState<SameDayAppointment[]>([])
+  const [sameDayLoading, setSameDayLoading] = useState(false)
+
   // Form
   const [form, setForm] = useState<FormData>({
     patient_id: '',
@@ -116,6 +131,7 @@ export default function AppointmentModal({
     booking_type_id: '',
     memo: '',
     lab_order_id: '',
+    slide_from_id: '',
     tag_ids: [],
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -141,6 +157,7 @@ export default function AppointmentModal({
     setPatientResults([])
     setShowPatientDropdown(false)
     setLabOrders([])
+    setSameDayAppointments([])
 
     if (appointment) {
       const startDate = new Date(appointment.start_time)
@@ -155,10 +172,12 @@ export default function AppointmentModal({
         booking_type_id: appointment.booking_type_id || '',
         memo: appointment.memo || '',
         lab_order_id: appointment.lab_order_id || '',
+        slide_from_id: appointment.slide_from_id || '',
         tag_ids: appointment.tags?.map(t => t.id) || [],
       })
       setSelectedPatient(appointment.patient)
       setLabOrderEnabled(!!appointment.lab_order_id)
+      setSlideEnabled(!!appointment.slide_from_id)
       setUseCustomType(!appointment.booking_type_id)
       // 技工物紐付け済みの場合、技工物リストを取得
       if (appointment.lab_order_id && appointment.patient?.chart_number) {
@@ -177,10 +196,12 @@ export default function AppointmentModal({
         booking_type_id: '',
         memo: '',
         lab_order_id: '',
+        slide_from_id: '',
         tag_ids: [],
       })
       setSelectedPatient(null)
       setLabOrderEnabled(false)
+      setSlideEnabled(false)
       setUseCustomType(false)
     }
   }, [isOpen, appointment, defaultDate, defaultUnitNumber, defaultStartTime, defaultDuration])
@@ -206,6 +227,15 @@ export default function AppointmentModal({
       setLabOrders([])
     }
   }, [labOrderEnabled, selectedPatient])
+
+  // Fetch same-day appointments when slide is enabled + patient + date are set
+  useEffect(() => {
+    if (slideEnabled && form.patient_id && form.date) {
+      fetchSameDayAppointments(form.patient_id, form.date)
+    } else {
+      setSameDayAppointments([])
+    }
+  }, [slideEnabled, form.patient_id, form.date])
 
   async function fetchSettings() {
     try {
@@ -263,6 +293,32 @@ export default function AppointmentModal({
     finally { setLabOrdersLoading(false) }
   }
 
+  async function fetchSameDayAppointments(patientId: string, date: string) {
+    setSameDayLoading(true)
+    try {
+      const res = await fetch(`/api/appointments?patient_id=${patientId}&date=${date}`)
+      const data = await res.json()
+      if (res.ok) {
+        const all = (data.appointments || []) as AppointmentWithRelations[]
+        // 自分自身と削除済み・キャンセル済みを除外
+        const filtered = all.filter(a =>
+          a.id !== appointment?.id &&
+          a.status !== 'cancelled' &&
+          a.status !== 'no_show'
+        )
+        setSameDayAppointments(filtered.map(a => ({
+          id: a.id,
+          unit_number: a.unit_number,
+          appointment_type: a.appointment_type,
+          start_time: a.start_time,
+          duration_minutes: a.duration_minutes,
+          staff: a.staff,
+        })))
+      }
+    } catch { /* ignore */ }
+    finally { setSameDayLoading(false) }
+  }
+
   // Patient search with debounce
   const searchPatients = useCallback(async (query: string) => {
     if (!query.trim()) {
@@ -293,10 +349,12 @@ export default function AppointmentModal({
 
   function handleClearPatient() {
     setSelectedPatient(null)
-    setForm((prev) => ({ ...prev, patient_id: '', lab_order_id: '' }))
+    setForm((prev) => ({ ...prev, patient_id: '', lab_order_id: '', slide_from_id: '' }))
     setPatientQuery('')
     setLabOrderEnabled(false)
     setLabOrders([])
+    setSlideEnabled(false)
+    setSameDayAppointments([])
   }
 
   function validate(): boolean {
@@ -340,6 +398,7 @@ export default function AppointmentModal({
         booking_type_id: form.booking_type_id || null,
         memo: form.memo,
         lab_order_id: labOrderEnabled ? form.lab_order_id || null : null,
+        slide_from_id: slideEnabled ? form.slide_from_id || null : null,
         tag_ids: form.tag_ids,
       }
       const body = isEdit ? { id: appointment!.id, ...baseBody } : baseBody
@@ -866,6 +925,96 @@ export default function AppointmentModal({
                           </div>
                         </label>
                       ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* スライド */}
+          {selectedPatient && (
+            <div className="rounded-lg border border-gray-200 p-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700">
+                  {'\u21C4'} スライド
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSlideEnabled(!slideEnabled)
+                    if (slideEnabled) {
+                      setForm(prev => ({ ...prev, slide_from_id: '' }))
+                    }
+                  }}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors min-h-[44px] min-w-[44px] ${
+                    slideEnabled ? 'bg-emerald-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      slideEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* 編集モードでスライド情報表示 */}
+              {isEdit && appointment?.slide_from && (
+                <div className="mt-2 rounded-md bg-blue-50 border border-blue-200 px-3 py-1.5 text-sm text-blue-700">
+                  {'\u2190'} 診察室{appointment.slide_from.unit_number} {appointment.slide_from.appointment_type}{' '}
+                  {formatTimeLocal(new Date(appointment.slide_from.start_time))} からスライド
+                  {appointment.slide_from.staff && ` / ${appointment.slide_from.staff.name}`}
+                </div>
+              )}
+              {isEdit && appointment?.slide_to && (
+                <div className="mt-2 rounded-md bg-blue-50 border border-blue-200 px-3 py-1.5 text-sm text-blue-700">
+                  {'\u2192'} 診察室{appointment.slide_to.unit_number} {appointment.slide_to.appointment_type}{' '}
+                  {formatTimeLocal(new Date(appointment.slide_to.start_time))} へスライド
+                  {appointment.slide_to.staff && ` / ${appointment.slide_to.staff.name}`}
+                </div>
+              )}
+
+              {slideEnabled && (
+                <div className="mt-3">
+                  <p className="mb-2 text-xs text-gray-500">この予約のスライド元（前の予約）を選択</p>
+                  {sameDayLoading ? (
+                    <p className="text-sm text-gray-400">同日の予約を取得中...</p>
+                  ) : sameDayAppointments.length === 0 ? (
+                    <p className="text-sm text-gray-500">同日・同患者の他の予約がありません</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {sameDayAppointments.map((sa) => {
+                        const time = formatTimeLocal(new Date(sa.start_time))
+                        return (
+                          <label
+                            key={sa.id}
+                            className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer min-h-[44px] ${
+                              form.slide_from_id === sa.id
+                                ? 'border-emerald-500 bg-emerald-50'
+                                : 'border-gray-200 hover:bg-gray-50'
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="slide_from_id"
+                              value={sa.id}
+                              checked={form.slide_from_id === sa.id}
+                              onChange={() => setForm(prev => ({ ...prev, slide_from_id: sa.id }))}
+                              className="mt-1"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium">
+                                診察室{sa.unit_number} {sa.appointment_type}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {time}〜{formatTimeLocal(new Date(new Date(sa.start_time).getTime() + sa.duration_minutes * 60000))}
+                                {sa.staff && ` / ${sa.staff.name}`}
+                              </div>
+                            </div>
+                          </label>
+                        )
+                      })}
                     </div>
                   )}
                 </div>

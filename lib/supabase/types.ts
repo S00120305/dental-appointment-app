@@ -37,6 +37,7 @@ export type Appointment = {
   status: AppointmentStatus
   lab_order_id: string | null
   booking_type_id: string | null
+  slide_from_id: string | null
   web_booking_status: string | null
   booking_token: string | null
   booking_source: string
@@ -77,6 +78,16 @@ export type LabOrderWithLab = LabOrder & {
   lab?: { id: string; name: string } | null
 }
 
+// スライド予約の参照データ
+export type SlideRef = {
+  id: string
+  unit_number: number
+  appointment_type: string
+  start_time: string
+  duration_minutes: number
+  staff: { id: string; name: string } | null
+}
+
 // JOIN済みの予約データ（API レスポンス用）
 export type AppointmentWithRelations = Appointment & {
   patient: Pick<Patient, 'id' | 'chart_number' | 'name' | 'name_kana' | 'phone' | 'is_vip' | 'caution_level' | 'is_infection_alert'> | null
@@ -98,6 +109,8 @@ export type AppointmentWithRelations = Appointment & {
     category: string | null
   } | null
   tags?: { id: string; name: string; icon: string | null; color: string | null }[]
+  slide_from?: SlideRef | null
+  slide_to?: SlideRef | null // フロント側で計算
 }
 
 // 予約種別マスタ

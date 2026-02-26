@@ -91,6 +91,7 @@ export function useAppointments() {
                 status: (updated.status as AppointmentStatus) ?? a.status,
                 memo: (updated.memo as string | null) ?? a.memo,
                 lab_order_id: (updated.lab_order_id as string | null) ?? a.lab_order_id,
+                slide_from_id: (updated.slide_from_id as string | null) ?? a.slide_from_id,
                 updated_at: (updated.updated_at as string) ?? a.updated_at,
               }
             })
