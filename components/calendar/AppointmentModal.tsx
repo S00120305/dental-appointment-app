@@ -8,7 +8,7 @@ import StatusBadge from '@/components/calendar/StatusBadge'
 import LabOrderBadge from '@/components/calendar/LabOrderBadge'
 import { useToast } from '@/components/ui/Toast'
 import { getNextStatus, getPrevStatus, STATUS_TEXT, STATUS_LABELS } from '@/lib/constants/appointment'
-import type { AppointmentStatus, AppointmentWithRelations, BookingType, LabOrderWithLab, Patient, Staff } from '@/lib/supabase/types'
+import type { AppointmentStatus, AppointmentTag, AppointmentWithRelations, BookingType, LabOrderWithLab, Patient, Staff } from '@/lib/supabase/types'
 import { BOOKING_CATEGORIES } from '@/lib/supabase/types'
 
 type StaffHolidayInfo = {
@@ -43,6 +43,7 @@ type FormData = {
   booking_type_id: string
   memo: string
   lab_order_id: string
+  tag_ids: string[]
 }
 
 const DURATION_OPTIONS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 120]
@@ -89,6 +90,7 @@ export default function AppointmentModal({
   const [businessHours, setBusinessHours] = useState({ start: '09:00', end: '18:00' })
   const [staffList, setStaffList] = useState<Staff[]>([])
   const [useCustomType, setUseCustomType] = useState(false)
+  const [availableTags, setAvailableTags] = useState<AppointmentTag[]>([])
 
   // Patient search
   const [patientQuery, setPatientQuery] = useState('')
@@ -114,6 +116,7 @@ export default function AppointmentModal({
     booking_type_id: '',
     memo: '',
     lab_order_id: '',
+    tag_ids: [],
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
@@ -127,6 +130,7 @@ export default function AppointmentModal({
     fetchSettings()
     fetchStaff()
     fetchBookingTypes()
+    fetchTags()
   }, [isOpen])
 
   // Initialize form
@@ -151,6 +155,7 @@ export default function AppointmentModal({
         booking_type_id: appointment.booking_type_id || '',
         memo: appointment.memo || '',
         lab_order_id: appointment.lab_order_id || '',
+        tag_ids: appointment.tags?.map(t => t.id) || [],
       })
       setSelectedPatient(appointment.patient)
       setLabOrderEnabled(!!appointment.lab_order_id)
@@ -172,6 +177,7 @@ export default function AppointmentModal({
         booking_type_id: '',
         memo: '',
         lab_order_id: '',
+        tag_ids: [],
       })
       setSelectedPatient(null)
       setLabOrderEnabled(false)
@@ -236,6 +242,14 @@ export default function AppointmentModal({
       const res = await fetch('/api/booking-types')
       const data = await res.json()
       if (res.ok) setBookingTypes(data.booking_types || [])
+    } catch { /* ignore */ }
+  }
+
+  async function fetchTags() {
+    try {
+      const res = await fetch('/api/appointment-tags')
+      const data = await res.json()
+      if (res.ok) setAvailableTags(data.appointment_tags || [])
     } catch { /* ignore */ }
   }
 
@@ -326,6 +340,7 @@ export default function AppointmentModal({
         booking_type_id: form.booking_type_id || null,
         memo: form.memo,
         lab_order_id: labOrderEnabled ? form.lab_order_id || null : null,
+        tag_ids: form.tag_ids,
       }
       const body = isEdit ? { id: appointment!.id, ...baseBody } : baseBody
 
@@ -855,6 +870,40 @@ export default function AppointmentModal({
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* 注意事項タグ */}
+          {availableTags.length > 0 && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">注意事項タグ</label>
+              <div className="flex flex-wrap gap-2">
+                {availableTags.map(tag => {
+                  const selected = form.tag_ids.includes(tag.id)
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => {
+                        setForm(prev => ({
+                          ...prev,
+                          tag_ids: selected
+                            ? prev.tag_ids.filter(id => id !== tag.id)
+                            : [...prev.tag_ids, tag.id],
+                        }))
+                      }}
+                      className={`min-h-[44px] rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                        selected
+                          ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {tag.icon && <span className="mr-1">{tag.icon}</span>}
+                      {tag.name}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           )}
 

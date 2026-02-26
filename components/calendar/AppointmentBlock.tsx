@@ -82,6 +82,7 @@ const AppointmentBlock = memo(function AppointmentBlock({ eventInfo, onStatusCli
     caution_level: extendedProps.caution_level as number | undefined,
     is_infection_alert: isInfectionAlert,
   })
+  const appointmentTagIcons = (extendedProps.appointment_tag_icons as string) || ''
 
   const staffColor = (extendedProps.staff_color as string) || ''
   const bookingTypeColor = extendedProps.booking_type_color as string | null | undefined
@@ -128,6 +129,9 @@ const AppointmentBlock = memo(function AppointmentBlock({ eventInfo, onStatusCli
               <span className="text-[10px]">{tagIcons}</span>
             )}
           </>
+        )}
+        {appointmentTagIcons && (
+          <span className="text-[10px] ml-0.5">{appointmentTagIcons}</span>
         )}
       </div>
       <div className="truncate text-[10px] leading-tight opacity-80">

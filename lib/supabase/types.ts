@@ -97,6 +97,7 @@ export type AppointmentWithRelations = Appointment & {
     color: string
     category: string | null
   } | null
+  tags?: { id: string; name: string; icon: string | null; color: string | null }[]
 }
 
 // 予約種別マスタ
@@ -133,6 +134,18 @@ export const BOOKING_CATEGORIES = [
   { name: '審美・ホワイトニング', color: '#06B6D4' },
   { name: 'その他', color: '#9CA3AF' },
 ] as const
+
+// 予約注意事項タグ
+export type AppointmentTag = {
+  id: string
+  name: string
+  icon: string | null
+  color: string | null
+  sort_order: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
 
 // 予約枠ブロック
 export type BlockedSlot = {

@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { getSessionUser, recordLog } from '@/lib/log'
 
+// tag_links をフラットな tags 配列に変換するヘルパー
+function flattenTags(appointment: Record<string, unknown>) {
+  const tagLinks = appointment.tag_links as { tag: { id: string; name: string; icon: string | null; color: string | null } | null }[] | null
+  const tags = tagLinks
+    ? tagLinks.map(link => link.tag).filter((t): t is NonNullable<typeof t> => t !== null)
+    : []
+  const { tag_links: _, ...rest } = appointment
+  return { ...rest, tags }
+}
+
 // GET: 予約一覧取得（日付/範囲フィルター、JOIN付き）
 export async function GET(request: NextRequest) {
   try {
@@ -24,7 +34,8 @@ export async function GET(request: NextRequest) {
       patient:patients!patient_id(id, chart_number, name, name_kana, phone, is_vip, caution_level, is_infection_alert),
       staff:users!staff_id(id, name),
       lab_order:lab_orders!left(id, status, item_type, tooth_info, due_date, set_date, lab:labs!left(id, name)),
-      booking_type:booking_types!left(id, display_name, internal_name, color, category)
+      booking_type:booking_types!left(id, display_name, internal_name, color, category),
+      tag_links:appointment_tag_links(tag:appointment_tags(id, name, icon, color))
     `
 
     // 単一予約取得（Realtime INSERT 後の詳細取得用）
@@ -39,7 +50,7 @@ export async function GET(request: NextRequest) {
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 })
       }
-      return NextResponse.json({ appointment: data })
+      return NextResponse.json({ appointment: flattenTags(data as Record<string, unknown>) })
     }
 
     let query = supabase
@@ -103,7 +114,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ appointments: data })
+    const appointments = (data || []).map(d => flattenTags(d as Record<string, unknown>))
+    return NextResponse.json({ appointments })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
@@ -117,7 +129,8 @@ const selectQueryPost = `
   patient:patients!patient_id(id, chart_number, name, name_kana, is_vip, caution_level, is_infection_alert),
   staff:users!staff_id(id, name),
   lab_order:lab_orders!left(id, status, item_type, tooth_info, due_date, set_date, lab:labs!left(id, name)),
-  booking_type:booking_types!left(id, display_name, internal_name, color, category)
+  booking_type:booking_types!left(id, display_name, internal_name, color, category),
+  tag_links:appointment_tag_links(tag:appointment_tags(id, name, icon, color))
 `
 
 // POST: 新規予約作成
@@ -136,6 +149,7 @@ export async function POST(request: NextRequest) {
       memo,
       lab_order_id,
       booking_type_id,
+      tag_ids,
     } = body
 
     // バリデーション
@@ -182,21 +196,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    // タグ紐付け
+    if (tag_ids?.length && data?.id) {
+      await supabase
+        .from('appointment_tag_links')
+        .insert(tag_ids.map((tag_id: string) => ({ appointment_id: data.id, tag_id })))
+    }
+
+    // タグ付きで再取得
+    let responseData = data
+    if (tag_ids?.length && data?.id) {
+      const { data: refreshed } = await supabase
+        .from('appointments')
+        .select(selectQueryPost)
+        .eq('id', data.id)
+        .single()
+      if (refreshed) responseData = refreshed
+    }
+
     // ログ記録
     const user = await getSessionUser()
-    const patientName = data?.patient && !Array.isArray(data.patient) ? (data.patient as { name: string }).name : '不明'
+    const patientName = responseData?.patient && !Array.isArray(responseData.patient) ? (responseData.patient as { name: string }).name : '不明'
     const time = new Date(start_time).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })
     await recordLog({
       userId: user?.userId,
       userName: user?.userName,
       actionType: 'create',
       targetType: 'appointment',
-      targetId: data?.id,
+      targetId: responseData?.id,
       summary: `${user?.userName || '不明'}が ${patientName} の予約を作成（${time} 診察室${unit_number}）`,
       details: { patient_id, unit_number, staff_id, start_time, duration_minutes, appointment_type },
     })
 
-    return NextResponse.json({ appointment: data }, { status: 201 })
+    return NextResponse.json({ appointment: flattenTags(responseData as Record<string, unknown>) }, { status: 201 })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
@@ -221,6 +253,7 @@ export async function PUT(request: NextRequest) {
       lab_order_id,
       booking_type_id,
       current_updated_at,
+      tag_ids,
     } = body
 
     if (!id) return NextResponse.json({ error: 'IDは必須です' }, { status: 400 })
@@ -289,10 +322,31 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    // タグ同期（tag_ids が渡された場合のみ、全置換）
+    if (tag_ids !== undefined) {
+      await supabase.from('appointment_tag_links').delete().eq('appointment_id', id)
+      if (tag_ids.length) {
+        await supabase
+          .from('appointment_tag_links')
+          .insert(tag_ids.map((tag_id: string) => ({ appointment_id: id, tag_id })))
+      }
+    }
+
+    // タグ更新後は再取得してレスポンスに反映
+    let responseData = data
+    if (tag_ids !== undefined) {
+      const { data: refreshed } = await supabase
+        .from('appointments')
+        .select(selectQueryPost)
+        .eq('id', id)
+        .single()
+      if (refreshed) responseData = refreshed
+    }
+
     // ログ記録
     const user = await getSessionUser()
     const existingPatient = existing?.patient && !Array.isArray(existing.patient) ? (existing.patient as { name: string }) : null
-    const patientName = data?.patient && !Array.isArray(data.patient) ? (data.patient as { name: string }).name : existingPatient?.name || '不明'
+    const patientName = responseData?.patient && !Array.isArray(responseData.patient) ? (responseData.patient as { name: string }).name : existingPatient?.name || '不明'
     if (isStatusOnly) {
       await recordLog({
         userId: user?.userId,
@@ -317,7 +371,7 @@ export async function PUT(request: NextRequest) {
 
     // 予約日変更時: 紐付く lab_orders.set_date を同期更新
     // start_time が実際に変わった場合のみ（ステータス変更等では更新しない）
-    if (start_time && existing && data) {
+    if (start_time && existing && responseData) {
       const oldDate = existing.start_time ? new Date(existing.start_time).toISOString().split('T')[0] : null
       const newDate = new Date(start_time).toISOString().split('T')[0]
       const startTimeChanged = oldDate !== newDate
@@ -338,7 +392,7 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ appointment: data })
+    return NextResponse.json({ appointment: flattenTags(responseData as Record<string, unknown>) })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

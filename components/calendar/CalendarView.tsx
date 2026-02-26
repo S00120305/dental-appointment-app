@@ -101,6 +101,7 @@ export default function CalendarView({
           is_vip: appt.patient?.is_vip || false,
           caution_level: appt.patient?.caution_level || 0,
           is_infection_alert: appt.patient?.is_infection_alert || false,
+          appointment_tag_icons: (appt.tags || []).map(t => t.icon).filter(Boolean).join(''),
         },
       }
     })
