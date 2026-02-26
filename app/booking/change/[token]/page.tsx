@@ -71,13 +71,13 @@ export default function BookingChangePage({
           return
         }
 
-        // 期限チェック
+        // 期限チェック（JST固定）
         const deadlineTime = deadlineData.deadline_time || '18:00'
-        const [h, m] = deadlineTime.split(':').map(Number)
         const apptDate = new Date(appt.start_time)
-        const deadline = new Date(apptDate)
-        deadline.setDate(deadline.getDate() - 1)
-        deadline.setHours(h, m, 0, 0)
+        const jstMs = apptDate.getTime() + 9 * 60 * 60 * 1000
+        const jstDateStr = new Date(jstMs).toISOString().split('T')[0]
+        const deadline = new Date(`${jstDateStr}T${deadlineTime}:00+09:00`)
+        deadline.setTime(deadline.getTime() - 24 * 60 * 60 * 1000)
 
         if (new Date() >= deadline) {
           setDeadlinePassed(true)

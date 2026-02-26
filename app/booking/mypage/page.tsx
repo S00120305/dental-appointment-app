@@ -199,9 +199,16 @@ export default function BookingMypagePage() {
                       キャンセルする
                     </Link>
                   </div>
+                ) : !a.booking_token ? (
+                  <p className="mt-3 text-xs" style={{ color: '#999999' }}>
+                    Web上での変更・キャンセルには対応していません。
+                    {data.clinic_phone && (
+                      <>お電話（<a href={`tel:${data.clinic_phone.replace(/-/g, '')}`} style={{ color: '#B8923A' }}>{data.clinic_phone}</a>）にてご連絡ください。</>
+                    )}
+                  </p>
                 ) : (
                   <p className="mt-3 text-xs" style={{ color: '#999999' }}>
-                    変更・キャンセルの受付期限を過ぎています。
+                    変更・キャンセルの受付期限（前日{data.cancel_deadline_time}まで）を過ぎています。
                     {data.clinic_phone && (
                       <>お電話（<a href={`tel:${data.clinic_phone.replace(/-/g, '')}`} style={{ color: '#B8923A' }}>{data.clinic_phone}</a>）にてご連絡ください。</>
                     )}

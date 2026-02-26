@@ -255,11 +255,13 @@ export async function PUT(
 }
 
 function isWithinDeadline(startTime: string, deadlineTime: string): boolean {
-  const appointmentDate = new Date(startTime)
-  const [hours, minutes] = deadlineTime.split(':').map(Number)
-  const deadline = new Date(appointmentDate)
-  deadline.setDate(deadline.getDate() - 1)
-  deadline.setHours(hours, minutes, 0, 0)
+  // 予約日のJST日付を取得（サーバーがUTCでも正しく動作）
+  const apptDate = new Date(startTime)
+  const jstMs = apptDate.getTime() + 9 * 60 * 60 * 1000
+  const jstDateStr = new Date(jstMs).toISOString().split('T')[0]
+  // 前日の期限時刻をJST固定で構築
+  const deadline = new Date(`${jstDateStr}T${deadlineTime}:00+09:00`)
+  deadline.setTime(deadline.getTime() - 24 * 60 * 60 * 1000)
   return new Date() < deadline
 }
 

@@ -47,11 +47,12 @@ export default function BookingConfirmPage({
         const appt = confirmData.appointment
         if (appt.status === 'scheduled' || appt.status === 'pending') {
           const dt = deadlineData.deadline_time || '18:00'
-          const [h, m] = dt.split(':').map(Number)
+          // JST固定で期限計算（ブラウザTZに依存しない）
           const apptDate = new Date(appt.start_time)
-          const deadline = new Date(apptDate)
-          deadline.setDate(deadline.getDate() - 1)
-          deadline.setHours(h, m, 0, 0)
+          const jstMs = apptDate.getTime() + 9 * 60 * 60 * 1000
+          const jstDateStr = new Date(jstMs).toISOString().split('T')[0]
+          const deadline = new Date(`${jstDateStr}T${dt}:00+09:00`)
+          deadline.setTime(deadline.getTime() - 24 * 60 * 60 * 1000)
           setCanChange(new Date() < deadline)
         }
       })
