@@ -111,10 +111,11 @@ export default function ImportPage() {
         <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
           <p className="mb-2 text-sm font-medium text-emerald-800">CSVフォーマット</p>
           <code className="block whitespace-pre text-xs text-emerald-700">
-            カルテNo,氏名,フリガナ,電話番号,メール{'\n'}
-            1001,田中 太郎,タナカ タロウ,090-1234-5678,{'\n'}
-            1002,佐藤 花子,サトウ ハナコ,,hanako@example.com
+            カルテNo,氏名,フリガナ,電話番号,メール,性別,生年月日,郵便番号,住所{'\n'}
+            1001,田中 太郎,タナカ タロウ,090-1234-5678,,男性,1990-01-15,920-0000,石川県金沢市...{'\n'}
+            1002,佐藤 花子,サトウ ハナコ,,hanako@example.com,女性,1985-05-20,,
           </code>
+          <p className="mt-1 text-xs text-emerald-600">※ 性別・生年月日・郵便番号・住所は省略可能です</p>
         </div>
 
         {/* ファイル選択 */}
@@ -171,6 +172,10 @@ export default function ImportPage() {
                     <th className="px-3 py-2 text-left font-medium text-gray-500">フリガナ</th>
                     <th className="px-3 py-2 text-left font-medium text-gray-500">電話番号</th>
                     <th className="px-3 py-2 text-left font-medium text-gray-500">メール</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-500">性別</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-500">生年月日</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-500">郵便番号</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-500">住所</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
@@ -189,6 +194,10 @@ export default function ImportPage() {
                         <td className="whitespace-nowrap px-3 py-2 text-gray-600">{row.name_kana}</td>
                         <td className="whitespace-nowrap px-3 py-2 text-gray-600">{row.phone}</td>
                         <td className="whitespace-nowrap px-3 py-2 text-gray-600">{row.email}</td>
+                        <td className="whitespace-nowrap px-3 py-2 text-gray-600">{row.gender}</td>
+                        <td className="whitespace-nowrap px-3 py-2 text-gray-600">{row.date_of_birth}</td>
+                        <td className="whitespace-nowrap px-3 py-2 text-gray-600">{row.postal_code}</td>
+                        <td className="whitespace-nowrap px-3 py-2 text-gray-600">{row.address}</td>
                       </tr>
                     )
                   })}

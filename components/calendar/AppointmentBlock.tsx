@@ -103,7 +103,7 @@ const AppointmentBlock = memo(function AppointmentBlock({ eventInfo, onStatusCli
 
   return (
     <div style={style} className="rounded-md">
-      <div className="truncate text-[13px] font-bold leading-tight">
+      <div className="truncate font-bold leading-tight" style={{ fontSize: 'var(--fc-event-name-size)' }}>
         <span
           role={canAdvance ? 'button' : undefined}
           onClick={handleStatusClick}
@@ -125,20 +125,20 @@ const AppointmentBlock = memo(function AppointmentBlock({ eventInfo, onStatusCli
           <>
             {' '}
             {isInfectionAlert ? (
-              <span className="text-[10px]">
+              <span style={{ fontSize: 'var(--fc-event-tag-size)' }}>
                 {tagIcons.replace('\u266A', '')}
                 <span className="rounded bg-purple-200 px-0.5 text-purple-700">{'\u266A'}</span>
               </span>
             ) : (
-              <span className="text-[10px]">{tagIcons}</span>
+              <span style={{ fontSize: 'var(--fc-event-tag-size)' }}>{tagIcons}</span>
             )}
           </>
         )}
         {appointmentTagIcons && (
-          <span className="text-[10px] ml-0.5">{appointmentTagIcons}</span>
+          <span style={{ fontSize: 'var(--fc-event-tag-size)' }} className="ml-0.5">{appointmentTagIcons}</span>
         )}
       </div>
-      <div className="truncate text-[11px] leading-tight opacity-90">
+      <div className="truncate leading-tight opacity-90" style={{ fontSize: 'var(--fc-event-detail-size)' }}>
         {appointmentType}
         {staffName && ` / ${staffName}`}
       </div>

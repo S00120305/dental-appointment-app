@@ -48,7 +48,19 @@ export function useSettings() {
   const settings: SettingsMap = data?.settings || {}
 
   const rawVisible = settings.visible_units || settings.unit_count || '5'
-  const visibleUnits = parseVisibleUnits(rawVisible)
+  const parsedUnits = parseVisibleUnits(rawVisible)
+
+  // unit_display_order があればその順序を優先、なければ昇順
+  let visibleUnits = parsedUnits
+  if (settings.unit_display_order) {
+    const orderArr = settings.unit_display_order
+      .split(',')
+      .map(s => parseInt(s.trim(), 10))
+      .filter(n => !isNaN(n) && parsedUnits.includes(n))
+    // orderArr に含まれないユニットがあれば末尾に追加
+    const remaining = parsedUnits.filter(u => !orderArr.includes(u))
+    visibleUnits = [...orderArr, ...remaining]
+  }
 
   let businessHours: BusinessHours = {
     start: '09:00', end: '18:00', lunch_start: '12:30', lunch_end: '14:00',

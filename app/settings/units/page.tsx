@@ -15,6 +15,7 @@ export default function UnitsSettingsPage() {
   const { showToast } = useToast()
   const { visibleUnits, mutate, isLoading } = useSettings()
   const [selectedUnits, setSelectedUnits] = useState<number[]>([1, 2, 3, 4])
+  const [displayOrder, setDisplayOrder] = useState<number[]>([1, 2, 3, 4])
   const [unitTypes, setUnitTypes] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const initialized = useRef(false)
@@ -38,6 +39,7 @@ export default function UnitsSettingsPage() {
     if (!isLoading && visibleUnits.length > 0 && !initialized.current) {
       initialized.current = true
       setSelectedUnits(visibleUnits)
+      setDisplayOrder(visibleUnits)
     }
   }, [visibleUnits, isLoading])
 
@@ -45,9 +47,23 @@ export default function UnitsSettingsPage() {
     setSelectedUnits(prev => {
       if (prev.includes(n)) {
         if (prev.length <= 1) return prev
-        return prev.filter(u => u !== n).sort((a, b) => a - b)
+        const next = prev.filter(u => u !== n)
+        setDisplayOrder(order => order.filter(u => u !== n))
+        return next
       }
-      return [...prev, n].sort((a, b) => a - b)
+      const next = [...prev, n]
+      setDisplayOrder(order => [...order, n])
+      return next
+    })
+  }
+
+  function moveUnit(idx: number, direction: 'up' | 'down') {
+    setDisplayOrder(prev => {
+      const arr = [...prev]
+      const targetIdx = direction === 'up' ? idx - 1 : idx + 1
+      if (targetIdx < 0 || targetIdx >= arr.length) return prev
+      ;[arr[idx], arr[targetIdx]] = [arr[targetIdx], arr[idx]]
+      return arr
     })
   }
 
@@ -62,16 +78,23 @@ export default function UnitsSettingsPage() {
     }
     setSaving(true)
     try {
+      // visible_units はソート済み（チェック用）、unit_display_order は表示順
+      const sortedUnits = [...selectedUnits].sort((a, b) => a - b)
       await Promise.all([
         fetch('/api/settings', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: 'visible_units', value: selectedUnits.join(',') }),
+          body: JSON.stringify({ key: 'visible_units', value: sortedUnits.join(',') }),
         }),
         fetch('/api/settings', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ key: 'unit_types', value: JSON.stringify(unitTypes) }),
+        }),
+        fetch('/api/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'unit_display_order', value: displayOrder.join(',') }),
         }),
       ])
       showToast('診察室設定を更新しました', 'success')
@@ -157,6 +180,44 @@ export default function UnitsSettingsPage() {
             </div>
             <p className="mt-2 text-sm text-gray-500">
               衛生士用の種別は衛生士用の診察室に、Dr用の種別はDr用の診察室に自動割当されます。
+            </p>
+          </div>
+
+          {/* 表示順序設定 */}
+          <div className="mb-6">
+            <label className="mb-3 block text-sm font-medium text-gray-700">
+              カレンダー表示順序
+            </label>
+            <div className="space-y-1">
+              {displayOrder.filter(n => selectedUnits.includes(n)).map((n, idx) => (
+                <div key={n} className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2">
+                  <span className="w-24 text-sm font-medium text-gray-700">診察室{n}</span>
+                  <span className="text-xs text-gray-400">
+                    {unitTypes[String(n)] === 'hygienist' ? '衛生士用' : 'Dr用'}
+                  </span>
+                  <div className="ml-auto flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => moveUnit(idx, 'up')}
+                      disabled={idx === 0}
+                      className="min-h-[36px] min-w-[36px] rounded border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-30"
+                    >
+                      {'\u25B2'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveUnit(idx, 'down')}
+                      disabled={idx === displayOrder.filter(u => selectedUnits.includes(u)).length - 1}
+                      className="min-h-[36px] min-w-[36px] rounded border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-30"
+                    >
+                      {'\u25BC'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-sm text-gray-500">
+              カレンダーの左から右への表示順序を変更できます。
             </p>
           </div>
 

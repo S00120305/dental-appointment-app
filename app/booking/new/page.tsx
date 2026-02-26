@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useToast } from '@/components/ui/Toast'
+import { cleanPhone } from '@/lib/utils/phone'
 
 // Types
 type BookingType = {
@@ -166,7 +167,7 @@ export default function BookingNewPage() {
       showToast('電話番号を入力してください', 'error')
       return
     }
-    const phoneClean = phone.replace(/[-\s]/g, '')
+    const phoneClean = cleanPhone(phone)
     if (!/^0\d{9,10}$/.test(phoneClean)) {
       showToast('電話番号の形式が正しくありません', 'error')
       return

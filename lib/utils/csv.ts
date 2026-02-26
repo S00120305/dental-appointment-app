@@ -4,6 +4,10 @@ export type CsvRow = {
   name_kana: string
   phone: string
   email: string
+  gender: string
+  date_of_birth: string
+  postal_code: string
+  address: string
 }
 
 export type CsvParseResult = {
@@ -28,6 +32,14 @@ const HEADER_MAP: Record<string, keyof CsvRow> = {
   'メール': 'email',
   'メールアドレス': 'email',
   'email': 'email',
+  '性別': 'gender',
+  'gender': 'gender',
+  '生年月日': 'date_of_birth',
+  'date_of_birth': 'date_of_birth',
+  '郵便番号': 'postal_code',
+  'postal_code': 'postal_code',
+  '住所': 'address',
+  'address': 'address',
 }
 
 export function parseCsv(text: string): CsvParseResult {
@@ -57,7 +69,7 @@ export function parseCsv(text: string): CsvParseResult {
   // データ行解析
   for (let i = 1; i < lines.length; i++) {
     const values = parseCsvLine(lines[i])
-    const row: CsvRow = { chart_number: '', name: '', name_kana: '', phone: '', email: '' }
+    const row: CsvRow = { chart_number: '', name: '', name_kana: '', phone: '', email: '', gender: '', date_of_birth: '', postal_code: '', address: '' }
 
     columnMap.forEach((key, colIdx) => {
       if (key && values[colIdx] !== undefined) {

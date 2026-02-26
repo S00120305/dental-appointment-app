@@ -5,6 +5,7 @@ import AppLayout from '@/components/layout/AppLayout'
 import StatusBadge from '@/components/calendar/StatusBadge'
 import LabOrderBadge from '@/components/calendar/LabOrderBadge'
 import { getPatientTagIcons } from '@/lib/constants/patient-tags'
+import { formatPhone } from '@/lib/utils/phone'
 import type { Patient, AppointmentWithRelations, LabOrderWithLab } from '@/lib/supabase/types'
 
 export default function PatientDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -137,8 +138,12 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
               <InfoRow label="カルテNo" value={patient.chart_number} />
               <InfoRow label="氏名" value={patient.name} />
               <InfoRow label="フリガナ" value={patient.name_kana || '—'} />
-              <InfoRow label="電話番号" value={patient.phone || '—'} />
+              <InfoRow label="性別" value={patient.gender || '—'} />
+              <InfoRow label="生年月日" value={patient.date_of_birth || '—'} />
+              <InfoRow label="電話番号" value={patient.phone ? formatPhone(patient.phone) : '—'} />
               <InfoRow label="メール" value={patient.email || '—'} />
+              <InfoRow label="郵便番号" value={patient.postal_code || '—'} />
+              <InfoRow label="住所" value={patient.address || '—'} />
               <InfoRow
                 label="通知方法"
                 value={
@@ -148,8 +153,6 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                 }
               />
               <InfoRow label="LINE連携" value={patient.line_user_id ? '連携済み' : '未連携'} />
-              <InfoRow label="SMS通知" value={patient.reminder_sms ? 'ON' : 'OFF'} />
-              <InfoRow label="メール通知" value={patient.reminder_email ? 'ON' : 'OFF'} />
               <InfoRow label="VIP" value={patient.is_vip ? '\u2B50 VIP' : '\u2014'} />
               <InfoRow
                 label="注意レベル"

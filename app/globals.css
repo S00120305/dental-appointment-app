@@ -31,6 +31,20 @@ body {
    FullCalendar カスタムスタイル
    ============================================ */
 
+/* レスポンシブフォントサイズ（予約ブロック） */
+:root {
+  --fc-event-name-size: 13px;
+  --fc-event-detail-size: 11px;
+  --fc-event-tag-size: 10px;
+}
+@media (max-width: 768px) {
+  :root {
+    --fc-event-name-size: 11px;
+    --fc-event-detail-size: 9px;
+    --fc-event-tag-size: 8px;
+  }
+}
+
 /* Resource TimeGrid の基本調整 */
 .fc {
   --fc-border-color: #e5e7eb;
@@ -97,6 +111,11 @@ body {
 .fc-event.holiday-bg {
   opacity: 0.6;
   cursor: default;
+}
+
+/* 1時間ごとの太罫線（正時の区切りを強調） */
+.fc .fc-timegrid-slot:not(.fc-timegrid-slot-minor) {
+  border-top: 2px solid #9ca3af;
 }
 
 /* ブロック枠（予約不可時間帯） */

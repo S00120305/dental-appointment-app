@@ -5,6 +5,7 @@ import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
+import { cleanPhone } from '@/lib/utils/phone'
 import type { Patient, LinePendingLink, PreferredNotification } from '@/lib/supabase/types'
 
 type PatientFormProps = {
@@ -20,8 +21,10 @@ type FormData = {
   name_kana: string
   phone: string
   email: string
-  reminder_sms: boolean
-  reminder_email: boolean
+  gender: string
+  date_of_birth: string
+  postal_code: string
+  address: string
   preferred_notification: PreferredNotification
   is_vip: boolean
   caution_level: number
@@ -34,8 +37,10 @@ const initialFormData: FormData = {
   name_kana: '',
   phone: '',
   email: '',
-  reminder_sms: false,
-  reminder_email: false,
+  gender: '',
+  date_of_birth: '',
+  postal_code: '',
+  address: '',
   preferred_notification: 'line',
   is_vip: false,
   caution_level: 0,
@@ -65,8 +70,10 @@ export default function PatientForm({ isOpen, onClose, onSaved, patient }: Patie
         name_kana: patient.name_kana || '',
         phone: patient.phone || '',
         email: patient.email || '',
-        reminder_sms: patient.reminder_sms,
-        reminder_email: patient.reminder_email,
+        gender: patient.gender || '',
+        date_of_birth: patient.date_of_birth || '',
+        postal_code: patient.postal_code || '',
+        address: patient.address || '',
         preferred_notification: patient.preferred_notification || 'line',
         is_vip: patient.is_vip ?? false,
         caution_level: patient.caution_level ?? 0,
@@ -93,7 +100,8 @@ export default function PatientForm({ isOpen, onClose, onSaved, patient }: Patie
     setSaving(true)
     try {
       const method = isEdit ? 'PUT' : 'POST'
-      const body = isEdit ? { id: patient!.id, ...form } : form
+      const cleanedForm = { ...form, phone: form.phone ? cleanPhone(form.phone) : '' }
+      const body = isEdit ? { id: patient!.id, ...cleanedForm } : cleanedForm
 
       const res = await fetch('/api/patients', {
         method,
@@ -299,6 +307,67 @@ export default function PatientForm({ isOpen, onClose, onSaved, patient }: Patie
             />
           </div>
 
+          {/* 性別 */}
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">性別</label>
+            <div className="flex gap-2">
+              {[
+                { value: '', label: '未設定' },
+                { value: '男性', label: '男性' },
+                { value: '女性', label: '女性' },
+                { value: 'その他', label: 'その他' },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setForm({ ...form, gender: opt.value })}
+                  className={`flex-1 min-h-[44px] rounded-md border-2 text-sm font-medium transition-colors ${
+                    form.gender === opt.value
+                      ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                      : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 生年月日 */}
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">生年月日</label>
+            <input
+              type="date"
+              value={form.date_of_birth}
+              onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-base"
+            />
+          </div>
+
+          {/* 郵便番号 */}
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">郵便番号</label>
+            <input
+              type="text"
+              value={form.postal_code}
+              onChange={(e) => setForm({ ...form, postal_code: e.target.value })}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-base"
+              placeholder="000-0000"
+            />
+          </div>
+
+          {/* 住所 */}
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">住所</label>
+            <input
+              type="text"
+              value={form.address}
+              onChange={(e) => setForm({ ...form, address: e.target.value })}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-base"
+              placeholder="例: 石川県金沢市..."
+            />
+          </div>
+
           {/* 通知設定 */}
           <div className="rounded-lg border border-gray-200 p-3 space-y-3">
             <h3 className="text-sm font-medium text-gray-700">通知設定</h3>
@@ -384,44 +453,6 @@ export default function PatientForm({ isOpen, onClose, onSaved, patient }: Patie
               </div>
             )}
 
-            {/* 旧SMS/メール通知トグル */}
-            <div className="flex items-center justify-between">
-              <label className="text-sm text-gray-600">SMS通知（旧設定）</label>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={form.reminder_sms}
-                onClick={() => setForm({ ...form, reminder_sms: !form.reminder_sms })}
-                className={`relative inline-flex h-7 w-12 min-w-[48px] items-center rounded-full transition-colors ${
-                  form.reminder_sms ? 'bg-emerald-600' : 'bg-gray-300'
-                }`}
-              >
-                <span
-                  className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                    form.reminder_sms ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <label className="text-sm text-gray-600">メール通知（旧設定）</label>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={form.reminder_email}
-                onClick={() => setForm({ ...form, reminder_email: !form.reminder_email })}
-                className={`relative inline-flex h-7 w-12 min-w-[48px] items-center rounded-full transition-colors ${
-                  form.reminder_email ? 'bg-emerald-600' : 'bg-gray-300'
-                }`}
-              >
-                <span
-                  className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                    form.reminder_email ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-            </div>
           </div>
 
           {/* 患者タグ */}

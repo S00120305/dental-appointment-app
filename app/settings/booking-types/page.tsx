@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import AppLayout from '@/components/layout/AppLayout'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
@@ -9,7 +9,7 @@ import { useToast } from '@/components/ui/Toast'
 import type { BookingType } from '@/lib/supabase/types'
 import { BOOKING_CATEGORIES } from '@/lib/supabase/types'
 
-const DURATION_OPTIONS = [10, 15, 20, 30, 45, 60, 90, 120]
+const DURATION_OPTIONS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]
 
 const PRESET_COLORS = [
   '#3B82F6', '#10B981', '#F59E0B', '#EF4444',
@@ -174,6 +174,62 @@ export default function BookingTypesPage() {
     } catch { /* ignore */ }
   }
 
+  // Drag-and-drop state
+  const dragItem = useRef<{ id: string; category: string } | null>(null)
+  const dragOverItem = useRef<{ id: string; category: string } | null>(null)
+  const [reordering, setReordering] = useState(false)
+
+  async function handleDrop(category: string) {
+    if (!dragItem.current || !dragOverItem.current) return
+    if (dragItem.current.category !== category || dragOverItem.current.category !== category) return
+    if (dragItem.current.id === dragOverItem.current.id) return
+
+    const categoryItems = bookingTypes
+      .filter(bt => bt.is_active && bt.category === category)
+      .sort((a, b) => a.sort_order - b.sort_order)
+
+    const dragIdx = categoryItems.findIndex(bt => bt.id === dragItem.current!.id)
+    const overIdx = categoryItems.findIndex(bt => bt.id === dragOverItem.current!.id)
+    if (dragIdx === -1 || overIdx === -1) return
+
+    const reordered = [...categoryItems]
+    const [moved] = reordered.splice(dragIdx, 1)
+    reordered.splice(overIdx, 0, moved)
+
+    // Optimistic UI update
+    const updates = reordered.map((bt, i) => ({ id: bt.id, sort_order: i + 1 }))
+    setBookingTypes(prev =>
+      prev.map(bt => {
+        const upd = updates.find(u => u.id === bt.id)
+        return upd ? { ...bt, sort_order: upd.sort_order } : bt
+      })
+    )
+
+    // Save to server
+    setReordering(true)
+    try {
+      const res = await fetch('/api/booking-types/reorder', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: updates }),
+      })
+      if (res.ok) {
+        showToast('並び順を更新しました', 'success')
+      } else {
+        showToast('並び順の更新に失敗しました', 'error')
+        fetchBookingTypes()
+      }
+    } catch {
+      showToast('通信エラーが発生しました', 'error')
+      fetchBookingTypes()
+    } finally {
+      setReordering(false)
+    }
+
+    dragItem.current = null
+    dragOverItem.current = null
+  }
+
   const activeTypes = bookingTypes.filter(bt => bt.is_active)
   const inactiveTypes = bookingTypes.filter(bt => !bt.is_active)
 
@@ -224,13 +280,19 @@ export default function BookingTypesPage() {
                   </h3>
                 </div>
                 <div className="space-y-1">
-                  {group.items.map(bt => (
+                  {[...group.items].sort((a, b) => a.sort_order - b.sort_order).map(bt => (
                     <div
                       key={bt.id}
-                      className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+                      draggable
+                      onDragStart={() => { dragItem.current = { id: bt.id, category: group.category } }}
+                      onDragOver={(e) => { e.preventDefault(); dragOverItem.current = { id: bt.id, category: group.category } }}
+                      onDrop={() => handleDrop(group.category)}
+                      onDragEnd={() => { dragItem.current = null; dragOverItem.current = null }}
+                      className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm cursor-grab active:cursor-grabbing"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
+                          <span className="text-gray-300 select-none text-lg" title="ドラッグで並び替え">{'\u2261'}</span>
                           <span
                             className="h-3 w-3 rounded-full shrink-0"
                             style={{ backgroundColor: bt.color }}
@@ -310,7 +372,7 @@ export default function BookingTypesPage() {
         onClose={() => setModalOpen(false)}
         title={editingId ? '予約種別の編集' : '予約種別の追加'}
       >
-        <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">カテゴリ</label>
             <select

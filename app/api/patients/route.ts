@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const supabase = createServerClient()
     const body = await request.json()
 
-    const { chart_number, name, name_kana, phone, email, reminder_sms, reminder_email, preferred_notification } = body
+    const { chart_number, name, name_kana, phone, email, reminder_sms, reminder_email, preferred_notification, gender, date_of_birth, postal_code, address } = body
 
     // バリデーション
     if (!chart_number?.trim()) {
@@ -63,6 +63,10 @@ export async function POST(request: NextRequest) {
         reminder_sms: reminder_sms ?? false,
         reminder_email: reminder_email ?? false,
         preferred_notification: preferred_notification || 'line',
+        gender: gender?.trim() || null,
+        date_of_birth: date_of_birth || null,
+        postal_code: postal_code?.trim() || null,
+        address: address?.trim() || null,
       })
       .select()
       .single()
@@ -105,6 +109,7 @@ export async function PUT(request: NextRequest) {
       id, chart_number, name, name_kana, phone, email,
       reminder_sms, reminder_email, preferred_notification, line_user_id,
       is_vip, caution_level, is_infection_alert,
+      gender, date_of_birth, postal_code, address,
       birth_date, memo,
     } = body
 
@@ -135,6 +140,10 @@ export async function PUT(request: NextRequest) {
     if (is_vip !== undefined) updateData.is_vip = is_vip
     if (caution_level !== undefined) updateData.caution_level = caution_level
     if (is_infection_alert !== undefined) updateData.is_infection_alert = is_infection_alert
+    if (gender !== undefined) updateData.gender = gender?.trim() || null
+    if (date_of_birth !== undefined) updateData.date_of_birth = date_of_birth || null
+    if (postal_code !== undefined) updateData.postal_code = postal_code?.trim() || null
+    if (address !== undefined) updateData.address = address?.trim() || null
     if (birth_date !== undefined) updateData.birth_date = birth_date || null
     if (memo !== undefined) updateData.memo = memo ?? ''
 

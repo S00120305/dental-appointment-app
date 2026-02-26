@@ -17,6 +17,10 @@ export type Patient = {
   is_vip: boolean
   caution_level: number // 0=なし, 1=注意①, 2=注意②, 3=注意③
   is_infection_alert: boolean
+  gender: string | null
+  date_of_birth: string | null
+  postal_code: string | null
+  address: string | null
   birth_date: string | null
   memo: string
   is_active: boolean
@@ -147,7 +151,6 @@ export const BOOKING_CATEGORIES = [
   { name: '手術', color: '#EF4444' },
   { name: 'インプラント', color: '#047857' },
   { name: '矯正', color: '#EAB308' },
-  { name: '審美・ホワイトニング', color: '#06B6D4' },
   { name: 'その他', color: '#9CA3AF' },
 ] as const
 

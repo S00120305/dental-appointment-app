@@ -56,7 +56,7 @@ type SameDayAppointment = {
   staff: { id: string; name: string } | null
 }
 
-const DURATION_OPTIONS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 120]
+const DURATION_OPTIONS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]
 
 function generateTimeSlots(start: string, end: string): string[] {
   const slots: string[] = []
@@ -496,7 +496,7 @@ export default function AppointmentModal({
   return (
     <>
       <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? '予約の編集' : '新規予約'}>
-        <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* ステータス操作セクション（編集モード時のみ） */}
           {isEdit && appointment && onStatusChange && currentStatus !== 'cancelled' && currentStatus !== 'no_show' && (
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">

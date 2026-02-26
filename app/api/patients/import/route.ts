@@ -8,6 +8,10 @@ type ImportRow = {
   name_kana?: string
   phone?: string
   email?: string
+  gender?: string
+  date_of_birth?: string
+  postal_code?: string
+  address?: string
 }
 
 // POST: CSV一括インポート（UPSERT）
@@ -46,15 +50,21 @@ export async function POST(request: NextRequest) {
 
       if (existing) {
         // 更新（UPSERT: 既存レコードを更新）
-        const { error } = await supabase
-          .from('patients')
-          .update({
+        const updateData: Record<string, unknown> = {
             name: row.name.trim(),
             name_kana: row.name_kana?.trim() || null,
             phone: row.phone?.trim() || null,
             email: row.email?.trim() || null,
             is_active: true,
-          })
+          }
+        if (row.gender) updateData.gender = row.gender.trim()
+        if (row.date_of_birth) updateData.date_of_birth = row.date_of_birth.trim()
+        if (row.postal_code) updateData.postal_code = row.postal_code.trim()
+        if (row.address) updateData.address = row.address.trim()
+
+        const { error } = await supabase
+          .from('patients')
+          .update(updateData)
           .eq('id', existing.id)
 
         if (error) {
@@ -64,13 +74,19 @@ export async function POST(request: NextRequest) {
         }
       } else {
         // 新規登録
-        const { error } = await supabase.from('patients').insert({
+        const insertData: Record<string, unknown> = {
           chart_number: row.chart_number.trim(),
           name: row.name.trim(),
           name_kana: row.name_kana?.trim() || null,
           phone: row.phone?.trim() || null,
           email: row.email?.trim() || null,
-        })
+        }
+        if (row.gender) insertData.gender = row.gender.trim()
+        if (row.date_of_birth) insertData.date_of_birth = row.date_of_birth.trim()
+        if (row.postal_code) insertData.postal_code = row.postal_code.trim()
+        if (row.address) insertData.address = row.address.trim()
+
+        const { error } = await supabase.from('patients').insert(insertData)
 
         if (error) {
           errors.push({ row: i + 1, message: error.message })
