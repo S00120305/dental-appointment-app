@@ -2,6 +2,33 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { getSessionUser, recordLog } from '@/lib/log'
 
+/** visible_units 設定を取得してパースする */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getVisibleUnits(supabase: any): Promise<number[]> {
+  const { data } = await supabase
+    .from('appointment_settings')
+    .select('key, value')
+    .in('key', ['visible_units', 'unit_count'])
+
+  const map: Record<string, string> = {}
+  for (const row of (data || []) as { key: string; value: string }[]) {
+    map[row.key] = row.value
+  }
+
+  const raw = map['visible_units'] || map['unit_count'] || '5'
+  const trimmed = raw.trim()
+
+  if (/^\d+$/.test(trimmed)) {
+    const n = parseInt(trimmed, 10)
+    if (n >= 1 && n <= 8) return Array.from({ length: n }, (_, i) => i + 1)
+  }
+
+  return trimmed
+    .split(',')
+    .map(s => parseInt(s.trim(), 10))
+    .filter(n => !isNaN(n) && n >= 1 && n <= 8)
+}
+
 // tag_links をフラットな tags 配列に変換 + slide_from を整形するヘルパー
 function transformAppointment(appointment: Record<string, unknown>) {
   const tagLinks = appointment.tag_links as { tag: { id: string; name: string; icon: string | null; color: string | null } | null }[] | null
@@ -166,6 +193,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '所要時間は10分単位で指定してください' }, { status: 400 })
     }
 
+    // 表示中の診察室のみ予約可能
+    const visibleUnits = await getVisibleUnits(supabase)
+    if (!visibleUnits.includes(unit_number)) {
+      return NextResponse.json({ error: `診察室${unit_number}は現在使用されていません` }, { status: 400 })
+    }
+
     // 重複チェック
     const overlapError = await checkOverlap(supabase, unit_number, start_time, duration_minutes)
     if (overlapError) {
@@ -286,6 +319,14 @@ export async function PUT(request: NextRequest) {
     if (!isStatusOnly) {
       if (duration_minutes && duration_minutes % 10 !== 0) {
         return NextResponse.json({ error: '所要時間は10分単位で指定してください' }, { status: 400 })
+      }
+
+      // 表示中の診察室のみ予約可能
+      if (unit_number) {
+        const visibleUnits = await getVisibleUnits(supabase)
+        if (!visibleUnits.includes(unit_number)) {
+          return NextResponse.json({ error: `診察室${unit_number}は現在使用されていません` }, { status: 400 })
+        }
       }
 
       // 時間/ユニット変更時の重複チェック（自分自身を除外）
