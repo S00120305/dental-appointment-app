@@ -98,6 +98,8 @@ export default function CalendarView({
         start: startDate,
         end: endDate,
         title: appt.patient?.name || '',
+        backgroundColor: 'transparent',
+        borderColor: 'transparent',
         extendedProps: {
           type: 'appointment',
           patient_name: appt.patient?.name || '',
