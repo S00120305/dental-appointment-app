@@ -25,6 +25,14 @@ export async function GET(request: NextRequest) {
     const durationMinutes = parseInt(searchParams.get('duration_minutes') || '30')
     const unitNumber = parseInt(searchParams.get('unit_number') || '0')
     const timeRange = searchParams.get('time_range') || 'all'
+    const daysOfWeekParam = searchParams.get('days_of_week')
+    const customTimeStart = searchParams.get('time_start')
+    const customTimeEnd = searchParams.get('time_end')
+
+    // 曜日フィルタ（0=日,1=月,...6=土）
+    const daysOfWeek: number[] = daysOfWeekParam
+      ? daysOfWeekParam.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n >= 0 && n <= 6)
+      : []
 
     // バリデーション
     if (!startDate || !endDate) {
@@ -150,12 +158,24 @@ export async function GET(request: NextRequest) {
     while (currentDate <= end) {
       const dayStr = formatDateJST(currentDate)
 
+      // 曜日フィルタ: getDay()はUTCなのでJSTで計算
+      const jstDate = new Date(currentDate.getTime() + 9 * 60 * 60 * 1000)
+      const dayOfWeek = jstDate.getUTCDay()
+      if (daysOfWeek.length > 0 && !daysOfWeek.includes(dayOfWeek)) {
+        currentDate.setDate(currentDate.getDate() + 1)
+        continue
+      }
+
       // 診療時間の開始・終了をその日のタイムスタンプに変換
       let windowStart = parseTimeToTimestamp(dayStr, bhStart)
       let windowEnd = parseTimeToTimestamp(dayStr, bhEnd)
 
       // time_range フィルタ
-      if (timeRange === 'morning') {
+      if (timeRange === 'custom' && customTimeStart && customTimeEnd) {
+        // カスタム時間帯（営業時間でclamp）
+        windowStart = Math.max(windowStart, parseTimeToTimestamp(dayStr, customTimeStart))
+        windowEnd = Math.min(windowEnd, parseTimeToTimestamp(dayStr, customTimeEnd))
+      } else if (timeRange === 'morning') {
         windowEnd = Math.min(windowEnd, parseTimeToTimestamp(dayStr, '12:00'))
       } else if (timeRange === 'afternoon') {
         windowStart = Math.max(windowStart, parseTimeToTimestamp(dayStr, '13:00'))

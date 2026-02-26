@@ -161,7 +161,7 @@ export default function PatientDetailPanel({
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose()
     }
-    function handleClickOutside(e: MouseEvent) {
+    function handleClickOutside(e: MouseEvent | TouchEvent) {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
         onClose()
       }
@@ -170,10 +170,12 @@ export default function PatientDetailPanel({
     // Delay adding click listener to prevent immediate close
     const timer = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('touchstart', handleClickOutside)
     }, 100)
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
       document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('touchstart', handleClickOutside)
       clearTimeout(timer)
     }
   }, [isOpen, onClose])
@@ -238,7 +240,7 @@ export default function PatientDetailPanel({
         className="w-full max-w-5xl mx-4 rounded-lg bg-white shadow-xl overflow-hidden max-h-[90vh] flex flex-col"
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
           <div className="flex items-center gap-2 min-w-0">
             {loadingDetail ? (
               <div className="h-6 w-32 animate-pulse rounded bg-gray-200" />
@@ -582,6 +584,16 @@ export default function PatientDetailPanel({
               )}
             </div>
           </div>
+        </div>
+
+        {/* Mobile close button */}
+        <div className="flex-shrink-0 border-t border-gray-200 p-3 sm:hidden">
+          <button
+            onClick={onClose}
+            className="w-full min-h-[44px] rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            閉じる
+          </button>
         </div>
       </div>
 

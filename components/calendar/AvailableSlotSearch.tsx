@@ -62,7 +62,10 @@ export default function AvailableSlotSearch({
   const [endDate, setEndDate] = useState(addDays(tomorrow, 14))
   const [durationMinutes, setDurationMinutes] = useState(30)
   const [unitNumber, setUnitNumber] = useState(0)
-  const [timeRange, setTimeRange] = useState<'all' | 'morning' | 'afternoon'>('all')
+  const [timeRange, setTimeRange] = useState<'all' | 'morning' | 'afternoon' | 'custom'>('all')
+  const [selectedDays, setSelectedDays] = useState<number[]>([])
+  const [customTimeStart, setCustomTimeStart] = useState('')
+  const [customTimeEnd, setCustomTimeEnd] = useState('')
 
   const [slots, setSlots] = useState<AvailableSlot[]>([])
   const [total, setTotal] = useState(0)
@@ -79,6 +82,9 @@ export default function AvailableSlotSearch({
       setDurationMinutes(30)
       setUnitNumber(0)
       setTimeRange('all')
+      setSelectedDays([])
+      setCustomTimeStart('')
+      setCustomTimeEnd('')
       setSlots([])
       setTotal(0)
       setHasMore(false)
@@ -107,6 +113,13 @@ export default function AvailableSlotSearch({
         unit_number: String(unitNumber),
         time_range: timeRange,
       })
+      if (selectedDays.length > 0) {
+        params.set('days_of_week', selectedDays.join(','))
+      }
+      if (timeRange === 'custom' && customTimeStart && customTimeEnd) {
+        params.set('time_start', customTimeStart)
+        params.set('time_end', customTimeEnd)
+      }
       const res = await fetch(`/api/appointments/available-slots?${params}`)
       const data = await res.json()
       if (res.ok) {
@@ -225,13 +238,95 @@ export default function AvailableSlotSearch({
                       name="time_range"
                       value={opt.value}
                       checked={timeRange === opt.value}
-                      onChange={() => setTimeRange(opt.value)}
+                      onChange={() => { setTimeRange(opt.value); setCustomTimeStart(''); setCustomTimeEnd('') }}
                       className="sr-only"
                     />
                     {opt.label}
                   </label>
                 ))}
               </div>
+            </div>
+
+            {/* 詳細時間指定 */}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">詳細時間指定</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="time"
+                  value={customTimeStart}
+                  onChange={(e) => {
+                    setCustomTimeStart(e.target.value)
+                    if (e.target.value && customTimeEnd) setTimeRange('custom')
+                  }}
+                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm min-h-[44px]"
+                />
+                <span className="text-gray-400">〜</span>
+                <input
+                  type="time"
+                  value={customTimeEnd}
+                  onChange={(e) => {
+                    setCustomTimeEnd(e.target.value)
+                    if (customTimeStart && e.target.value) setTimeRange('custom')
+                  }}
+                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm min-h-[44px]"
+                />
+                {(customTimeStart || customTimeEnd) && (
+                  <button
+                    type="button"
+                    onClick={() => { setCustomTimeStart(''); setCustomTimeEnd(''); if (timeRange === 'custom') setTimeRange('all') }}
+                    className="min-h-[44px] min-w-[44px] rounded-md border border-gray-300 text-sm text-gray-500 hover:bg-gray-50"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              {timeRange === 'custom' && (
+                <p className="mt-1 text-xs text-emerald-600">詳細時間指定が優先されます</p>
+              )}
+            </div>
+
+            {/* 曜日指定 */}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">曜日指定</label>
+              <div className="flex gap-1.5">
+                {([
+                  { day: 1, label: '月' },
+                  { day: 2, label: '火' },
+                  { day: 3, label: '水' },
+                  { day: 4, label: '木' },
+                  { day: 5, label: '金' },
+                  { day: 6, label: '土' },
+                ] as const).map((opt) => {
+                  const isSelected = selectedDays.includes(opt.day)
+                  return (
+                    <button
+                      key={opt.day}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDays(prev =>
+                          isSelected ? prev.filter(d => d !== opt.day) : [...prev, opt.day].sort()
+                        )
+                      }}
+                      className={`min-h-[44px] min-w-[44px] flex-1 rounded-md border text-sm font-medium ${
+                        isSelected
+                          ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                          : 'border-gray-300 text-gray-700'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  )
+                })}
+              </div>
+              {selectedDays.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedDays([])}
+                  className="mt-1 text-xs text-gray-400 hover:text-gray-600"
+                >
+                  曜日指定をクリア
+                </button>
+              )}
             </div>
 
             {/* 検索ボタン */}

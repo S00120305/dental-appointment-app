@@ -43,12 +43,12 @@ export function getEventStyle(
 
   // スタッフ色がある場合は薄い背景色として使用、なければステータスの背景色
   const bg = staffColor
-    ? staffColor + '20' // hex alpha ~12% opacity
+    ? staffColor + '40' // hex alpha ~25% opacity
     : (STATUS_BG[status] || STATUS_BG['scheduled'])
 
-  // テキスト色: スタッフ色がある場合はコントラスト自動判定、なければステータス色
+  // テキスト色: 25% opacity背景は常に明るいため、常にダーク文字で統一
   const textColor = staffColor
-    ? getContrastTextColor(staffColor)
+    ? '#1f2937'
     : (STATUS_TEXT[status] || STATUS_TEXT['scheduled'])
 
   return {
@@ -103,7 +103,7 @@ const AppointmentBlock = memo(function AppointmentBlock({ eventInfo, onStatusCli
 
   return (
     <div style={style} className="rounded-md">
-      <div className="truncate text-xs font-bold leading-tight">
+      <div className="truncate text-[13px] font-bold leading-tight">
         <span
           role={canAdvance ? 'button' : undefined}
           onClick={handleStatusClick}
@@ -138,7 +138,7 @@ const AppointmentBlock = memo(function AppointmentBlock({ eventInfo, onStatusCli
           <span className="text-[10px] ml-0.5">{appointmentTagIcons}</span>
         )}
       </div>
-      <div className="truncate text-[10px] leading-tight opacity-80">
+      <div className="truncate text-[11px] leading-tight opacity-90">
         {appointmentType}
         {staffName && ` / ${staffName}`}
       </div>
