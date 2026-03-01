@@ -56,7 +56,7 @@ export function getEventStyle(
     color: textColor,
     borderLeft: `4px solid ${borderColor}`,
     height: '100%',
-    padding: '2px 6px',
+    padding: '3px 6px 2px',
     overflow: 'hidden',
     lineHeight: '1.3',
     opacity: isCancelledOrNoShow ? 0.5 : 1,

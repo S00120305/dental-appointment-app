@@ -1,7 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import useSWR from 'swr'
 import Button from '@/components/ui/Button'
+import type { BookingType } from '@/lib/supabase/types'
+import { BOOKING_CATEGORIES } from '@/lib/supabase/types'
+
+const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 type AvailableSlot = {
   date: string
@@ -14,13 +19,20 @@ type AvailableSlot = {
 type AvailableSlotSearchProps = {
   isOpen: boolean
   onClose: () => void
-  onSelectSlot: (slot: AvailableSlot, durationMinutes: number) => void
+  onSelectSlot: (
+    slot: AvailableSlot,
+    durationMinutes: number,
+    bookingTypeId?: string,
+    patientId?: string,
+  ) => void
   visibleUnits: number[]
   preSelectedPatientId?: string
   preSelectedPatientName?: string
+  defaultRangeDays?: number
+  defaultDuration?: number
 }
 
-const DURATION_OPTIONS = [10, 15, 20, 30, 45, 60, 90]
+const DURATION_OPTIONS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]
 
 function formatDateLocal(date: Date): string {
   const y = date.getFullYear()
@@ -55,13 +67,40 @@ export default function AvailableSlotSearch({
   visibleUnits,
   preSelectedPatientId,
   preSelectedPatientName,
+  defaultRangeDays = 14,
+  defaultDuration = 30,
 }: AvailableSlotSearchProps) {
   const tomorrow = formatDateLocal(new Date(Date.now() + 24 * 60 * 60 * 1000))
 
+  // Booking types
+  const { data: typesData } = useSWR<{ booking_types: BookingType[] }>(
+    isOpen ? '/api/booking-types' : null,
+    fetcher
+  )
+  const bookingTypes = (typesData?.booking_types || []).filter(t => t.is_active)
+
+  const bookingTypeGroups = useMemo(() => {
+    const groups: { category: string; items: BookingType[] }[] = []
+    for (const cat of BOOKING_CATEGORIES) {
+      const items = bookingTypes.filter((bt) => bt.category === cat.name)
+      if (items.length > 0) {
+        groups.push({ category: cat.name, items })
+      }
+    }
+    const uncategorized = bookingTypes.filter(
+      (bt) => !bt.category || !BOOKING_CATEGORIES.some((c) => c.name === bt.category)
+    )
+    if (uncategorized.length > 0) {
+      groups.push({ category: '未分類', items: uncategorized })
+    }
+    return groups
+  }, [bookingTypes])
+
   const [startDate, setStartDate] = useState(tomorrow)
-  const [endDate, setEndDate] = useState(addDays(tomorrow, 14))
-  const [durationMinutes, setDurationMinutes] = useState(30)
-  const [unitNumber, setUnitNumber] = useState(0)
+  const [endDate, setEndDate] = useState(addDays(tomorrow, defaultRangeDays))
+  const [durationMinutes, setDurationMinutes] = useState(defaultDuration)
+  const [selectedBookingTypeId, setSelectedBookingTypeId] = useState('')
+  const [selectedUnits, setSelectedUnits] = useState<number[]>([]) // empty = all
   const [timeRange, setTimeRange] = useState<'all' | 'morning' | 'afternoon' | 'custom'>('all')
   const [selectedDays, setSelectedDays] = useState<number[]>([])
   const [customTimeStart, setCustomTimeStart] = useState('')
@@ -78,9 +117,10 @@ export default function AvailableSlotSearch({
     if (isOpen) {
       const t = formatDateLocal(new Date(Date.now() + 24 * 60 * 60 * 1000))
       setStartDate(t)
-      setEndDate(addDays(t, 14))
-      setDurationMinutes(30)
-      setUnitNumber(0)
+      setEndDate(addDays(t, defaultRangeDays))
+      setDurationMinutes(defaultDuration)
+      setSelectedBookingTypeId('')
+      setSelectedUnits([])
       setTimeRange('all')
       setSelectedDays([])
       setCustomTimeStart('')
@@ -90,7 +130,25 @@ export default function AvailableSlotSearch({
       setHasMore(false)
       setSearched(false)
     }
-  }, [isOpen])
+  }, [isOpen, defaultRangeDays, defaultDuration])
+
+  function handleBookingTypeChange(val: string) {
+    if (val === '__custom__') {
+      setSelectedBookingTypeId('')
+      return
+    }
+    setSelectedBookingTypeId(val)
+    const bt = bookingTypes.find(b => b.id === val)
+    if (bt) {
+      setDurationMinutes(bt.duration_minutes)
+    }
+  }
+
+  function toggleUnit(unit: number) {
+    setSelectedUnits(prev =>
+      prev.includes(unit) ? prev.filter(u => u !== unit) : [...prev, unit].sort((a, b) => a - b)
+    )
+  }
 
   async function handleSearch() {
     // 期間バリデーション
@@ -110,9 +168,12 @@ export default function AvailableSlotSearch({
         start_date: startDate,
         end_date: endDate,
         duration_minutes: String(durationMinutes),
-        unit_number: String(unitNumber),
         time_range: timeRange,
       })
+      // マルチユニット対応
+      if (selectedUnits.length > 0) {
+        params.set('unit_numbers', selectedUnits.join(','))
+      }
       if (selectedDays.length > 0) {
         params.set('days_of_week', selectedDays.join(','))
       }
@@ -165,6 +226,27 @@ export default function AvailableSlotSearch({
 
           {/* 検索フォーム */}
           <div className="space-y-3">
+            {/* 予約種別 */}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">予約種別</label>
+              <select
+                value={selectedBookingTypeId}
+                onChange={(e) => handleBookingTypeChange(e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              >
+                <option value="">カスタム（時間指定）</option>
+                {bookingTypeGroups.map(group => (
+                  <optgroup key={group.category} label={group.category}>
+                    {group.items.map(bt => (
+                      <option key={bt.id} value={bt.id}>
+                        {bt.internal_name}（{bt.duration_minutes}分）
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+
             {/* 開始日・終了日 */}
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -187,32 +269,61 @@ export default function AvailableSlotSearch({
               </div>
             </div>
 
-            {/* 必要時間・ユニット */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">必要時間</label>
-                <select
-                  value={durationMinutes}
-                  onChange={(e) => setDurationMinutes(parseInt(e.target.value))}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            {/* 必要時間 */}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">必要時間</label>
+              <select
+                value={durationMinutes}
+                onChange={(e) => {
+                  setDurationMinutes(parseInt(e.target.value))
+                  // カスタム時間を選んだら予約種別をクリア
+                  if (selectedBookingTypeId) {
+                    const bt = bookingTypes.find(b => b.id === selectedBookingTypeId)
+                    if (bt && bt.duration_minutes !== parseInt(e.target.value)) {
+                      setSelectedBookingTypeId('')
+                    }
+                  }
+                }}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              >
+                {DURATION_OPTIONS.map((d) => (
+                  <option key={d} value={d}>{d}分</option>
+                ))}
+              </select>
+            </div>
+
+            {/* 診察室（マルチセレクトチップ） */}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">診察室</label>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setSelectedUnits([])}
+                  className={`min-h-[40px] rounded-full px-3 text-sm font-medium ${
+                    selectedUnits.length === 0
+                      ? 'bg-emerald-600 text-white'
+                      : 'border border-gray-300 bg-white text-gray-700'
+                  }`}
                 >
-                  {DURATION_OPTIONS.map((d) => (
-                    <option key={d} value={d}>{d}分</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">診察室</label>
-                <select
-                  value={unitNumber}
-                  onChange={(e) => setUnitNumber(parseInt(e.target.value))}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-                >
-                  <option value={0}>全診察室</option>
-                  {visibleUnits.map((n) => (
-                    <option key={n} value={n}>診察室{n}</option>
-                  ))}
-                </select>
+                  全て
+                </button>
+                {visibleUnits.map((n) => {
+                  const isSelected = selectedUnits.includes(n)
+                  return (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => toggleUnit(n)}
+                      className={`min-h-[40px] rounded-full px-3 text-sm font-medium ${
+                        isSelected
+                          ? 'bg-emerald-600 text-white'
+                          : 'border border-gray-300 bg-white text-gray-700'
+                      }`}
+                    >
+                      診{n}
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
@@ -367,7 +478,12 @@ export default function AvailableSlotSearch({
                           {daySlots.map((slot, idx) => (
                             <button
                               key={`${slot.unit_number}-${idx}`}
-                              onClick={() => onSelectSlot(slot, durationMinutes)}
+                              onClick={() => onSelectSlot(
+                                slot,
+                                durationMinutes,
+                                selectedBookingTypeId || undefined,
+                                preSelectedPatientId || undefined,
+                              )}
                               className="flex w-full items-center justify-between rounded-md border border-gray-200 px-3 py-2 text-left text-sm hover:bg-emerald-50 min-h-[44px]"
                             >
                               <div className="flex items-center gap-2">

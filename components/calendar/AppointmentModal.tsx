@@ -27,6 +27,8 @@ type AppointmentModalProps = {
   defaultUnitNumber?: number
   defaultStartTime?: string // HH:mm
   defaultDuration?: number // minutes
+  defaultPatientId?: string
+  defaultBookingTypeId?: string
   isHoliday?: (dateStr: string) => boolean
   getHolidayLabel?: (dateStr: string) => string | null
   getStaffHolidayMap?: (dateStr: string) => Record<string, StaffHolidayInfo>
@@ -86,6 +88,8 @@ export default function AppointmentModal({
   defaultUnitNumber,
   defaultStartTime,
   defaultDuration,
+  defaultPatientId,
+  defaultBookingTypeId,
   isHoliday,
   getHolidayLabel,
   getStaffHolidayMap,
@@ -218,6 +222,41 @@ export default function AppointmentModal({
       }))
     }
   }, [bookingTypes, form.booking_type_id, form.appointment_type, appointment, useCustomType, defaultDuration])
+
+  // Auto-fill patient from defaultPatientId (slot search → modal flow)
+  useEffect(() => {
+    if (!isOpen || appointment || !defaultPatientId) return
+    // Only set if patient is not already selected
+    if (selectedPatient?.id === defaultPatientId) return
+    async function loadPatient() {
+      try {
+        const res = await fetch(`/api/patients?search=${encodeURIComponent(defaultPatientId!)}`)
+        const data = await res.json()
+        if (res.ok && data.patients?.length > 0) {
+          const p = data.patients[0]
+          setSelectedPatient(p)
+          setForm(prev => ({ ...prev, patient_id: p.id }))
+          setPatientQuery(`${p.chart_number} ${p.name}`)
+        }
+      } catch { /* ignore */ }
+    }
+    loadPatient()
+  }, [isOpen, appointment, defaultPatientId, selectedPatient?.id])
+
+  // Auto-fill booking type from defaultBookingTypeId (slot search → modal flow)
+  useEffect(() => {
+    if (!isOpen || appointment || !defaultBookingTypeId || bookingTypes.length === 0) return
+    const bt = bookingTypes.find(b => b.id === defaultBookingTypeId)
+    if (bt && form.booking_type_id !== bt.id) {
+      setForm(prev => ({
+        ...prev,
+        booking_type_id: bt.id,
+        appointment_type: bt.internal_name,
+        duration_minutes: defaultDuration || bt.duration_minutes,
+      }))
+      setUseCustomType(false)
+    }
+  }, [isOpen, appointment, defaultBookingTypeId, bookingTypes, defaultDuration, form.booking_type_id])
 
   // Fetch lab orders when patient changes and toggle is ON
   useEffect(() => {
@@ -414,6 +453,11 @@ export default function AppointmentModal({
       if (!res.ok) {
         if (res.status === 409) {
           setErrors({ overlap: data.error })
+          setTimeout(() => {
+            document.getElementById('overlap-error')?.scrollIntoView({
+              behavior: 'smooth', block: 'center'
+            })
+          }, 100)
         } else {
           showToast(data.error || 'エラーが発生しました', 'error')
         }
@@ -560,13 +604,6 @@ export default function AppointmentModal({
                   未来院に戻す
                 </button>
               )}
-            </div>
-          )}
-
-          {/* 重複エラー */}
-          {errors.overlap && (
-            <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
-              {errors.overlap}
             </div>
           )}
 
@@ -768,6 +805,16 @@ export default function AppointmentModal({
               </select>
             </div>
           </div>
+
+          {/* 重複エラー（開始時刻・所要時間の直後に表示） */}
+          {errors.overlap && (
+            <div
+              id="overlap-error"
+              className="animate-pulse rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700"
+            >
+              {errors.overlap}
+            </div>
+          )}
 
           {/* 予約種別 */}
           <div data-error={errors.appointment_type ? true : undefined}>

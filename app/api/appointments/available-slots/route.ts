@@ -23,7 +23,6 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('start_date')
     const endDate = searchParams.get('end_date')
     const durationMinutes = parseInt(searchParams.get('duration_minutes') || '30')
-    const unitNumber = parseInt(searchParams.get('unit_number') || '0')
     const timeRange = searchParams.get('time_range') || 'all'
     const daysOfWeekParam = searchParams.get('days_of_week')
     const customTimeStart = searchParams.get('time_start')
@@ -51,6 +50,10 @@ export async function GET(request: NextRequest) {
     if (diffDays < 1) {
       return NextResponse.json({ error: '終了日は開始日以降にしてください' }, { status: 400 })
     }
+
+    // 複数ユニット対応 (unit_numbers=1,3,5)
+    const unitNumbersParam = searchParams.get('unit_numbers')
+    const unitNumber = parseInt(searchParams.get('unit_number') || '0')
 
     // 設定を取得
     const { data: settingsData } = await supabase
@@ -93,9 +96,35 @@ export async function GET(request: NextRequest) {
     const allUnits = parseUnits(visibleUnitsRaw || unitCountRaw || '5')
 
     // 対象ユニットリスト
-    const targetUnits = unitNumber > 0
-      ? [unitNumber]
-      : allUnits
+    let targetUnits: number[]
+    if (unitNumbersParam) {
+      // 新形式: カンマ区切り複数ユニット
+      targetUnits = unitNumbersParam.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && allUnits.includes(n))
+      if (targetUnits.length === 0) targetUnits = allUnits
+    } else if (unitNumber > 0) {
+      // 旧形式: 単一ユニット
+      targetUnits = [unitNumber]
+    } else {
+      targetUnits = allUnits
+    }
+
+    // 休診日を取得
+    const { data: holidaysData } = await supabase
+      .from('clinic_holidays')
+      .select('holiday_type, date, day_of_week')
+      .eq('is_active', true)
+
+    const weeklyClosedDays = new Set<number>()
+    const specificHolidays = new Set<string>()
+    if (holidaysData) {
+      for (const h of holidaysData) {
+        if (h.holiday_type === 'weekly' && h.day_of_week !== null) {
+          weeklyClosedDays.add(h.day_of_week)
+        } else if (h.date) {
+          specificHolidays.add(h.date)
+        }
+      }
+    }
 
     // 期間内の予約を一括取得
     const rangeStart = `${startDate}T00:00:00+09:00`
@@ -162,6 +191,12 @@ export async function GET(request: NextRequest) {
       const jstDate = new Date(currentDate.getTime() + 9 * 60 * 60 * 1000)
       const dayOfWeek = jstDate.getUTCDay()
       if (daysOfWeek.length > 0 && !daysOfWeek.includes(dayOfWeek)) {
+        currentDate.setDate(currentDate.getDate() + 1)
+        continue
+      }
+
+      // 休診日スキップ
+      if (weeklyClosedDays.has(dayOfWeek) || specificHolidays.has(dayStr)) {
         currentDate.setDate(currentDate.getDate() + 1)
         continue
       }

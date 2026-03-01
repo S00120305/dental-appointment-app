@@ -46,7 +46,7 @@ export default function AppointmentsPage() {
     removeAppointment,
   } = useAppointments()
 
-  const { visibleUnits, businessHours, staffColors: settingsStaffColors, isLoading: settingsLoading } = useSettings()
+  const { settings, visibleUnits, businessHours, staffColors: settingsStaffColors, isLoading: settingsLoading } = useSettings()
   const { staffList, staffColors: userStaffColors } = useStaff()
 
   // users.color ベースの色を優先し、fallback として settings の色を使う
@@ -113,6 +113,10 @@ export default function AppointmentsPage() {
   // Available Slot Search
   const [slotSearchOpen, setSlotSearchOpen] = useState(false)
   const [defaultModalDuration, setDefaultModalDuration] = useState<number | undefined>(undefined)
+  const [slotSearchPatientId, setSlotSearchPatientId] = useState<string | undefined>()
+  const [slotSearchPatientName, setSlotSearchPatientName] = useState<string | undefined>()
+  const [defaultModalPatientId, setDefaultModalPatientId] = useState<string | undefined>()
+  const [defaultModalBookingTypeId, setDefaultModalBookingTypeId] = useState<string | undefined>()
 
   // Patient Detail Panel
   const [detailPanelOpen, setDetailPanelOpen] = useState(false)
@@ -268,6 +272,8 @@ export default function AppointmentsPage() {
     setDefaultModalTime(slotActionMenu.time)
     setDefaultModalUnit(slotActionMenu.unit)
     setDefaultModalDuration(undefined)
+    setDefaultModalPatientId(undefined)
+    setDefaultModalBookingTypeId(undefined)
     setModalOpen(true)
   }, [slotActionMenu])
 
@@ -297,7 +303,9 @@ export default function AppointmentsPage() {
   }, [detailAppointment])
 
   // Detail panel → new appointment via available slot search
-  const handleDetailNewAppointment = useCallback((_patientId: string, _patientName: string) => {
+  const handleDetailNewAppointment = useCallback((patientId: string, patientName: string) => {
+    setSlotSearchPatientId(patientId)
+    setSlotSearchPatientName(patientName)
     setSlotSearchOpen(true)
   }, [])
 
@@ -375,7 +383,9 @@ export default function AppointmentsPage() {
 
   function handleAvailableSlotSelect(
     slot: { date: string; unit_number: number; start_time: string },
-    durationMinutes: number
+    durationMinutes: number,
+    bookingTypeId?: string,
+    patientId?: string,
   ) {
     const startDate = new Date(slot.start_time)
     const timeStr = `${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}`
@@ -384,6 +394,8 @@ export default function AppointmentsPage() {
     setDefaultModalTime(timeStr)
     setDefaultModalUnit(slot.unit_number)
     setDefaultModalDuration(durationMinutes)
+    setDefaultModalPatientId(patientId)
+    setDefaultModalBookingTypeId(bookingTypeId)
     setSlotSearchOpen(false)
     setModalOpen(true)
   }
@@ -394,6 +406,8 @@ export default function AppointmentsPage() {
     setDefaultModalTime('')
     setDefaultModalUnit(1)
     setDefaultModalDuration(undefined)
+    setDefaultModalPatientId(undefined)
+    setDefaultModalBookingTypeId(undefined)
     setModalOpen(true)
   }
 
@@ -623,9 +637,17 @@ export default function AppointmentsPage() {
       {/* 空き枠検索パネル */}
       <AvailableSlotSearch
         isOpen={slotSearchOpen}
-        onClose={() => setSlotSearchOpen(false)}
+        onClose={() => {
+          setSlotSearchOpen(false)
+          setSlotSearchPatientId(undefined)
+          setSlotSearchPatientName(undefined)
+        }}
         onSelectSlot={handleAvailableSlotSelect}
         visibleUnits={visibleUnits}
+        preSelectedPatientId={slotSearchPatientId}
+        preSelectedPatientName={slotSearchPatientName}
+        defaultRangeDays={parseInt(settings?.slot_search_default_range_days || '14')}
+        defaultDuration={parseInt(settings?.slot_search_default_duration || '30')}
       />
 
       {/* SlotActionMenu */}
@@ -649,6 +671,8 @@ export default function AppointmentsPage() {
         defaultUnitNumber={defaultModalUnit}
         defaultStartTime={defaultModalTime}
         defaultDuration={defaultModalDuration}
+        defaultPatientId={defaultModalPatientId}
+        defaultBookingTypeId={defaultModalBookingTypeId}
         isHoliday={isHoliday}
         getHolidayLabel={getHolidayLabel}
         getStaffHolidayMap={getStaffHolidayMap}

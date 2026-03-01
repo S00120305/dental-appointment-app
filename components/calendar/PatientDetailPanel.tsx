@@ -492,8 +492,11 @@ export default function PatientDetailPanel({
               </div>
               <button
                 onClick={() => setTokenModalOpen(true)}
-                className="w-full min-h-[44px] rounded-md border border-amber-400 bg-white px-3 text-sm font-medium text-amber-700 hover:bg-amber-50"
+                className="w-full min-h-[44px] rounded-md bg-amber-500 px-3 text-sm font-bold text-white shadow-sm hover:bg-amber-600 active:bg-amber-700"
               >
+                <svg className="mr-1.5 inline-block h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+                </svg>
                 次回予約案内を作成
               </button>
             </div>

@@ -76,7 +76,7 @@ body {
 }
 
 .fc-event .fc-event-main {
-  padding: 2px 6px;
+  padding: 3px 6px 2px;
   overflow: hidden;
 }
 
@@ -115,7 +115,7 @@ body {
 
 /* 1時間ごとの太罫線（正時の区切りを強調） */
 .fc .fc-timegrid-slot:not(.fc-timegrid-slot-minor) {
-  border-top: 2px solid #9ca3af;
+  border-top: 2px solid #d1d5db;
 }
 
 /* ブロック枠（予約不可時間帯） */

@@ -119,8 +119,9 @@ export default function TokenCreateModal({ isOpen, onClose, patientId, patientNa
   const durationOptions = Array.from({ length: 24 }, (_, i) => (i + 1) * 5)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-md max-h-[90vh] overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
         {result ? (
           /* 作成完了 */
           <>
