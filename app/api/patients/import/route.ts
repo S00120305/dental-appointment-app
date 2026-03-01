@@ -4,8 +4,10 @@ import { getSessionUser, recordLog } from '@/lib/log'
 
 type ImportRow = {
   chart_number: string
-  name: string
-  name_kana?: string
+  last_name: string
+  first_name?: string
+  last_name_kana?: string
+  first_name_kana?: string
   phone?: string
   email?: string
   gender?: string
@@ -36,8 +38,8 @@ export async function POST(request: NextRequest) {
         errors.push({ row: i + 1, message: 'カルテNoは必須です' })
         continue
       }
-      if (!row.name?.trim()) {
-        errors.push({ row: i + 1, message: '氏名は必須です' })
+      if (!row.last_name?.trim()) {
+        errors.push({ row: i + 1, message: '姓は必須です' })
         continue
       }
 
@@ -51,8 +53,10 @@ export async function POST(request: NextRequest) {
       if (existing) {
         // 更新（UPSERT: 既存レコードを更新）
         const updateData: Record<string, unknown> = {
-            name: row.name.trim(),
-            name_kana: row.name_kana?.trim() || null,
+            last_name: row.last_name.trim(),
+            first_name: row.first_name?.trim() || '',
+            last_name_kana: row.last_name_kana?.trim() || null,
+            first_name_kana: row.first_name_kana?.trim() || null,
             phone: row.phone?.trim() || null,
             email: row.email?.trim() || null,
             is_active: true,
@@ -76,8 +80,10 @@ export async function POST(request: NextRequest) {
         // 新規登録
         const insertData: Record<string, unknown> = {
           chart_number: row.chart_number.trim(),
-          name: row.name.trim(),
-          name_kana: row.name_kana?.trim() || null,
+          last_name: row.last_name.trim(),
+          first_name: row.first_name?.trim() || '',
+          last_name_kana: row.last_name_kana?.trim() || null,
+          first_name_kana: row.first_name_kana?.trim() || null,
           phone: row.phone?.trim() || null,
           email: row.email?.trim() || null,
         }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { getSessionUser, recordLog } from '@/lib/log'
 import { sendNotification } from '@/lib/notifications'
+import { formatPatientName } from '@/lib/utils/patient-name'
 
 // PUT: 承認/却下/変更承認（認証必須）
 export async function PUT(request: NextRequest) {
@@ -52,7 +53,7 @@ export async function PUT(request: NextRequest) {
       .select(`
         id, patient_id, unit_number, start_time, duration_minutes,
         appointment_type, status, booking_type_id, booking_token, memo,
-        patient:patients!patient_id(id, name, phone, email, line_user_id, preferred_notification),
+        patient:patients!patient_id(id, last_name, first_name, phone, email, line_user_id, preferred_notification),
         booking_type:booking_types!left(id, display_name, duration_minutes)
       `)
       .eq('id', appointment_id)
@@ -69,7 +70,7 @@ export async function PUT(request: NextRequest) {
 
     // 患者情報
     const patient = appointment.patient && !Array.isArray(appointment.patient)
-      ? (appointment.patient as { id: string; name: string; phone: string | null; email: string | null; line_user_id: string | null; preferred_notification: string })
+      ? (appointment.patient as { id: string; last_name: string; first_name: string; phone: string | null; email: string | null; line_user_id: string | null; preferred_notification: string })
       : null
 
     // booking_type 情報
@@ -116,7 +117,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // ログ記録
-    const patientName = patient?.name || '不明'
+    const patientName = patient ? formatPatientName(patient.last_name, patient.first_name) : '不明'
     const actionLabels: Record<string, string> = {
       approve: '承認',
       reject: '却下',

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, use } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 type TokenInfo = {
@@ -26,6 +27,7 @@ type ErrorInfo = {
 
 export default function TokenBookingPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params)
+  const router = useRouter()
 
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null)
   const [errorInfo, setErrorInfo] = useState<ErrorInfo | null>(null)
@@ -71,6 +73,13 @@ export default function TokenBookingPage({ params }: { params: Promise<{ token: 
       })
       .finally(() => setLoading(false))
   }, [token])
+
+  // 使用済みトークン → 確認ページに自動リダイレクト
+  useEffect(() => {
+    if (errorInfo?.code === 'used' && errorInfo.confirm_token) {
+      router.replace(`/booking/confirm/${errorInfo.confirm_token}`)
+    }
+  }, [errorInfo, router])
 
   // Fetch available dates when month or tokenInfo changes
   useEffect(() => {

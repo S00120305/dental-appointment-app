@@ -2,6 +2,7 @@
 
 import type { Patient } from '@/lib/supabase/types'
 import { getPatientTagIcons } from '@/lib/constants/patient-tags'
+import { formatPatientName, formatPatientNameKana } from '@/lib/utils/patient-name'
 
 type PatientCardProps = {
   patient: Patient
@@ -22,7 +23,7 @@ export default function PatientCard({ patient, onClick }: PatientCardProps) {
             <span className="inline-flex items-center rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
               {patient.chart_number}
             </span>
-            <span className="truncate text-base font-medium text-gray-900">{patient.name}</span>
+            <span className="truncate text-base font-medium text-gray-900">{formatPatientName(patient.last_name, patient.first_name)}</span>
             {tags.length > 0 && (
               <span className="flex items-center gap-0.5 flex-shrink-0">
                 {tags.map((tag, i) => (
@@ -38,8 +39,8 @@ export default function PatientCard({ patient, onClick }: PatientCardProps) {
               </span>
             )}
           </div>
-          {patient.name_kana && (
-            <p className="mt-1 text-sm text-gray-500">{patient.name_kana}</p>
+          {(patient.last_name_kana || patient.first_name_kana) && (
+            <p className="mt-1 text-sm text-gray-500">{formatPatientNameKana(patient.last_name_kana, patient.first_name_kana)}</p>
           )}
           {patient.phone && (
             <p className="mt-1 text-sm text-gray-500">{patient.phone}</p>

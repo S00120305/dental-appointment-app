@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { formatPatientName } from '@/lib/utils/patient-name'
 import { sendSMS, isSMSConfigured } from '@/lib/notifications/sms'
 import { sendEmail, isEmailConfigured } from '@/lib/notifications/email'
 import { renderTemplate, DEFAULT_SMS_TEMPLATE, DEFAULT_EMAIL_TEMPLATE, DEFAULT_EMAIL_SUBJECT } from '@/lib/notifications/template'
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
       .from('appointments')
       .select(`
         id, start_time, appointment_type,
-        patient:patients!patient_id(id, name, phone, email, reminder_sms, reminder_email)
+        patient:patients!patient_id(id, last_name, first_name, phone, email, reminder_sms, reminder_email)
       `)
       .eq('is_deleted', false)
       .eq('status', 'scheduled')
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
     for (const appt of appointments) {
       const patientRaw = appt.patient as unknown
       const patient = (Array.isArray(patientRaw) ? patientRaw[0] : patientRaw) as {
-        id: string; name: string; phone: string | null;
+        id: string; last_name: string; first_name: string; phone: string | null;
         email: string | null; reminder_sms: boolean; reminder_email: boolean
       } | null
 
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
 
       const startDate = new Date(appt.start_time)
       const vars = {
-        patient_name: patient.name,
+        patient_name: formatPatientName(patient.last_name, patient.first_name),
         date: formatDateJP(startDate),
         time: formatTimeJP(startDate),
         type: appt.appointment_type,

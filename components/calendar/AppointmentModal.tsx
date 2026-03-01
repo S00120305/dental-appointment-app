@@ -9,6 +9,7 @@ import LabOrderBadge from '@/components/calendar/LabOrderBadge'
 import { useToast } from '@/components/ui/Toast'
 import { getNextStatus, getPrevStatus, STATUS_TEXT, STATUS_LABELS } from '@/lib/constants/appointment'
 import type { AppointmentStatus, AppointmentTag, AppointmentWithRelations, BookingType, LabOrderWithLab, Patient, Staff } from '@/lib/supabase/types'
+import { formatPatientName, formatPatientNameKana } from '@/lib/utils/patient-name'
 import { BOOKING_CATEGORIES } from '@/lib/supabase/types'
 
 type StaffHolidayInfo = {
@@ -111,7 +112,7 @@ export default function AppointmentModal({
   // Patient search
   const [patientQuery, setPatientQuery] = useState('')
   const [patientResults, setPatientResults] = useState<Patient[]>([])
-  const [selectedPatient, setSelectedPatient] = useState<Pick<Patient, 'id' | 'chart_number' | 'name' | 'name_kana'> | null>(null)
+  const [selectedPatient, setSelectedPatient] = useState<Pick<Patient, 'id' | 'chart_number' | 'last_name' | 'first_name' | 'last_name_kana' | 'first_name_kana'> | null>(null)
   const [showPatientDropdown, setShowPatientDropdown] = useState(false)
   const patientDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -236,9 +237,9 @@ export default function AppointmentModal({
         const data = await res.json()
         if (res.ok && data.patient) {
           const p = data.patient
-          setSelectedPatient({ id: p.id, chart_number: p.chart_number, name: p.name, name_kana: p.name_kana })
+          setSelectedPatient({ id: p.id, chart_number: p.chart_number, last_name: p.last_name, first_name: p.first_name, last_name_kana: p.last_name_kana, first_name_kana: p.first_name_kana })
           setForm(prev => ({ ...prev, patient_id: p.id }))
-          setPatientQuery(`${p.chart_number} ${p.name}`)
+          setPatientQuery(`${p.chart_number} ${formatPatientName(p.last_name, p.first_name)}`)
         }
       } catch { /* ignore */ }
     }
@@ -383,7 +384,7 @@ export default function AppointmentModal({
   function handleSelectPatient(patient: Patient) {
     setSelectedPatient(patient)
     setForm((prev) => ({ ...prev, patient_id: patient.id, lab_order_id: '' }))
-    setPatientQuery(`${patient.chart_number} ${patient.name}`)
+    setPatientQuery(`${patient.chart_number} ${formatPatientName(patient.last_name, patient.first_name)}`)
     setShowPatientDropdown(false)
     setPatientResults([])
   }
@@ -640,9 +641,9 @@ export default function AppointmentModal({
                   <span className="mr-2 inline-flex items-center rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
                     {selectedPatient.chart_number}
                   </span>
-                  {selectedPatient.name}
-                  {selectedPatient.name_kana && (
-                    <span className="ml-2 text-sm text-gray-500">{selectedPatient.name_kana}</span>
+                  {formatPatientName(selectedPatient.last_name, selectedPatient.first_name)}
+                  {(selectedPatient.last_name_kana || selectedPatient.first_name_kana) && (
+                    <span className="ml-2 text-sm text-gray-500">{formatPatientNameKana(selectedPatient.last_name_kana, selectedPatient.first_name_kana)}</span>
                   )}
                 </span>
                 <button
@@ -677,8 +678,8 @@ export default function AppointmentModal({
                         <span className="mr-2 inline-flex items-center rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-800">
                           {p.chart_number}
                         </span>
-                        {p.name}
-                        {p.name_kana && <span className="ml-2 text-gray-500">{p.name_kana}</span>}
+                        {formatPatientName(p.last_name, p.first_name)}
+                        {(p.last_name_kana || p.first_name_kana) && <span className="ml-2 text-gray-500">{formatPatientNameKana(p.last_name_kana, p.first_name_kana)}</span>}
                       </button>
                     ))}
                   </div>

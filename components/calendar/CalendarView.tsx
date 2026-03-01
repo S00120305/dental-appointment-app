@@ -13,6 +13,7 @@ import type {
 } from '@fullcalendar/core'
 import AppointmentBlock, { getStaffColor, getEventStyle } from './AppointmentBlock'
 import type { AppointmentWithRelations, BlockedSlot } from '@/lib/supabase/types'
+import { formatPatientName } from '@/lib/utils/patient-name'
 
 export type BusinessHours = {
   start: string
@@ -98,12 +99,12 @@ export default function CalendarView({
         resourceId: String(appt.unit_number),
         start: startDate,
         end: endDate,
-        title: appt.patient?.name || '',
+        title: appt.patient ? formatPatientName(appt.patient.last_name, appt.patient.first_name) : '',
         backgroundColor: 'transparent',
         borderColor: 'transparent',
         extendedProps: {
           type: 'appointment',
-          patient_name: appt.patient?.name || '',
+          patient_name: appt.patient ? formatPatientName(appt.patient.last_name, appt.patient.first_name) : '',
           patient_chart_number: appt.patient?.chart_number || '',
           appointment_type: appt.appointment_type,
           staff_name: appt.staff?.name || '',

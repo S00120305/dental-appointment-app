@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { sendNotification } from '@/lib/notifications'
 import { renderTemplate, DEFAULT_SMS_TEMPLATE, DEFAULT_EMAIL_SUBJECT } from '@/lib/notifications/template'
+import { formatPatientName } from '@/lib/utils/patient-name'
 
 // POST /api/notifications/reminder
 // 翌日の予約に対してリマインド通知を送信する
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
       .from('appointments')
       .select(`
         id, start_time, appointment_type, booking_token,
-        patient:patients!patient_id(id, name, phone, email, line_user_id, preferred_notification)
+        patient:patients!patient_id(id, last_name, first_name, phone, email, line_user_id, preferred_notification)
       `)
       .eq('is_deleted', false)
       .eq('status', 'scheduled')
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
 
       const patientRaw = appt.patient as unknown
       const patient = (Array.isArray(patientRaw) ? patientRaw[0] : patientRaw) as {
-        id: string; name: string; phone: string | null
+        id: string; last_name: string; first_name: string; phone: string | null
         email: string | null; line_user_id: string | null
         preferred_notification: string
       } | null
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest) {
       const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][startDate.getDay()]
 
       const vars = {
-        patient_name: patient.name,
+        patient_name: formatPatientName(patient.last_name, patient.first_name),
         date: `${startDate.getMonth() + 1}/${startDate.getDate()}(${dayOfWeek})`,
         time: `${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}`,
         type: appt.appointment_type,

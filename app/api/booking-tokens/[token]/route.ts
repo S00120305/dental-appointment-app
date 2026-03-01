@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import { toPatientDisplayName, toPatientStaffName } from '@/lib/utils/patient-display'
+import { formatPatientName } from '@/lib/utils/patient-name'
 
 // GET: トークン情報取得（公開API）
 export async function GET(
@@ -26,7 +27,7 @@ export async function GET(
       .select(`
         id, token, patient_id, booking_type_id, duration_minutes,
         staff_id, unit_number, status, expires_at, used_at, appointment_id,
-        patient:patients!patient_id(id, name),
+        patient:patients!patient_id(id, last_name, first_name),
         booking_type:booking_types!booking_type_id(id, display_name, internal_name, duration_minutes, is_active, category, is_web_bookable),
         staff:users!staff_id(id, name)
       `)
@@ -65,7 +66,7 @@ export async function GET(
 
     // 患者情報
     const patient = data.patient && !Array.isArray(data.patient)
-      ? (data.patient as { id: string; name: string })
+      ? (data.patient as { id: string; last_name: string; first_name: string })
       : null
 
     // 予約種別情報
@@ -86,7 +87,7 @@ export async function GET(
 
     return NextResponse.json({
       token: data.token,
-      patient_name: patient?.name || '',
+      patient_name: patient ? formatPatientName(patient.last_name, patient.first_name) : '',
       booking_type_id: data.booking_type_id,
       booking_type_name: patientDisplayName,
       duration_minutes: data.duration_minutes,

@@ -7,6 +7,7 @@ import LabOrderBadge from '@/components/calendar/LabOrderBadge'
 import { getPatientTagIcons } from '@/lib/constants/patient-tags'
 import { formatPhone } from '@/lib/utils/phone'
 import type { Patient, AppointmentWithRelations, LabOrderWithLab } from '@/lib/supabase/types'
+import { formatPatientName, formatPatientNameKana } from '@/lib/utils/patient-name'
 
 export default function PatientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -92,7 +93,7 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
               <span className="inline-flex items-center rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
                 {patient.chart_number}
               </span>
-              <h1 className="text-xl font-bold text-gray-900">{patient.name}</h1>
+              <h1 className="text-xl font-bold text-gray-900">{formatPatientName(patient.last_name, patient.first_name)}</h1>
               {getPatientTagIcons(patient).map((tag, i) => (
                 <span
                   key={i}
@@ -104,8 +105,8 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                 </span>
               ))}
             </div>
-            {patient.name_kana && (
-              <p className="text-sm text-gray-500">{patient.name_kana}</p>
+            {(patient.last_name_kana || patient.first_name_kana) && (
+              <p className="text-sm text-gray-500">{formatPatientNameKana(patient.last_name_kana, patient.first_name_kana)}</p>
             )}
           </div>
         </div>
@@ -136,8 +137,10 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
           <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
             <div className="divide-y divide-gray-100">
               <InfoRow label="カルテNo" value={patient.chart_number} />
-              <InfoRow label="氏名" value={patient.name} />
-              <InfoRow label="フリガナ" value={patient.name_kana || '—'} />
+              <InfoRow label="姓" value={patient.last_name} />
+              <InfoRow label="名" value={patient.first_name || '—'} />
+              <InfoRow label="セイ" value={patient.last_name_kana || '—'} />
+              <InfoRow label="メイ" value={patient.first_name_kana || '—'} />
               <InfoRow label="性別" value={patient.gender || '—'} />
               <InfoRow label="生年月日" value={patient.date_of_birth || '—'} />
               <InfoRow label="電話番号" value={patient.phone ? formatPhone(patient.phone) : '—'} />

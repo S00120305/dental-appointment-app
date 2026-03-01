@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
         .from('appointments')
         .select(`
           id, start_time, unit_number, status, lab_order_id, duration_minutes,
-          patient:patients!patient_id(id, chart_number, name),
+          patient:patients!patient_id(id, chart_number, last_name, first_name),
           staff:users!staff_id(id, name)
         `)
         .eq('is_deleted', false)
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
         .from('appointments')
         .select(`
           id, start_time, duration_minutes, status, booking_source, created_at,
-          patient:patients!patient_id(id, name)
+          patient:patients!patient_id(id, last_name, first_name)
         `)
         .eq('is_deleted', false)
         .eq('booking_source', 'web')

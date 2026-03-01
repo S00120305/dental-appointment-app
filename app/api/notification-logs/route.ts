@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('notification_logs')
       .select(
-        'id, patient_id, appointment_id, channel, type, status, content, error_message, created_at, patient:patients!patient_id(name, chart_number)',
+        'id, patient_id, appointment_id, channel, type, status, content, error_message, created_at, patient:patients!patient_id(last_name, first_name, chart_number)',
         { count: 'exact' }
       )
       .order('created_at', { ascending: false })

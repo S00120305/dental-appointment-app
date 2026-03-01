@@ -3,6 +3,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { getSessionUser, recordLog } from '@/lib/log'
 import { sendNotification } from '@/lib/notifications'
 import { toPatientDisplayName } from '@/lib/utils/patient-display'
+import { formatPatientName } from '@/lib/utils/patient-name'
 
 // POST: トークン作成（認証必須）
 export async function POST(request: NextRequest) {
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
     // 患者の存在確認
     const { data: patient, error: patientError } = await supabase
       .from('patients')
-      .select('id, name, phone, email, line_user_id, preferred_notification')
+      .select('id, last_name, first_name, phone, email, line_user_id, preferred_notification')
       .eq('id', patient_id)
       .eq('is_active', true)
       .single()
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
       actionType: 'create',
       targetType: 'booking_token',
       targetId: tokenRecord.id,
-      summary: `${user.userName}が ${patient.name} の次回予約トークンを作成（${bookingType.display_name}）`,
+      summary: `${user.userName}が ${formatPatientName(patient.last_name, patient.first_name)} の次回予約トークンを作成（${bookingType.display_name}）`,
       details: { patient_id, booking_type_id, duration_minutes, staff_id, expires_days, send_method },
     })
 
@@ -137,7 +138,8 @@ export async function POST(request: NextRequest) {
         if (preferredChannel === 'line') {
           message = `🦷 金澤オーラルケアクリニック\n\n次回のご予約のご案内です。\n\n📋 ${patientDisplayName}（${duration_minutes}分）\n📆 有効期限: ${expiresFormatted}まで\n\n▼ ご都合のよい日時をお選びください\n${tokenUrl}\n\n※ ご不明な点はお電話ください${clinicPhone ? `\n${clinicPhone}` : ''}`
         } else {
-          message = `${patient.name}様\n\n次回のご予約のご案内です。\n下記リンクからご都合のよい日時をお選びください。\n\n■ 予約内容\n内容: ${patientDisplayName}（${duration_minutes}分）\n有効期限: ${expiresFormatted}まで\n\n■ ご予約はこちら\n${tokenUrl}\n\n金澤オーラルケアクリニック\n〒921-8148 石川県金沢市額新保2-272番地${clinicPhone ? `\nTEL: ${clinicPhone}` : ''}`
+          const patientFullName = formatPatientName(patient.last_name, patient.first_name)
+          message = `${patientFullName}様\n\n次回のご予約のご案内です。\n下記リンクからご都合のよい日時をお選びください。\n\n■ 予約内容\n内容: ${patientDisplayName}（${duration_minutes}分）\n有効期限: ${expiresFormatted}まで\n\n■ ご予約はこちら\n${tokenUrl}\n\n金澤オーラルケアクリニック\n〒921-8148 石川県金沢市額新保2-272番地${clinicPhone ? `\nTEL: ${clinicPhone}` : ''}`
         }
 
         sendResult = await sendNotification(

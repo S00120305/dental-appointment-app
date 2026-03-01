@@ -67,17 +67,18 @@ export async function POST(request: NextRequest) {
     const user = await getSessionUser()
     const { data: patient } = await supabase
       .from('patients')
-      .select('name, chart_number')
+      .select('last_name, first_name, chart_number')
       .eq('id', patient_id)
       .single()
 
+    const patientName = patient ? `${patient.last_name} ${patient.first_name}`.trim() : '不明'
     await recordLog({
       userId: user?.userId,
       userName: user?.userName,
       actionType: 'update',
       targetType: 'patient',
       targetId: patient_id,
-      summary: `${user?.userName || '不明'}が ${patient?.name || '不明'}のLINE連携を実行（${link.line_display_name || link.line_user_id}）`,
+      summary: `${user?.userName || '不明'}が ${patientName}のLINE連携を実行（${link.line_display_name || link.line_user_id}）`,
       details: { line_user_id: link.line_user_id, line_display_name: link.line_display_name },
     })
 

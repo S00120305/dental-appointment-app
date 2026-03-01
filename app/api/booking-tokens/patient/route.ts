@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import { toPatientDisplayName, toPatientStaffName } from '@/lib/utils/patient-display'
+import { formatPatientName } from '@/lib/utils/patient-name'
 
 // GET: 患者のトークン一覧（公開API、診察券番号+電話番号で認証）
 export async function GET(request: NextRequest) {
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
     // 患者検索
     const { data: patient, error: patientError } = await supabase
       .from('patients')
-      .select('id, name')
+      .select('id, last_name, first_name')
       .eq('chart_number', chartNumber.trim())
       .eq('phone', phoneClean)
       .eq('is_active', true)
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
       .order('start_time', { ascending: true })
 
     return NextResponse.json({
-      patient_name: patient.name,
+      patient_name: formatPatientName(patient.last_name, patient.first_name),
       tokens: (tokens || []).map(t => {
         const bt = t.booking_type && !Array.isArray(t.booking_type)
           ? (t.booking_type as { id: string; display_name: string; category: string | null; is_web_bookable: boolean })

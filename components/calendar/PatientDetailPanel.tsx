@@ -5,14 +5,17 @@ import TokenCreateModal from './TokenCreateModal'
 import StatusBadge from './StatusBadge'
 import LabOrderBadge from './LabOrderBadge'
 import { getPatientTagIcons } from '@/lib/constants/patient-tags'
+import { formatPatientName, formatPatientNameKana } from '@/lib/utils/patient-name'
 import { getNextStatus, getPrevStatus, STATUS_TEXT, STATUS_LABELS } from '@/lib/constants/appointment'
 import type { AppointmentStatus, AppointmentWithRelations, LabOrderStatus } from '@/lib/supabase/types'
 
 type PatientInfo = {
   id: string
   chart_number: string
-  name: string
-  name_kana: string | null
+  last_name: string
+  first_name: string
+  last_name_kana: string | null
+  first_name_kana: string | null
   phone: string | null
   email: string | null
   birth_date: string | null
@@ -251,9 +254,9 @@ export default function PatientDetailPanel({
                 <span className="inline-flex items-center rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-800">
                   {patient.chart_number}
                 </span>
-                <span className="font-bold text-gray-900 truncate">{patient.name}</span>
-                {patient.name_kana && (
-                  <span className="text-xs text-gray-400">{patient.name_kana}</span>
+                <span className="font-bold text-gray-900 truncate">{formatPatientName(patient.last_name, patient.first_name)}</span>
+                {(patient.last_name_kana || patient.first_name_kana) && (
+                  <span className="text-xs text-gray-400">{formatPatientNameKana(patient.last_name_kana, patient.first_name_kana)}</span>
                 )}
                 {getPatientTagIcons(patient).map((tag, i) => (
                   <span
@@ -471,7 +474,8 @@ export default function PatientDetailPanel({
                   onClick={() => {
                     const completedPast = pastAppointments.find(a => a.status === 'completed' && a.staff?.id)
                     const lastStaffId = completedPast?.staff?.id || appointment.staff_id || undefined
-                    onNewAppointment(patientId, patient?.name || appointment.patient?.name || '', lastStaffId)
+                    const pName = patient ? formatPatientName(patient.last_name, patient.first_name) : appointment.patient ? formatPatientName(appointment.patient.last_name, appointment.patient.first_name) : ''
+                    onNewAppointment(patientId, pName, lastStaffId)
                     onClose()
                   }}
                   className="flex-1 min-h-[40px] rounded-md border border-emerald-300 bg-white px-2 text-sm font-medium text-emerald-600 hover:bg-emerald-50"
@@ -605,7 +609,7 @@ export default function PatientDetailPanel({
         isOpen={tokenModalOpen}
         onClose={() => setTokenModalOpen(false)}
         patientId={patientId}
-        patientName={patient?.name || appointment.patient?.name || ''}
+        patientName={patient ? formatPatientName(patient.last_name, patient.first_name) : appointment.patient ? formatPatientName(appointment.patient.last_name, appointment.patient.first_name) : ''}
         chartNumber={patient?.chart_number || appointment.patient?.chart_number || ''}
       />
     </div>

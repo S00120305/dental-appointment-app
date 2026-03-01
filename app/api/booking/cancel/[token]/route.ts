@@ -3,6 +3,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import { sendNotification } from '@/lib/notifications'
 import { recordLog } from '@/lib/log/record-log'
+import { formatPatientName } from '@/lib/utils/patient-name'
 
 // POST: 予約キャンセル（公開API）
 export async function POST(
@@ -31,7 +32,7 @@ export async function POST(
       .from('appointments')
       .select(`
         id, start_time, duration_minutes, status, appointment_type, patient_id, booking_token,
-        patient:patients!patient_id(id, name, email, phone, preferred_notification, line_user_id),
+        patient:patients!patient_id(id, last_name, first_name, email, phone, preferred_notification, line_user_id),
         booking_type:booking_types!left(display_name, duration_minutes)
       `)
       .eq('booking_token', token)
@@ -87,7 +88,7 @@ export async function POST(
 
     // 患者情報
     const patient = appointment.patient && !Array.isArray(appointment.patient)
-      ? (appointment.patient as { id: string; name: string; email: string | null; phone: string | null; preferred_notification: string; line_user_id: string | null })
+      ? (appointment.patient as { id: string; last_name: string; first_name: string; email: string | null; phone: string | null; preferred_notification: string; line_user_id: string | null })
       : null
     const bookingType = appointment.booking_type && !Array.isArray(appointment.booking_type)
       ? (appointment.booking_type as { display_name: string; duration_minutes: number })
@@ -104,8 +105,8 @@ export async function POST(
       actionType: 'cancel',
       targetType: 'appointment',
       targetId: appointment.id,
-      summary: `Web患者がキャンセル: ${patient?.name || ''} ${dateFormatted} ${time} ${typeName}`,
-      details: { booking_token: token, patient_name: patient?.name },
+      summary: `Web患者がキャンセル: ${patient ? formatPatientName(patient.last_name, patient.first_name) : ''} ${dateFormatted} ${time} ${typeName}`,
+      details: { booking_token: token, patient_name: patient ? formatPatientName(patient.last_name, patient.first_name) : '' },
     })
 
     // 通知送信
@@ -115,7 +116,8 @@ export async function POST(
 
         const lineMessage = `🦷 金澤オーラルケアクリニック\n\nご予約をキャンセルしました。\n\nキャンセル: ${dateFormatted} ${time}〜\n📋 ${typeName}\n\n再度のご予約はこちら:\n${appUrl}/booking`
 
-        const emailMessage = `${patient.name}様\n\n以下のご予約をキャンセルしました。\n\n■ キャンセル済み\n日時: ${dateFormatted} ${time}〜\n内容: ${typeName}\n\n再度のご予約はこちら:\n${appUrl}/booking\n\n金澤オーラルケアクリニック${clinicPhone ? `\n${clinicPhone}` : ''}`
+        const patientFullName = formatPatientName(patient.last_name, patient.first_name)
+        const emailMessage = `${patientFullName}様\n\n以下のご予約をキャンセルしました。\n\n■ キャンセル済み\n日時: ${dateFormatted} ${time}〜\n内容: ${typeName}\n\n再度のご予約はこちら:\n${appUrl}/booking\n\n金澤オーラルケアクリニック${clinicPhone ? `\n${clinicPhone}` : ''}`
 
         const message = preferredNotification === 'line' ? lineMessage : emailMessage
 

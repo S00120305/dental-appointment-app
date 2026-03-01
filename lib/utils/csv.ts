@@ -1,7 +1,9 @@
 export type CsvRow = {
   chart_number: string
-  name: string
-  name_kana: string
+  last_name: string
+  first_name: string
+  last_name_kana: string
+  first_name_kana: string
   phone: string
   email: string
   gender: string
@@ -15,17 +17,32 @@ export type CsvParseResult = {
   errors: { row: number; message: string }[]
 }
 
-const HEADER_MAP: Record<string, keyof CsvRow> = {
+// Extended key type: includes intermediate full-name keys for backward compat
+type CsvKey = keyof CsvRow | '_full_name' | '_full_name_kana'
+
+const HEADER_MAP: Record<string, CsvKey> = {
   'カルテNo': 'chart_number',
   'カルテno': 'chart_number',
   'カルテNO': 'chart_number',
   'chart_number': 'chart_number',
-  '氏名': 'name',
-  '名前': 'name',
-  'name': 'name',
-  'フリガナ': 'name_kana',
-  'ふりがな': 'name_kana',
-  'name_kana': 'name_kana',
+  // 姓名分離カラム
+  '姓': 'last_name',
+  'last_name': 'last_name',
+  '名': 'first_name',
+  'first_name': 'first_name',
+  // 後方互換: 「氏名」1カラム → スペース分割
+  '氏名': '_full_name',
+  '名前': '_full_name',
+  'name': '_full_name',
+  // フリガナ分離カラム
+  'セイ': 'last_name_kana',
+  'last_name_kana': 'last_name_kana',
+  'メイ': 'first_name_kana',
+  'first_name_kana': 'first_name_kana',
+  // 後方互換: 「フリガナ」1カラム → スペース分割
+  'フリガナ': '_full_name_kana',
+  'ふりがな': '_full_name_kana',
+  'name_kana': '_full_name_kana',
   '電話番号': 'phone',
   '電話': 'phone',
   'phone': 'phone',
@@ -42,6 +59,20 @@ const HEADER_MAP: Record<string, keyof CsvRow> = {
   'address': 'address',
 }
 
+/**
+ * スペース（半角・全角）で姓名を分割する
+ * 例: "田中 太郎" → ["田中", "太郎"]
+ *      "田中" → ["田中", ""]
+ */
+function splitName(fullName: string): [string, string] {
+  const trimmed = fullName.trim()
+  const parts = trimmed.split(/[\s\u3000]+/)
+  if (parts.length >= 2) {
+    return [parts[0], parts.slice(1).join(' ')]
+  }
+  return [trimmed, '']
+}
+
 export function parseCsv(text: string): CsvParseResult {
   const lines = text.split(/\r?\n/).filter((line) => line.trim() !== '')
   const rows: CsvRow[] = []
@@ -53,35 +84,61 @@ export function parseCsv(text: string): CsvParseResult {
 
   // ヘッダー解析
   const headers = parseCsvLine(lines[0])
-  const columnMap: (keyof CsvRow | null)[] = headers.map((h) => {
+  const columnMap: (CsvKey | null)[] = headers.map((h) => {
     const trimmed = h.trim()
     return HEADER_MAP[trimmed] || null
   })
 
-  // カルテNoと氏名のカラムが存在するか確認
+  // カルテNoが存在するか確認
   if (!columnMap.includes('chart_number')) {
     return { rows, errors: [{ row: 1, message: '「カルテNo」列が見つかりません' }] }
   }
-  if (!columnMap.includes('name')) {
-    return { rows, errors: [{ row: 1, message: '「氏名」列が見つかりません' }] }
+  // 氏名: last_name直接 or _full_name（後方互換）のいずれかが必要
+  if (!columnMap.includes('last_name') && !columnMap.includes('_full_name')) {
+    return { rows, errors: [{ row: 1, message: '「氏名」または「姓」列が見つかりません' }] }
   }
 
   // データ行解析
   for (let i = 1; i < lines.length; i++) {
     const values = parseCsvLine(lines[i])
-    const row: CsvRow = { chart_number: '', name: '', name_kana: '', phone: '', email: '', gender: '', date_of_birth: '', postal_code: '', address: '' }
+    const row: CsvRow = {
+      chart_number: '', last_name: '', first_name: '',
+      last_name_kana: '', first_name_kana: '',
+      phone: '', email: '', gender: '', date_of_birth: '',
+      postal_code: '', address: '',
+    }
+    let fullName = ''
+    let fullNameKana = ''
 
     columnMap.forEach((key, colIdx) => {
-      if (key && values[colIdx] !== undefined) {
-        row[key] = values[colIdx].trim()
+      if (!key || values[colIdx] === undefined) return
+      const val = values[colIdx].trim()
+      if (key === '_full_name') {
+        fullName = val
+      } else if (key === '_full_name_kana') {
+        fullNameKana = val
+      } else {
+        row[key] = val
       }
     })
+
+    // 後方互換: 氏名1カラムからスペース分割
+    if (fullName && !row.last_name) {
+      const [lastName, firstName] = splitName(fullName)
+      row.last_name = lastName
+      row.first_name = firstName
+    }
+    if (fullNameKana && !row.last_name_kana) {
+      const [lastKana, firstKana] = splitName(fullNameKana)
+      row.last_name_kana = lastKana
+      row.first_name_kana = firstKana
+    }
 
     // バリデーション
     if (!row.chart_number) {
       errors.push({ row: i + 1, message: 'カルテNoが空です' })
-    } else if (!row.name) {
-      errors.push({ row: i + 1, message: '氏名が空です' })
+    } else if (!row.last_name) {
+      errors.push({ row: i + 1, message: '氏名（姓）が空です' })
     }
 
     rows.push(row)

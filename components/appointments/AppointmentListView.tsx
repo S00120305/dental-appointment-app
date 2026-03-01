@@ -6,6 +6,7 @@ import LabOrderBadge from '@/components/calendar/LabOrderBadge'
 import { getPatientTagIcons } from '@/lib/constants/patient-tags'
 import { getNextStatus, STATUS_LABELS, STATUS_TEXT } from '@/lib/constants/appointment'
 import type { AppointmentStatus, AppointmentWithRelations, BlockedSlot } from '@/lib/supabase/types'
+import { formatPatientName } from '@/lib/utils/patient-name'
 
 type Props = {
   appointments: AppointmentWithRelations[]
@@ -115,7 +116,7 @@ const AppointmentListView = memo(function AppointmentListView({
                 <td className="px-3 py-2 text-sm text-gray-500">診{appt.unit_number}</td>
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-1">
-                    <span className="text-sm font-medium text-gray-900">{appt.patient?.name || '—'}</span>
+                    <span className="text-sm font-medium text-gray-900">{appt.patient ? formatPatientName(appt.patient.last_name, appt.patient.first_name) : '—'}</span>
                     {tags.map((tag, i) => (
                       <span
                         key={i}

@@ -3,6 +3,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import { sendNotification } from '@/lib/notifications'
 import { recordLog } from '@/lib/log/record-log'
+import { formatPatientName } from '@/lib/utils/patient-name'
 
 // PUT: 予約変更（日時のみ。種別・所要時間はそのまま）（公開API）
 export async function PUT(
@@ -42,7 +43,7 @@ export async function PUT(
       .select(`
         id, start_time, duration_minutes, status, appointment_type, patient_id,
         unit_number, booking_token, booking_type_id, lab_order_id,
-        patient:patients!patient_id(id, name, email, phone, preferred_notification, line_user_id),
+        patient:patients!patient_id(id, last_name, first_name, email, phone, preferred_notification, line_user_id),
         booking_type:booking_types!left(display_name, duration_minutes)
       `)
       .eq('booking_token', token)
@@ -213,7 +214,7 @@ export async function PUT(
 
     // 患者情報
     const patient = appointment.patient && !Array.isArray(appointment.patient)
-      ? (appointment.patient as { id: string; name: string; email: string | null; phone: string | null; preferred_notification: string; line_user_id: string | null })
+      ? (appointment.patient as { id: string; last_name: string; first_name: string; email: string | null; phone: string | null; preferred_notification: string; line_user_id: string | null })
       : null
     const btInfo = appointment.booking_type && !Array.isArray(appointment.booking_type)
       ? (appointment.booking_type as { display_name: string; duration_minutes: number })
@@ -230,10 +231,10 @@ export async function PUT(
       actionType: 'modify',
       targetType: 'appointment',
       targetId: appointment.id,
-      summary: `Web患者が変更: ${patient?.name || ''} ${oldDateFormatted} ${oldTime} → ${newDateFormatted} ${new_time}`,
+      summary: `Web患者が変更: ${patient ? formatPatientName(patient.last_name, patient.first_name) : ''} ${oldDateFormatted} ${oldTime} → ${newDateFormatted} ${new_time}`,
       details: {
         booking_token: token,
-        patient_name: patient?.name,
+        patient_name: patient ? formatPatientName(patient.last_name, patient.first_name) : '',
         old_start_time: oldStartTime,
         new_start_time: newStartTime,
       },
@@ -246,7 +247,8 @@ export async function PUT(
 
         const lineMessage = `🦷 金澤オーラルケアクリニック\n\nご予約を変更しました。\n\n変更前: ${oldDateFormatted} ${oldTime}〜\n変更後: ${newDateFormatted} ${new_time}〜\n📋 ${typeName}（${durationMinutes}分）\n\n▼ 予約の確認\n${confirmUrl}\n\n※変更・キャンセルは前日${cancelDeadlineTime}まで`
 
-        const emailMessage = `${patient.name}様\n\nご予約を変更しましたのでお知らせいたします。\n\n■ 変更前\n日時: ${oldDateFormatted} ${oldTime}〜\n\n■ 変更後\n日時: ${newDateFormatted} ${new_time}〜\n内容: ${typeName}（${durationMinutes}分）\n\n■ 予約の確認\n${confirmUrl}\n\n金澤オーラルケアクリニック${clinicPhone ? `\n${clinicPhone}` : ''}`
+        const patientFullName = formatPatientName(patient.last_name, patient.first_name)
+        const emailMessage = `${patientFullName}様\n\nご予約を変更しましたのでお知らせいたします。\n\n■ 変更前\n日時: ${oldDateFormatted} ${oldTime}〜\n\n■ 変更後\n日時: ${newDateFormatted} ${new_time}〜\n内容: ${typeName}（${durationMinutes}分）\n\n■ 予約の確認\n${confirmUrl}\n\n金澤オーラルケアクリニック${clinicPhone ? `\n${clinicPhone}` : ''}`
 
         const message = preferredNotification === 'line' ? lineMessage : emailMessage
 

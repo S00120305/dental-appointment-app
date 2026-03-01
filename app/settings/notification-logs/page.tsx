@@ -14,7 +14,7 @@ type NotificationLogEntry = {
   content: string | null
   error_message: string | null
   created_at: string
-  patient?: { name: string; chart_number: string } | null
+  patient?: { last_name: string; first_name: string; chart_number: string } | null
 }
 
 const CHANNEL_LABELS: Record<string, string> = {
@@ -218,7 +218,7 @@ export default function NotificationLogsPage() {
                       {TYPE_LABELS[log.type] || log.type}
                     </span>
                     <span className="truncate font-medium text-gray-900">
-                      {log.patient?.name || '—'}
+                      {log.patient ? `${log.patient.last_name} ${log.patient.first_name}`.trim() : '—'}
                     </span>
                   </div>
                 </button>

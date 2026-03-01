@@ -3,6 +3,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import { sendNotification } from '@/lib/notifications'
 import { toPatientDisplayName } from '@/lib/utils/patient-display'
+import { formatPatientName } from '@/lib/utils/patient-name'
 
 // POST: トークン予約確定（公開API）
 export async function POST(
@@ -38,7 +39,7 @@ export async function POST(
       .select(`
         id, token, patient_id, booking_type_id, duration_minutes,
         staff_id, unit_number, status, expires_at,
-        patient:patients!patient_id(id, name, email, line_user_id, preferred_notification),
+        patient:patients!patient_id(id, last_name, first_name, email, line_user_id, preferred_notification),
         booking_type:booking_types!booking_type_id(id, display_name, duration_minutes, category, is_web_bookable)
       `)
       .eq('token', token)
@@ -226,7 +227,7 @@ export async function POST(
     // 確認通知送信
     try {
       const patient = tokenData.patient && !Array.isArray(tokenData.patient)
-        ? (tokenData.patient as { id: string; name: string; email: string | null; line_user_id: string | null; preferred_notification: string })
+        ? (tokenData.patient as { id: string; last_name: string; first_name: string; email: string | null; line_user_id: string | null; preferred_notification: string })
         : null
 
       if (patient) {
@@ -248,7 +249,8 @@ export async function POST(
         if (patient.preferred_notification === 'line' && patient.line_user_id) {
           message = `🦷 金澤オーラルケアクリニック\n\nご予約ありがとうございます。\n\n📅 ${dateFormatted} ${time}〜\n📋 ${patientDisplayName}（${durationMinutes}分）\n\n▼ 予約の確認\n${confirmUrl}\n\n※変更・キャンセルは前日18:00まで`
         } else {
-          message = `${patient.name}様\n\nご予約ありがとうございます。\n\n■ ご予約内容\n日時: ${dateFormatted} ${time}〜\n内容: ${patientDisplayName}（${durationMinutes}分）\n\n■ 予約の確認・変更\n${confirmUrl}\n\n※ 変更・キャンセルは前日18:00まで${clinicPhone ? `\n※ お電話: ${clinicPhone}` : ''}\n\n金澤オーラルケアクリニック\n〒921-8148 石川県金沢市額新保2-272番地`
+          const patientFullName = formatPatientName(patient.last_name, patient.first_name)
+          message = `${patientFullName}様\n\nご予約ありがとうございます。\n\n■ ご予約内容\n日時: ${dateFormatted} ${time}〜\n内容: ${patientDisplayName}（${durationMinutes}分）\n\n■ 予約の確認・変更\n${confirmUrl}\n\n※ 変更・キャンセルは前日18:00まで${clinicPhone ? `\n※ お電話: ${clinicPhone}` : ''}\n\n金澤オーラルケアクリニック\n〒921-8148 石川県金沢市額新保2-272番地`
         }
 
         await sendNotification(

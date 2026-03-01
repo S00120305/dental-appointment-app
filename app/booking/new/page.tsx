@@ -53,8 +53,10 @@ export default function BookingNewPage() {
   })
 
   // Form
-  const [patientName, setPatientName] = useState('')
-  const [patientNameKana, setPatientNameKana] = useState('')
+  const [patientLastName, setPatientLastName] = useState('')
+  const [patientFirstName, setPatientFirstName] = useState('')
+  const [patientLastNameKana, setPatientLastNameKana] = useState('')
+  const [patientFirstNameKana, setPatientFirstNameKana] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [memo, setMemo] = useState('')
@@ -159,8 +161,8 @@ export default function BookingNewPage() {
     e.preventDefault()
     if (!selectedType || !selectedDate || !selectedTime) return
 
-    if (!patientName.trim()) {
-      showToast('お名前を入力してください', 'error')
+    if (!patientLastName.trim()) {
+      showToast('お名前（姓）を入力してください', 'error')
       return
     }
     if (!phone.trim()) {
@@ -186,8 +188,10 @@ export default function BookingNewPage() {
           booking_type_id: selectedType.id,
           date: selectedDate,
           time: selectedTime,
-          patient_name: patientName.trim(),
-          patient_name_kana: patientNameKana.trim() || undefined,
+          patient_last_name: patientLastName.trim(),
+          patient_first_name: patientFirstName.trim() || undefined,
+          patient_last_name_kana: patientLastNameKana.trim() || undefined,
+          patient_first_name_kana: patientFirstNameKana.trim() || undefined,
           phone: phoneClean,
           email: email.trim() || undefined,
           memo: memo.trim() || undefined,
@@ -678,38 +682,72 @@ export default function BookingNewPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Name */}
-            <div>
-              <label className="mb-1 block text-sm font-medium" style={{ color: '#333333' }}>
-                お名前 <span style={{ color: '#DC2626' }}>*</span>
-              </label>
-              <input
-                type="text"
-                value={patientName}
-                onChange={(e) => setPatientName(e.target.value)}
-                placeholder="例: 山田 太郎"
-                required
-                className="w-full rounded-lg border px-4 py-3 text-base outline-none transition-colors"
-                style={{ borderColor: '#E8E0D0', color: '#333333' }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = '#B8923A')}
-                onBlur={(e) => (e.currentTarget.style.borderColor = '#E8E0D0')}
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-sm font-medium" style={{ color: '#333333' }}>
+                  姓 <span style={{ color: '#DC2626' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={patientLastName}
+                  onChange={(e) => setPatientLastName(e.target.value)}
+                  placeholder="例: 山田"
+                  required
+                  className="w-full rounded-lg border px-4 py-3 text-base outline-none transition-colors"
+                  style={{ borderColor: '#E8E0D0', color: '#333333' }}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = '#B8923A')}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = '#E8E0D0')}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium" style={{ color: '#333333' }}>
+                  名
+                </label>
+                <input
+                  type="text"
+                  value={patientFirstName}
+                  onChange={(e) => setPatientFirstName(e.target.value)}
+                  placeholder="例: 太郎"
+                  className="w-full rounded-lg border px-4 py-3 text-base outline-none transition-colors"
+                  style={{ borderColor: '#E8E0D0', color: '#333333' }}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = '#B8923A')}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = '#E8E0D0')}
+                />
+              </div>
             </div>
 
             {/* Kana */}
-            <div>
-              <label className="mb-1 block text-sm font-medium" style={{ color: '#333333' }}>
-                フリガナ
-              </label>
-              <input
-                type="text"
-                value={patientNameKana}
-                onChange={(e) => setPatientNameKana(e.target.value)}
-                placeholder="例: ヤマダ タロウ"
-                className="w-full rounded-lg border px-4 py-3 text-base outline-none transition-colors"
-                style={{ borderColor: '#E8E0D0', color: '#333333' }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = '#B8923A')}
-                onBlur={(e) => (e.currentTarget.style.borderColor = '#E8E0D0')}
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-sm font-medium" style={{ color: '#333333' }}>
+                  セイ
+                </label>
+                <input
+                  type="text"
+                  value={patientLastNameKana}
+                  onChange={(e) => setPatientLastNameKana(e.target.value)}
+                  placeholder="例: ヤマダ"
+                  className="w-full rounded-lg border px-4 py-3 text-base outline-none transition-colors"
+                  style={{ borderColor: '#E8E0D0', color: '#333333' }}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = '#B8923A')}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = '#E8E0D0')}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium" style={{ color: '#333333' }}>
+                  メイ
+                </label>
+                <input
+                  type="text"
+                  value={patientFirstNameKana}
+                  onChange={(e) => setPatientFirstNameKana(e.target.value)}
+                  placeholder="例: タロウ"
+                  className="w-full rounded-lg border px-4 py-3 text-base outline-none transition-colors"
+                  style={{ borderColor: '#E8E0D0', color: '#333333' }}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = '#B8923A')}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = '#E8E0D0')}
+                />
+              </div>
             </div>
 
             {/* Phone */}

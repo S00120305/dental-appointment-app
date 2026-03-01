@@ -183,7 +183,7 @@ export default function BookingConfirmPage({
               <div className="flex justify-between">
                 <span>お名前</span>
                 <span style={{ color: '#333333', fontWeight: 500 }}>
-                  {appointment.patient_name}
+                  {appointment.patient_name}様
                 </span>
               </div>
               <div
@@ -239,7 +239,7 @@ export default function BookingConfirmPage({
                 キャンセルする
               </Link>
               <p className="text-center text-xs" style={{ color: '#999999' }}>
-                変更・キャンセルは前日{deadlineTime}まで
+                ご予約の変更・キャンセルは、前日の{deadlineTime}までにお手続きください。
               </p>
             </div>
           ) : (

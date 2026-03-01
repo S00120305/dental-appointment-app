@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { getSessionUser, recordLog } from '@/lib/log'
+import { formatPatientName } from '@/lib/utils/patient-name'
 
 // GET: 患者一覧取得（検索対応）
 export async function GET(request: NextRequest) {
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     if (search) {
       query = query.or(
-        `chart_number.ilike.%${search}%,name.ilike.%${search}%,name_kana.ilike.%${search}%`
+        `chart_number.ilike.%${search}%,last_name.ilike.%${search}%,first_name.ilike.%${search}%,last_name_kana.ilike.%${search}%,first_name_kana.ilike.%${search}%`
       )
     }
 
@@ -42,22 +43,24 @@ export async function POST(request: NextRequest) {
     const supabase = createServerClient()
     const body = await request.json()
 
-    const { chart_number, name, name_kana, phone, email, reminder_sms, reminder_email, preferred_notification, gender, date_of_birth, postal_code, address } = body
+    const { chart_number, last_name, first_name, last_name_kana, first_name_kana, phone, email, reminder_sms, reminder_email, preferred_notification, gender, date_of_birth, postal_code, address } = body
 
     // バリデーション
     if (!chart_number?.trim()) {
       return NextResponse.json({ error: 'カルテNoは必須です' }, { status: 400 })
     }
-    if (!name?.trim()) {
-      return NextResponse.json({ error: '氏名は必須です' }, { status: 400 })
+    if (!last_name?.trim()) {
+      return NextResponse.json({ error: '姓は必須です' }, { status: 400 })
     }
 
     const { data, error } = await supabase
       .from('patients')
       .insert({
         chart_number: chart_number.trim(),
-        name: name.trim(),
-        name_kana: name_kana?.trim() || null,
+        last_name: last_name.trim(),
+        first_name: first_name?.trim() || '',
+        last_name_kana: last_name_kana?.trim() || null,
+        first_name_kana: first_name_kana?.trim() || null,
         phone: phone?.trim() || null,
         email: email?.trim() || null,
         reminder_sms: reminder_sms ?? false,
@@ -83,14 +86,15 @@ export async function POST(request: NextRequest) {
 
     // ログ記録
     const user = await getSessionUser()
+    const fullName = formatPatientName(last_name.trim(), first_name?.trim() || '')
     await recordLog({
       userId: user?.userId,
       userName: user?.userName,
       actionType: 'create',
       targetType: 'patient',
       targetId: data?.id,
-      summary: `${user?.userName || '不明'}が 患者 ${name.trim()}（${chart_number.trim()}）を登録`,
-      details: { chart_number, name },
+      summary: `${user?.userName || '不明'}が 患者 ${fullName}（${chart_number.trim()}）を登録`,
+      details: { chart_number, last_name, first_name },
     })
 
     return NextResponse.json({ patient: data }, { status: 201 })
@@ -106,7 +110,7 @@ export async function PUT(request: NextRequest) {
     const body = await request.json()
 
     const {
-      id, chart_number, name, name_kana, phone, email,
+      id, chart_number, last_name, first_name, last_name_kana, first_name_kana, phone, email,
       reminder_sms, reminder_email, preferred_notification, line_user_id,
       is_vip, caution_level, is_infection_alert,
       gender, date_of_birth, postal_code, address,
@@ -119,8 +123,8 @@ export async function PUT(request: NextRequest) {
     if (!chart_number?.trim()) {
       return NextResponse.json({ error: 'カルテNoは必須です' }, { status: 400 })
     }
-    if (!name?.trim()) {
-      return NextResponse.json({ error: '氏名は必須です' }, { status: 400 })
+    if (!last_name?.trim()) {
+      return NextResponse.json({ error: '姓は必須です' }, { status: 400 })
     }
     if (caution_level !== undefined && (caution_level < 0 || caution_level > 3)) {
       return NextResponse.json({ error: '注意レベルは0〜3で指定してください' }, { status: 400 })
@@ -128,8 +132,10 @@ export async function PUT(request: NextRequest) {
 
     const updateData: Record<string, unknown> = {
       chart_number: chart_number.trim(),
-      name: name.trim(),
-      name_kana: name_kana?.trim() || null,
+      last_name: last_name.trim(),
+      first_name: first_name?.trim() || '',
+      last_name_kana: last_name_kana?.trim() || null,
+      first_name_kana: first_name_kana?.trim() || null,
       phone: phone?.trim() || null,
       email: email?.trim() || null,
       reminder_sms: reminder_sms ?? false,
@@ -166,13 +172,14 @@ export async function PUT(request: NextRequest) {
 
     // ログ記録
     const user = await getSessionUser()
+    const fullName = formatPatientName(last_name.trim(), first_name?.trim() || '')
     await recordLog({
       userId: user?.userId,
       userName: user?.userName,
       actionType: 'update',
       targetType: 'patient',
       targetId: id,
-      summary: `${user?.userName || '不明'}が 患者 ${name.trim()}（${chart_number.trim()}）を更新`,
+      summary: `${user?.userName || '不明'}が 患者 ${fullName}（${chart_number.trim()}）を更新`,
       details: updateData,
     })
 
@@ -196,7 +203,7 @@ export async function DELETE(request: NextRequest) {
     // 削除前に情報取得（ログ用）
     const { data: target } = await supabase
       .from('patients')
-      .select('name, chart_number')
+      .select('last_name, first_name, chart_number')
       .eq('id', id)
       .single()
 
@@ -211,14 +218,15 @@ export async function DELETE(request: NextRequest) {
 
     // ログ記録
     const user = await getSessionUser()
+    const targetName = target ? formatPatientName(target.last_name, target.first_name) : '不明'
     await recordLog({
       userId: user?.userId,
       userName: user?.userName,
       actionType: 'delete',
       targetType: 'patient',
       targetId: id,
-      summary: `${user?.userName || '不明'}が 患者 ${target?.name || '不明'}（${target?.chart_number || ''}）を削除`,
-      details: { name: target?.name, chart_number: target?.chart_number },
+      summary: `${user?.userName || '不明'}が 患者 ${targetName}（${target?.chart_number || ''}）を削除`,
+      details: { last_name: target?.last_name, first_name: target?.first_name, chart_number: target?.chart_number },
     })
 
     return NextResponse.json({ success: true })

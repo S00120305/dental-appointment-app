@@ -27,7 +27,7 @@ type DashboardData = {
     status: string
     lab_order_id: string | null
     duration_minutes: number
-    patient: { id: string; chart_number: string; name: string } | null
+    patient: { id: string; chart_number: string; last_name: string; first_name: string } | null
     staff: { id: string; name: string } | null
   }>
   todayLabOrders: Array<{
@@ -57,7 +57,7 @@ type DashboardData = {
     status: string
     booking_source: string
     created_at: string
-    patient: { id: string; name: string } | null
+    patient: { id: string; last_name: string; first_name: string } | null
   }>
 }
 
@@ -110,7 +110,7 @@ export default function DashboardPage() {
       return {
         start_time: a.start_time,
         unit_number: a.unit_number,
-        patient_name: a.patient?.name || '',
+        patient_name: a.patient ? `${a.patient.last_name} ${a.patient.first_name}`.trim() : '',
         item_type: lo.item_type,
         tooth_info: lo.tooth_info,
         lab_name: lo.lab?.name || null,
@@ -182,7 +182,7 @@ export default function DashboardPage() {
                 availableUnits={availableUnits}
                 visibleUnits={visibleUnits.length}
                 nextAppointment={nextAppointment ? {
-                  patient_name: nextAppointment.patient?.name || '',
+                  patient_name: nextAppointment.patient ? `${nextAppointment.patient.last_name} ${nextAppointment.patient.first_name}`.trim() : '',
                   start_time: nextAppointment.start_time,
                   unit_number: nextAppointment.unit_number,
                 } : null}
@@ -260,7 +260,7 @@ function WebBookingNotifications({
       <div className="space-y-2">
         {bookings.map((booking) => {
           const patientName = booking.patient && !Array.isArray(booking.patient)
-            ? (booking.patient as { name: string }).name
+            ? `${(booking.patient as { last_name: string; first_name: string }).last_name} ${(booking.patient as { last_name: string; first_name: string }).first_name}`.trim()
             : '不明'
           const isPending = booking.status === 'pending'
 

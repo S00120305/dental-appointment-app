@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { getSessionUser, recordLog } from '@/lib/log'
+import { formatPatientName } from '@/lib/utils/patient-name'
 
 /** visible_units 設定を取得してパースする */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
       id, patient_id, unit_number, staff_id, start_time, duration_minutes,
       appointment_type, status, memo, lab_order_id, booking_type_id, slide_from_id,
       web_booking_status, booking_token, is_deleted, created_at, updated_at,
-      patient:patients!patient_id(id, chart_number, name, name_kana, phone, is_vip, caution_level, is_infection_alert),
+      patient:patients!patient_id(id, chart_number, last_name, first_name, last_name_kana, first_name_kana, phone, is_vip, caution_level, is_infection_alert),
       staff:users!staff_id(id, name),
       lab_order:lab_orders!left(id, status, item_type, tooth_info, due_date, set_date, lab:labs!left(id, name)),
       booking_type:booking_types!left(id, display_name, internal_name, color, category),
@@ -154,7 +155,7 @@ const selectQueryPost = `
   id, patient_id, unit_number, staff_id, start_time, duration_minutes,
   appointment_type, status, memo, lab_order_id, booking_type_id, slide_from_id,
   web_booking_status, booking_token, is_deleted, created_at, updated_at,
-  patient:patients!patient_id(id, chart_number, name, name_kana, is_vip, caution_level, is_infection_alert),
+  patient:patients!patient_id(id, chart_number, last_name, first_name, last_name_kana, first_name_kana, is_vip, caution_level, is_infection_alert),
   staff:users!staff_id(id, name),
   lab_order:lab_orders!left(id, status, item_type, tooth_info, due_date, set_date, lab:labs!left(id, name)),
   booking_type:booking_types!left(id, display_name, internal_name, color, category),
@@ -253,7 +254,8 @@ export async function POST(request: NextRequest) {
 
     // ログ記録
     const user = await getSessionUser()
-    const patientName = responseData?.patient && !Array.isArray(responseData.patient) ? (responseData.patient as { name: string }).name : '不明'
+    const patientObj = responseData?.patient && !Array.isArray(responseData.patient) ? (responseData.patient as { last_name: string; first_name: string }) : null
+    const patientName = patientObj ? formatPatientName(patientObj.last_name, patientObj.first_name) : '不明'
     const time = new Date(start_time).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })
     await recordLog({
       userId: user?.userId,
@@ -299,7 +301,7 @@ export async function PUT(request: NextRequest) {
     // 更新前の予約を取得（競合検出 + start_time 変更検知 + ログ用）
     const { data: existing } = await supabase
       .from('appointments')
-      .select('updated_at, start_time, lab_order_id, status, unit_number, patient:patients!patient_id(name)')
+      .select('updated_at, start_time, lab_order_id, status, unit_number, patient:patients!patient_id(last_name, first_name)')
       .eq('id', id)
       .single()
 
@@ -400,8 +402,9 @@ export async function PUT(request: NextRequest) {
 
     // ログ記録
     const user = await getSessionUser()
-    const existingPatient = existing?.patient && !Array.isArray(existing.patient) ? (existing.patient as { name: string }) : null
-    const patientName = responseData?.patient && !Array.isArray(responseData.patient) ? (responseData.patient as { name: string }).name : existingPatient?.name || '不明'
+    const existingPatientObj = existing?.patient && !Array.isArray(existing.patient) ? (existing.patient as { last_name: string; first_name: string }) : null
+    const responsePatientObj = responseData?.patient && !Array.isArray(responseData.patient) ? (responseData.patient as { last_name: string; first_name: string }) : null
+    const patientName = responsePatientObj ? formatPatientName(responsePatientObj.last_name, responsePatientObj.first_name) : existingPatientObj ? formatPatientName(existingPatientObj.last_name, existingPatientObj.first_name) : '不明'
     if (isStatusOnly) {
       await recordLog({
         userId: user?.userId,
@@ -465,7 +468,7 @@ export async function DELETE(request: NextRequest) {
     // 削除前に情報取得（ログ用）
     const { data: target } = await supabase
       .from('appointments')
-      .select('unit_number, start_time, patient:patients!patient_id(name)')
+      .select('unit_number, start_time, patient:patients!patient_id(last_name, first_name)')
       .eq('id', id)
       .single()
 
@@ -486,7 +489,8 @@ export async function DELETE(request: NextRequest) {
 
     // ログ記録
     const user = await getSessionUser()
-    const patientName = target?.patient && !Array.isArray(target.patient) ? (target.patient as { name: string }).name : '不明'
+    const targetPatientObj = target?.patient && !Array.isArray(target.patient) ? (target.patient as { last_name: string; first_name: string }) : null
+    const patientName = targetPatientObj ? formatPatientName(targetPatientObj.last_name, targetPatientObj.first_name) : '不明'
     await recordLog({
       userId: user?.userId,
       userName: user?.userName,

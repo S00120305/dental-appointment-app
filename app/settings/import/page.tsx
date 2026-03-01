@@ -50,7 +50,7 @@ export default function ImportPage() {
 
   async function handleImport() {
     // バリデーションエラーがあるものを含めずに有効な行のみ送信
-    const validRows = rows.filter((r) => r.chart_number && r.name)
+    const validRows = rows.filter((r) => r.chart_number && r.last_name)
 
     if (validRows.length === 0) {
       showToast('インポート可能なデータがありません', 'error')
@@ -115,7 +115,7 @@ export default function ImportPage() {
             1001,田中 太郎,タナカ タロウ,090-1234-5678,,男性,1990-01-15,920-0000,石川県金沢市...{'\n'}
             1002,佐藤 花子,サトウ ハナコ,,hanako@example.com,女性,1985-05-20,,
           </code>
-          <p className="mt-1 text-xs text-emerald-600">※ 性別・生年月日・郵便番号・住所は省略可能です</p>
+          <p className="mt-1 text-xs text-emerald-600">※ 性別・生年月日・郵便番号・住所は省略可能です。「氏名」列はスペースで姓・名に自動分割されます。</p>
         </div>
 
         {/* ファイル選択 */}
@@ -168,8 +168,10 @@ export default function ImportPage() {
                   <tr>
                     <th className="px-3 py-2 text-left font-medium text-gray-500">#</th>
                     <th className="px-3 py-2 text-left font-medium text-gray-500">カルテNo</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-500">氏名</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-500">フリガナ</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-500">姓</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-500">名</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-500">セイ</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-500">メイ</th>
                     <th className="px-3 py-2 text-left font-medium text-gray-500">電話番号</th>
                     <th className="px-3 py-2 text-left font-medium text-gray-500">メール</th>
                     <th className="px-3 py-2 text-left font-medium text-gray-500">性別</th>
@@ -189,9 +191,11 @@ export default function ImportPage() {
                           {row.chart_number || <span className="text-red-500">（空）</span>}
                         </td>
                         <td className={`whitespace-nowrap px-3 py-2 ${hasError ? 'text-red-700 font-medium' : ''}`}>
-                          {row.name || <span className="text-red-500">（空）</span>}
+                          {row.last_name || <span className="text-red-500">（空）</span>}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-2 text-gray-600">{row.name_kana}</td>
+                        <td className="whitespace-nowrap px-3 py-2 text-gray-600">{row.first_name}</td>
+                        <td className="whitespace-nowrap px-3 py-2 text-gray-600">{row.last_name_kana}</td>
+                        <td className="whitespace-nowrap px-3 py-2 text-gray-600">{row.first_name_kana}</td>
                         <td className="whitespace-nowrap px-3 py-2 text-gray-600">{row.phone}</td>
                         <td className="whitespace-nowrap px-3 py-2 text-gray-600">{row.email}</td>
                         <td className="whitespace-nowrap px-3 py-2 text-gray-600">{row.gender}</td>

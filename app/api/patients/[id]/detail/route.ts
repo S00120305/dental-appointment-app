@@ -13,7 +13,7 @@ export async function GET(
     // 患者基本情報
     const { data: patient, error: patientError } = await supabase
       .from('patients')
-      .select('id, chart_number, name, name_kana, phone, email, birth_date, memo, is_vip, caution_level, is_infection_alert')
+      .select('id, chart_number, last_name, first_name, last_name_kana, first_name_kana, phone, email, birth_date, memo, is_vip, caution_level, is_infection_alert')
       .eq('id', id)
       .eq('is_active', true)
       .single()

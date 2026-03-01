@@ -14,8 +14,10 @@ type PendingAppointment = AppointmentWithRelations & {
   patient: {
     id: string
     chart_number: string
-    name: string
-    name_kana: string | null
+    last_name: string
+    first_name: string
+    last_name_kana: string | null
+    first_name_kana: string | null
     phone: string | null
     is_vip: boolean
     caution_level: number
@@ -256,7 +258,7 @@ export default function PendingAppointmentsPage() {
                       {/* 患者名 + 電話番号 */}
                       <div className="mt-1 flex items-center gap-3 text-sm">
                         <span className="font-medium text-gray-800">
-                          {patient?.name || '不明'}
+                          {patient ? `${patient.last_name} ${patient.first_name}`.trim() : '不明'}
                         </span>
                         {patient?.phone && (
                           <span className="text-xs text-gray-500">
@@ -325,7 +327,7 @@ export default function PendingAppointmentsPage() {
             <h3 className="text-lg font-bold text-gray-900">予約を却下</h3>
             <p className="mt-1 text-sm text-gray-600">
               {rejectTarget.patient && !Array.isArray(rejectTarget.patient)
-                ? (rejectTarget.patient as { name: string }).name
+                ? `${(rejectTarget.patient as { last_name: string; first_name: string }).last_name} ${(rejectTarget.patient as { last_name: string; first_name: string }).first_name}`.trim()
                 : '不明'} さんの予約リクエストを却下します。
             </p>
             <div className="mt-4">
@@ -366,7 +368,7 @@ export default function PendingAppointmentsPage() {
             <h3 className="text-lg font-bold text-gray-900">日時を変更して承認</h3>
             <p className="mt-1 text-sm text-gray-600">
               {modifyTarget.patient && !Array.isArray(modifyTarget.patient)
-                ? (modifyTarget.patient as { name: string }).name
+                ? `${(modifyTarget.patient as { last_name: string; first_name: string }).last_name} ${(modifyTarget.patient as { last_name: string; first_name: string }).first_name}`.trim()
                 : '不明'} さんの予約日時を変更します。
             </p>
             <div className="mt-4 space-y-3">

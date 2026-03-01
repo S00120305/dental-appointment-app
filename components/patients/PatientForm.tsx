@@ -6,6 +6,7 @@ import Button from '@/components/ui/Button'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { cleanPhone } from '@/lib/utils/phone'
+import { formatPatientName } from '@/lib/utils/patient-name'
 import type { Patient, LinePendingLink, PreferredNotification } from '@/lib/supabase/types'
 
 type PatientFormProps = {
@@ -17,8 +18,10 @@ type PatientFormProps = {
 
 type FormData = {
   chart_number: string
-  name: string
-  name_kana: string
+  last_name: string
+  first_name: string
+  last_name_kana: string
+  first_name_kana: string
   phone: string
   email: string
   gender: string
@@ -33,8 +36,10 @@ type FormData = {
 
 const initialFormData: FormData = {
   chart_number: '',
-  name: '',
-  name_kana: '',
+  last_name: '',
+  first_name: '',
+  last_name_kana: '',
+  first_name_kana: '',
   phone: '',
   email: '',
   gender: '',
@@ -66,8 +71,10 @@ export default function PatientForm({ isOpen, onClose, onSaved, patient }: Patie
     if (patient) {
       setForm({
         chart_number: patient.chart_number || '',
-        name: patient.name,
-        name_kana: patient.name_kana || '',
+        last_name: patient.last_name || '',
+        first_name: patient.first_name || '',
+        last_name_kana: patient.last_name_kana || '',
+        first_name_kana: patient.first_name_kana || '',
         phone: patient.phone || '',
         email: patient.email || '',
         gender: patient.gender || '',
@@ -88,7 +95,7 @@ export default function PatientForm({ isOpen, onClose, onSaved, patient }: Patie
   function validate(): boolean {
     const newErrors: Record<string, string> = {}
     if (!form.chart_number.trim()) newErrors.chart_number = 'カルテNoは必須です'
-    if (!form.name.trim()) newErrors.name = '氏名は必須です'
+    if (!form.last_name.trim()) newErrors.last_name = '姓は必須です'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -211,7 +218,8 @@ export default function PatientForm({ isOpen, onClose, onSaved, patient }: Patie
         body: JSON.stringify({
           id: patient.id,
           chart_number: form.chart_number,
-          name: form.name,
+          last_name: form.last_name,
+          first_name: form.first_name,
           line_user_id: null,
           preferred_notification: form.email ? 'email' : 'none',
         }),
@@ -254,33 +262,57 @@ export default function PatientForm({ isOpen, onClose, onSaved, patient }: Patie
             )}
           </div>
 
-          {/* 氏名 */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              氏名 <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className={`w-full rounded-md border px-3 py-2 text-base ${
-                errors.name ? 'border-red-500' : 'border-gray-300'
-              }`}
-              placeholder="例: 田中 太郎"
-            />
-            {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
+          {/* 姓名 */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                姓 <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={form.last_name}
+                onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+                className={`w-full rounded-md border px-3 py-2 text-base ${
+                  errors.last_name ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="例: 田中"
+              />
+              {errors.last_name && <p className="mt-1 text-sm text-red-500">{errors.last_name}</p>}
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">名</label>
+              <input
+                type="text"
+                value={form.first_name}
+                onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-base"
+                placeholder="例: 太郎"
+              />
+            </div>
           </div>
 
           {/* フリガナ */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">フリガナ</label>
-            <input
-              type="text"
-              value={form.name_kana}
-              onChange={(e) => setForm({ ...form, name_kana: e.target.value })}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-base"
-              placeholder="例: タナカ タロウ"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">セイ</label>
+              <input
+                type="text"
+                value={form.last_name_kana}
+                onChange={(e) => setForm({ ...form, last_name_kana: e.target.value })}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-base"
+                placeholder="例: タナカ"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">メイ</label>
+              <input
+                type="text"
+                value={form.first_name_kana}
+                onChange={(e) => setForm({ ...form, first_name_kana: e.target.value })}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-base"
+                placeholder="例: タロウ"
+              />
+            </div>
           </div>
 
           {/* 電話番号 */}
@@ -642,7 +674,7 @@ export default function PatientForm({ isOpen, onClose, onSaved, patient }: Patie
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={handleDelete}
         title="患者の無効化"
-        message={`${patient?.name} さんを無効にしますか？無効にした患者は一覧に表示されなくなります。`}
+        message={`${patient ? formatPatientName(patient.last_name, patient.first_name) : ''} さんを無効にしますか？無効にした患者は一覧に表示されなくなります。`}
         confirmLabel="無効にする"
         variant="danger"
       />

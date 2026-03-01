@@ -22,8 +22,10 @@ export async function POST(request: NextRequest) {
       booking_type_id,
       date,
       time,
-      patient_name,
-      patient_name_kana,
+      patient_last_name,
+      patient_first_name,
+      patient_last_name_kana,
+      patient_first_name_kana,
       phone,
       email,
       memo,
@@ -39,8 +41,8 @@ export async function POST(request: NextRequest) {
     if (!time || !/^\d{2}:\d{2}$/.test(time)) {
       return NextResponse.json({ error: '時刻は HH:mm 形式で指定してください' }, { status: 400 })
     }
-    if (!patient_name?.trim()) {
-      return NextResponse.json({ error: 'お名前は必須です' }, { status: 400 })
+    if (!patient_last_name?.trim()) {
+      return NextResponse.json({ error: 'お名前（姓）は必須です' }, { status: 400 })
     }
     if (!phone?.trim()) {
       return NextResponse.json({ error: '電話番号は必須です' }, { status: 400 })
@@ -186,8 +188,10 @@ export async function POST(request: NextRequest) {
         .from('patients')
         .insert({
           chart_number: `WEB-${Date.now()}`,
-          name: patient_name.trim(),
-          name_kana: patient_name_kana?.trim() || null,
+          last_name: patient_last_name.trim(),
+          first_name: patient_first_name?.trim() || '',
+          last_name_kana: patient_last_name_kana?.trim() || null,
+          first_name_kana: patient_first_name_kana?.trim() || null,
           phone: phoneClean,
           email: email?.trim() || null,
           preferred_notification: email ? 'email' : 'none',
@@ -274,7 +278,8 @@ export async function POST(request: NextRequest) {
 
       if (autoConfirmed) {
         // 即時確定: 確認通知（テンプレートに従う）
-        const emailMessage = `${patient_name.trim()}様\n\nご予約ありがとうございます。\n\n■ ご予約内容\n日時: ${dateFormatted} ${time}〜\n内容: ${bookingType.display_name}（${durationMinutes}分）\n\n■ 予約の確認・変更\n${confirmUrl}\n\n※ 変更・キャンセルは前日18:00まで${clinicPhone ? `\n※ お電話: ${clinicPhone}` : ''}\n\n金澤オーラルケアクリニック`
+        const patientFullName = `${patient_last_name.trim()} ${patient_first_name?.trim() || ''}`.trim()
+        const emailMessage = `${patientFullName}様\n\nご予約ありがとうございます。\n\n■ ご予約内容\n日時: ${dateFormatted} ${time}〜\n内容: ${bookingType.display_name}（${durationMinutes}分）\n\n■ 予約の確認・変更\n${confirmUrl}\n\n※ 変更・キャンセルは前日18:00まで${clinicPhone ? `\n※ お電話: ${clinicPhone}` : ''}\n\n金澤オーラルケアクリニック`
 
         const lineMessage = `🦷 金澤オーラルケアクリニック\n\nご予約ありがとうございます。\n\n📅 ${dateFormatted} ${time}〜\n📋 ${bookingType.display_name}（${durationMinutes}分）\n\n▼ 予約の確認\n${confirmUrl}\n\n※変更・キャンセルは前日18:00まで`
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import { toPatientDisplayName } from '@/lib/utils/patient-display'
+import { formatPatientName } from '@/lib/utils/patient-name'
 
 // POST: マイページ認証（診察券番号＋電話番号）
 export async function POST(request: NextRequest) {
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
     // 患者検索（chart_number + phone の完全一致）
     const { data: patient, error: patientError } = await supabase
       .from('patients')
-      .select('id, name, chart_number, phone, email, preferred_notification, line_user_id')
+      .select('id, last_name, first_name, chart_number, phone, email, preferred_notification, line_user_id')
       .eq('chart_number', chart_number.trim())
       .eq('phone', phoneClean)
       .eq('is_active', true)
@@ -160,7 +161,7 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({
-      patient: { name: patient.name },
+      patient: { name: formatPatientName(patient.last_name, patient.first_name) },
       upcoming_appointments: upcoming,
       unused_tokens: tokens,
       past_appointments: past,
