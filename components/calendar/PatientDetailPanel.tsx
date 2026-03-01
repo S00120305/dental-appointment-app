@@ -108,6 +108,7 @@ export default function PatientDetailPanel({
 
   const [statusChanging, setStatusChanging] = useState(false)
   const [tokenModalOpen, setTokenModalOpen] = useState(false)
+  const [lastStaffIdForToken, setLastStaffIdForToken] = useState<string | undefined>(undefined)
   const panelRef = useRef<HTMLDivElement>(null)
 
   const patientId = appointment.patient_id
@@ -492,7 +493,11 @@ export default function PatientDetailPanel({
                   予約変更
                 </button>
                 <button
-                  onClick={() => setTokenModalOpen(true)}
+                  onClick={() => {
+                    const completedPast = pastAppointments.find(a => a.status === 'completed' && a.staff?.id)
+                    setLastStaffIdForToken(completedPast?.staff?.id || appointment.staff_id || undefined)
+                    setTokenModalOpen(true)
+                  }}
                   className="flex-1 min-h-[40px] rounded-md bg-amber-500 px-2 text-sm font-bold text-white shadow-sm hover:bg-amber-600 active:bg-amber-700"
                 >
                   <svg className="mr-1 inline-block h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -611,6 +616,7 @@ export default function PatientDetailPanel({
         patientId={patientId}
         patientName={patient ? formatPatientName(patient.last_name, patient.first_name) : appointment.patient ? formatPatientName(appointment.patient.last_name, appointment.patient.first_name) : ''}
         chartNumber={patient?.chart_number || appointment.patient?.chart_number || ''}
+        lastStaffId={lastStaffIdForToken}
       />
     </div>
   )

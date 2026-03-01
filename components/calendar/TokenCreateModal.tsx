@@ -24,9 +24,10 @@ type Props = {
   patientId: string
   patientName: string
   chartNumber: string
+  lastStaffId?: string
 }
 
-export default function TokenCreateModal({ isOpen, onClose, patientId, patientName, chartNumber }: Props) {
+export default function TokenCreateModal({ isOpen, onClose, patientId, patientName, chartNumber, lastStaffId }: Props) {
   const { data: typesData } = useSWR<{ booking_types: BookingTypeOption[] }>(
     isOpen ? '/api/booking-types' : null,
     fetcher
@@ -55,26 +56,28 @@ export default function TokenCreateModal({ isOpen, onClose, patientId, patientNa
   const bookingTypes = (typesData?.booking_types || []).filter(t => t.is_active)
   const staffList = staffData?.users || []
 
-  // 予約種別が変わったらデフォルト所要時間を設定
+  // 予約種別が変わったらデフォルト所要時間を設定（bookingTypeIdのみに依存）
   useEffect(() => {
     if (bookingTypeId) {
-      const bt = bookingTypes.find(t => t.id === bookingTypeId)
+      const bt = (typesData?.booking_types || []).find(t => t.id === bookingTypeId)
       if (bt) setDurationMinutes(bt.duration_minutes)
     }
-  }, [bookingTypeId, bookingTypes])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookingTypeId])
 
   // モーダルを開いたときにリセット
   useEffect(() => {
     if (isOpen) {
       setBookingTypeId('')
       setDurationMinutes(30)
-      setStaffId('')
+      setStaffId(lastStaffId || '')
       setExpiresDays(7)
       setMemo('')
       setSendMethod('none')
       setResult(null)
       setError(null)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
 
   const handleCreate = async () => {
@@ -115,8 +118,8 @@ export default function TokenCreateModal({ isOpen, onClose, patientId, patientNa
 
   if (!isOpen) return null
 
-  // 所要時間選択肢（5分刻み）
-  const durationOptions = Array.from({ length: 24 }, (_, i) => (i + 1) * 5)
+  // 所要時間選択肢（10分刻み）
+  const durationOptions = Array.from({ length: 12 }, (_, i) => (i + 1) * 10)
 
   return (
     <div
