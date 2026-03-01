@@ -62,6 +62,8 @@ type Props = {
   onEditClick: () => void
   onNewAppointment: (patientId: string, patientName: string, lastStaffId?: string) => void
   onCalendarSelect: (patientId: string, patientName: string, lastStaffId?: string) => void
+  onEditSlotSearch: (appointmentId: string, patientId: string, patientName: string, lastStaffId?: string) => void
+  onEditCalendarSelect: (appointmentId: string, patientId: string, patientName: string, lastStaffId?: string) => void
   onJumpToDate: (date: string) => void
 }
 
@@ -89,6 +91,8 @@ export default function PatientDetailPanel({
   onEditClick,
   onNewAppointment,
   onCalendarSelect,
+  onEditSlotSearch,
+  onEditCalendarSelect,
   onJumpToDate,
 }: Props) {
   const [patient, setPatient] = useState<PatientInfo | null>(null)
@@ -111,7 +115,9 @@ export default function PatientDetailPanel({
   const [statusChanging, setStatusChanging] = useState(false)
   const [tokenModalOpen, setTokenModalOpen] = useState(false)
   const [lastStaffIdForToken, setLastStaffIdForToken] = useState<string | undefined>(undefined)
+  const [openMenu, setOpenMenu] = useState<'next' | 'edit' | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const patientId = appointment.patient_id
 
@@ -187,6 +193,30 @@ export default function PatientDetailPanel({
       clearTimeout(timer)
     }
   }, [isOpen, onClose, tokenModalOpen])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!openMenu) return
+    function handleClick(e: MouseEvent | TouchEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenu(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('touchstart', handleClick)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('touchstart', handleClick)
+    }
+  }, [openMenu])
+
+  // Helper: get patient name and last staff id
+  const getPatientContext = useCallback(() => {
+    const completedPast = pastAppointments.find(a => a.status === 'completed' && a.staff?.id)
+    const lastStaffId = completedPast?.staff?.id || appointment.staff_id || undefined
+    const pName = patient ? formatPatientName(patient.last_name, patient.first_name) : appointment.patient ? formatPatientName(appointment.patient.last_name, appointment.patient.first_name) : ''
+    return { pName, lastStaffId }
+  }, [pastAppointments, appointment, patient])
 
   // Status change handler
   async function handleStatusChange(newStatus: AppointmentStatus) {
@@ -471,47 +501,114 @@ export default function PatientDetailPanel({
                 </div>
               )}
 
-              {/* Action Buttons — single row */}
-              <div className="flex gap-1.5">
-                <div className="flex flex-1 min-w-0">
+              {/* Action Buttons — split buttons */}
+              <div className="flex gap-1.5" ref={menuRef}>
+                {/* 次回予約 split button */}
+                <div className="relative flex flex-1 min-w-0">
                   <button
                     onClick={() => {
-                      const completedPast = pastAppointments.find(a => a.status === 'completed' && a.staff?.id)
-                      const lastStaffId = completedPast?.staff?.id || appointment.staff_id || undefined
-                      const pName = patient ? formatPatientName(patient.last_name, patient.first_name) : appointment.patient ? formatPatientName(appointment.patient.last_name, appointment.patient.first_name) : ''
+                      const { pName, lastStaffId } = getPatientContext()
                       onNewAppointment(patientId, pName, lastStaffId)
                       onClose()
                     }}
                     className="flex-1 min-h-[40px] rounded-l-md border border-emerald-300 bg-white px-2 text-sm font-medium text-emerald-600 hover:bg-emerald-50"
                   >
-                    空き枠検索
+                    次回予約
                   </button>
                   <button
+                    onClick={() => setOpenMenu(openMenu === 'next' ? null : 'next')}
+                    className="min-w-[44px] min-h-[40px] rounded-r-md border border-l-0 border-emerald-300 bg-white px-1 text-sm text-emerald-600 hover:bg-emerald-50 flex items-center justify-center"
+                  >
+                    ▾
+                  </button>
+                  {openMenu === 'next' && (
+                    <div className="absolute left-0 top-full mt-1 z-50 w-full min-w-[160px] rounded-md border border-gray-200 bg-white shadow-lg">
+                      <button
+                        onClick={() => {
+                          setOpenMenu(null)
+                          const { pName, lastStaffId } = getPatientContext()
+                          onNewAppointment(patientId, pName, lastStaffId)
+                          onClose()
+                        }}
+                        className="w-full text-left px-3 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center"
+                      >
+                        空き枠検索
+                      </button>
+                      <button
+                        onClick={() => {
+                          setOpenMenu(null)
+                          const { pName, lastStaffId } = getPatientContext()
+                          onCalendarSelect(patientId, pName, lastStaffId)
+                          onClose()
+                        }}
+                        className="w-full text-left px-3 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 border-t border-gray-100 flex items-center"
+                      >
+                        カレンダーで選択
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* 予約変更 split button */}
+                <div className="relative flex flex-1 min-w-0">
+                  <button
                     onClick={() => {
-                      const completedPast = pastAppointments.find(a => a.status === 'completed' && a.staff?.id)
-                      const lastStaffId = completedPast?.staff?.id || appointment.staff_id || undefined
-                      const pName = patient ? formatPatientName(patient.last_name, patient.first_name) : appointment.patient ? formatPatientName(appointment.patient.last_name, appointment.patient.first_name) : ''
-                      onCalendarSelect(patientId, pName, lastStaffId)
+                      onEditClick()
                       onClose()
                     }}
-                    className="flex-1 min-h-[40px] rounded-r-md border border-l-0 border-emerald-300 bg-white px-2 text-sm font-medium text-emerald-600 hover:bg-emerald-50"
+                    className="flex-1 min-h-[40px] rounded-l-md border border-gray-300 bg-white px-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                   >
-                    カレンダー選択
+                    予約変更
                   </button>
+                  <button
+                    onClick={() => setOpenMenu(openMenu === 'edit' ? null : 'edit')}
+                    className="min-w-[44px] min-h-[40px] rounded-r-md border border-l-0 border-gray-300 bg-white px-1 text-sm text-gray-500 hover:bg-gray-50 flex items-center justify-center"
+                  >
+                    ▾
+                  </button>
+                  {openMenu === 'edit' && (
+                    <div className="absolute left-0 top-full mt-1 z-50 w-full min-w-[180px] rounded-md border border-gray-200 bg-white shadow-lg">
+                      <button
+                        onClick={() => {
+                          setOpenMenu(null)
+                          onEditClick()
+                          onClose()
+                        }}
+                        className="w-full text-left px-3 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center"
+                      >
+                        内容を編集
+                      </button>
+                      <button
+                        onClick={() => {
+                          setOpenMenu(null)
+                          const { pName, lastStaffId } = getPatientContext()
+                          onEditSlotSearch(appointment.id, patientId, pName, lastStaffId)
+                          onClose()
+                        }}
+                        className="w-full text-left px-3 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 border-t border-gray-100 flex items-center"
+                      >
+                        空き枠で日時変更
+                      </button>
+                      <button
+                        onClick={() => {
+                          setOpenMenu(null)
+                          const { pName, lastStaffId } = getPatientContext()
+                          onEditCalendarSelect(appointment.id, patientId, pName, lastStaffId)
+                          onClose()
+                        }}
+                        className="w-full text-left px-3 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 border-t border-gray-100 flex items-center"
+                      >
+                        カレンダーで日時変更
+                      </button>
+                    </div>
+                  )}
                 </div>
+
+                {/* 案内作成 */}
                 <button
                   onClick={() => {
-                    onEditClick()
-                    onClose()
-                  }}
-                  className="flex-1 min-h-[40px] rounded-md border border-gray-300 bg-white px-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  予約変更
-                </button>
-                <button
-                  onClick={() => {
-                    const completedPast = pastAppointments.find(a => a.status === 'completed' && a.staff?.id)
-                    setLastStaffIdForToken(completedPast?.staff?.id || appointment.staff_id || undefined)
+                    const { lastStaffId } = getPatientContext()
+                    setLastStaffIdForToken(lastStaffId)
                     setTokenModalOpen(true)
                   }}
                   className="flex-1 min-h-[40px] rounded-md bg-amber-500 px-2 text-sm font-bold text-white shadow-sm hover:bg-amber-600 active:bg-amber-700"

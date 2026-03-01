@@ -168,12 +168,13 @@ export default function AppointmentModal({
 
     if (appointment) {
       const startDate = new Date(appointment.start_time)
+      const hasTimeOverride = !!defaultDate
       setForm({
         patient_id: appointment.patient_id,
-        unit_number: appointment.unit_number,
+        unit_number: hasTimeOverride && defaultUnitNumber ? defaultUnitNumber : appointment.unit_number,
         staff_id: appointment.staff_id,
-        date: formatDateLocal(startDate),
-        time: formatTimeLocal(startDate),
+        date: hasTimeOverride ? defaultDate : formatDateLocal(startDate),
+        time: hasTimeOverride && defaultStartTime ? defaultStartTime : formatTimeLocal(startDate),
         duration_minutes: appointment.duration_minutes,
         appointment_type: appointment.appointment_type,
         booking_type_id: appointment.booking_type_id || '',

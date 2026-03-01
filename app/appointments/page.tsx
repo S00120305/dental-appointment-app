@@ -123,12 +123,17 @@ export default function AppointmentsPage() {
   const [detailPanelOpen, setDetailPanelOpen] = useState(false)
   const [detailAppointment, setDetailAppointment] = useState<AppointmentWithRelations | null>(null)
 
-  // Calendar Select Mode (次回予約 → カレンダー選択)
+  // Calendar Select Mode (次回予約 → カレンダー選択 / 予約変更 → カレンダー日時変更)
   const [calendarSelectMode, setCalendarSelectMode] = useState<{
     patientId: string
     patientName: string
     staffId?: string
+    mode: 'new' | 'edit'
+    appointmentId?: string
   } | null>(null)
+
+  // 空き枠検索の編集モード用
+  const [slotSearchEditAppointmentId, setSlotSearchEditAppointmentId] = useState<string | null>(null)
 
   // Unit filter (mobile)
   const [filteredUnit, setFilteredUnit] = useState<number | null>(null)
@@ -263,16 +268,34 @@ export default function AppointmentsPage() {
 
     // Calendar select mode: skip SlotActionMenu, open AppointmentModal directly
     if (calendarSelectMode) {
-      setSelectedAppointment(null)
-      setDefaultModalDate(dateStr)
-      setDefaultModalTime(timeStr)
-      setDefaultModalUnit(unit)
-      setDefaultModalDuration(undefined)
-      setDefaultModalPatientId(calendarSelectMode.patientId)
-      setDefaultModalBookingTypeId(undefined)
-      setDefaultModalStaffId(calendarSelectMode.staffId)
-      setCalendarSelectMode(null)
-      setModalOpen(true)
+      if (calendarSelectMode.mode === 'edit' && calendarSelectMode.appointmentId) {
+        // 予約変更 → カレンダーで日時変更: 既存予約を編集モーダルで開き日時をオーバーライド
+        const existingAppt = appointments.find(a => a.id === calendarSelectMode.appointmentId)
+        if (existingAppt) {
+          setSelectedAppointment(existingAppt)
+          setDefaultModalDate(dateStr)
+          setDefaultModalTime(timeStr)
+          setDefaultModalUnit(unit)
+          setDefaultModalDuration(undefined)
+          setDefaultModalPatientId(undefined)
+          setDefaultModalBookingTypeId(undefined)
+          setDefaultModalStaffId(undefined)
+          setCalendarSelectMode(null)
+          setModalOpen(true)
+        }
+      } else {
+        // 次回予約 → カレンダーで選択: 新規予約
+        setSelectedAppointment(null)
+        setDefaultModalDate(dateStr)
+        setDefaultModalTime(timeStr)
+        setDefaultModalUnit(unit)
+        setDefaultModalDuration(undefined)
+        setDefaultModalPatientId(calendarSelectMode.patientId)
+        setDefaultModalBookingTypeId(undefined)
+        setDefaultModalStaffId(calendarSelectMode.staffId)
+        setCalendarSelectMode(null)
+        setModalOpen(true)
+      }
       return
     }
 
@@ -297,7 +320,7 @@ export default function AppointmentsPage() {
       endTime: endTimeStr,
       unit,
     })
-  }, [calendarSelectMode])
+  }, [calendarSelectMode, appointments])
 
   const handleSlotActionAppointment = useCallback(() => {
     setSelectedAppointment(null)
@@ -328,10 +351,17 @@ export default function AppointmentsPage() {
     }
   }, [appointments])
 
-  // Detail panel → edit modal
+  // Detail panel → edit modal (内容を編集: 日時オーバーライドなし)
   const handleDetailEditClick = useCallback(() => {
     if (detailAppointment) {
       setSelectedAppointment(detailAppointment)
+      setDefaultModalDate('')
+      setDefaultModalTime('')
+      setDefaultModalUnit(1)
+      setDefaultModalDuration(undefined)
+      setDefaultModalPatientId(undefined)
+      setDefaultModalBookingTypeId(undefined)
+      setDefaultModalStaffId(undefined)
       setModalOpen(true)
     }
   }, [detailAppointment])
@@ -339,15 +369,32 @@ export default function AppointmentsPage() {
   // Detail panel → new appointment via available slot search
   const handleDetailNewAppointment = useCallback((patientId: string, patientName: string, lastStaffId?: string) => {
     setCalendarSelectMode(null)
+    setSlotSearchEditAppointmentId(null)
     setSlotSearchPatientId(patientId)
     setSlotSearchPatientName(patientName)
     setDefaultModalStaffId(lastStaffId)
     setSlotSearchOpen(true)
   }, [])
 
-  // Detail panel → calendar select mode
+  // Detail panel → calendar select mode (new)
   const handleDetailCalendarSelect = useCallback((patientId: string, patientName: string, lastStaffId?: string) => {
-    setCalendarSelectMode({ patientId, patientName, staffId: lastStaffId })
+    setCalendarSelectMode({ patientId, patientName, staffId: lastStaffId, mode: 'new' })
+    setActiveView('calendar')
+  }, [])
+
+  // Detail panel → 予約変更 → 空き枠検索
+  const handleDetailEditSlotSearch = useCallback((appointmentId: string, patientId: string, patientName: string, lastStaffId?: string) => {
+    setSlotSearchEditAppointmentId(appointmentId)
+    setCalendarSelectMode(null)
+    setSlotSearchPatientId(patientId)
+    setSlotSearchPatientName(patientName)
+    setDefaultModalStaffId(lastStaffId)
+    setSlotSearchOpen(true)
+  }, [])
+
+  // Detail panel → 予約変更 → カレンダーで日時変更
+  const handleDetailEditCalendarSelect = useCallback((appointmentId: string, patientId: string, patientName: string, lastStaffId?: string) => {
+    setCalendarSelectMode({ patientId, patientName, staffId: lastStaffId, mode: 'edit', appointmentId })
     setActiveView('calendar')
   }, [])
 
@@ -431,19 +478,40 @@ export default function AppointmentsPage() {
   ) {
     const startDate = new Date(slot.start_time)
     const timeStr = `${String(startDate.getHours()).padStart(2, '0')}:${String(startDate.getMinutes()).padStart(2, '0')}`
-    setSelectedAppointment(null)
-    setDefaultModalDate(slot.date)
-    setDefaultModalTime(timeStr)
-    setDefaultModalUnit(slot.unit_number)
-    setDefaultModalDuration(durationMinutes)
-    setDefaultModalPatientId(patientId)
-    setDefaultModalBookingTypeId(bookingTypeId)
-    setSlotSearchOpen(false)
-    setModalOpen(true)
+
+    if (slotSearchEditAppointmentId) {
+      // 予約変更 → 空き枠検索: 既存予約を編集モーダルで開き日時をオーバーライド
+      const existingAppt = appointments.find(a => a.id === slotSearchEditAppointmentId)
+      if (existingAppt) {
+        setSelectedAppointment(existingAppt)
+        setDefaultModalDate(slot.date)
+        setDefaultModalTime(timeStr)
+        setDefaultModalUnit(slot.unit_number)
+        setDefaultModalDuration(undefined)
+        setDefaultModalPatientId(undefined)
+        setDefaultModalBookingTypeId(undefined)
+        setDefaultModalStaffId(undefined)
+        setSlotSearchEditAppointmentId(null)
+        setSlotSearchOpen(false)
+        setModalOpen(true)
+      }
+    } else {
+      // 通常: 新規予約
+      setSelectedAppointment(null)
+      setDefaultModalDate(slot.date)
+      setDefaultModalTime(timeStr)
+      setDefaultModalUnit(slot.unit_number)
+      setDefaultModalDuration(durationMinutes)
+      setDefaultModalPatientId(patientId)
+      setDefaultModalBookingTypeId(bookingTypeId)
+      setSlotSearchOpen(false)
+      setModalOpen(true)
+    }
   }
 
   function handleNewAppointment() {
     setCalendarSelectMode(null)
+    setSlotSearchEditAppointmentId(null)
     setSelectedAppointment(null)
     setDefaultModalDate(selectedDate)
     setDefaultModalTime('')
@@ -648,7 +716,10 @@ export default function AppointmentsPage() {
                   <div className="sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-emerald-200 bg-emerald-50 px-4 py-2">
                     <span className="text-sm font-medium text-emerald-800">
                       <span className="mr-1.5">&#x1F5B1;</span>
-                      <span className="font-bold">{calendarSelectMode.patientName}</span> の予約 ─ カレンダー上で予約枠をクリック
+                      <span className="font-bold">{calendarSelectMode.patientName}</span>
+                      {calendarSelectMode.mode === 'edit'
+                        ? ' の予約変更 ─ 新しい日時をカレンダーで選択'
+                        : ' の予約 ─ カレンダー上で予約枠をクリック'}
                     </span>
                     <button
                       onClick={() => setCalendarSelectMode(null)}
@@ -683,7 +754,7 @@ export default function AppointmentsPage() {
 
       {/* 空き枠検索フローティングボタン */}
       <button
-        onClick={() => { setCalendarSelectMode(null); setSlotSearchOpen(true) }}
+        onClick={() => { setCalendarSelectMode(null); setSlotSearchEditAppointmentId(null); setSlotSearchOpen(true) }}
         className="fixed bottom-20 right-4 z-30 flex min-h-[48px] items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg hover:bg-emerald-700 active:bg-emerald-800 safe-area-bottom"
       >
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -699,6 +770,7 @@ export default function AppointmentsPage() {
           setSlotSearchOpen(false)
           setSlotSearchPatientId(undefined)
           setSlotSearchPatientName(undefined)
+          setSlotSearchEditAppointmentId(null)
         }}
         onSelectSlot={handleAvailableSlotSelect}
         visibleUnits={visibleUnits}
@@ -747,6 +819,8 @@ export default function AppointmentsPage() {
           onEditClick={handleDetailEditClick}
           onNewAppointment={handleDetailNewAppointment}
           onCalendarSelect={handleDetailCalendarSelect}
+          onEditSlotSearch={handleDetailEditSlotSearch}
+          onEditCalendarSelect={handleDetailEditCalendarSelect}
           onJumpToDate={handleJumpToDate}
         />
       )}
