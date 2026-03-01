@@ -61,6 +61,7 @@ type Props = {
   onStatusChange: (id: string, newStatus: AppointmentStatus) => Promise<void>
   onEditClick: () => void
   onNewAppointment: (patientId: string, patientName: string, lastStaffId?: string) => void
+  onCalendarSelect: (patientId: string, patientName: string, lastStaffId?: string) => void
   onJumpToDate: (date: string) => void
 }
 
@@ -87,6 +88,7 @@ export default function PatientDetailPanel({
   onStatusChange,
   onEditClick,
   onNewAppointment,
+  onCalendarSelect,
   onJumpToDate,
 }: Props) {
   const [patient, setPatient] = useState<PatientInfo | null>(null)
@@ -471,18 +473,32 @@ export default function PatientDetailPanel({
 
               {/* Action Buttons — single row */}
               <div className="flex gap-1.5">
-                <button
-                  onClick={() => {
-                    const completedPast = pastAppointments.find(a => a.status === 'completed' && a.staff?.id)
-                    const lastStaffId = completedPast?.staff?.id || appointment.staff_id || undefined
-                    const pName = patient ? formatPatientName(patient.last_name, patient.first_name) : appointment.patient ? formatPatientName(appointment.patient.last_name, appointment.patient.first_name) : ''
-                    onNewAppointment(patientId, pName, lastStaffId)
-                    onClose()
-                  }}
-                  className="flex-1 min-h-[40px] rounded-md border border-emerald-300 bg-white px-2 text-sm font-medium text-emerald-600 hover:bg-emerald-50"
-                >
-                  次回予約
-                </button>
+                <div className="flex flex-1 min-w-0">
+                  <button
+                    onClick={() => {
+                      const completedPast = pastAppointments.find(a => a.status === 'completed' && a.staff?.id)
+                      const lastStaffId = completedPast?.staff?.id || appointment.staff_id || undefined
+                      const pName = patient ? formatPatientName(patient.last_name, patient.first_name) : appointment.patient ? formatPatientName(appointment.patient.last_name, appointment.patient.first_name) : ''
+                      onNewAppointment(patientId, pName, lastStaffId)
+                      onClose()
+                    }}
+                    className="flex-1 min-h-[40px] rounded-l-md border border-emerald-300 bg-white px-2 text-sm font-medium text-emerald-600 hover:bg-emerald-50"
+                  >
+                    空き枠検索
+                  </button>
+                  <button
+                    onClick={() => {
+                      const completedPast = pastAppointments.find(a => a.status === 'completed' && a.staff?.id)
+                      const lastStaffId = completedPast?.staff?.id || appointment.staff_id || undefined
+                      const pName = patient ? formatPatientName(patient.last_name, patient.first_name) : appointment.patient ? formatPatientName(appointment.patient.last_name, appointment.patient.first_name) : ''
+                      onCalendarSelect(patientId, pName, lastStaffId)
+                      onClose()
+                    }}
+                    className="flex-1 min-h-[40px] rounded-r-md border border-l-0 border-emerald-300 bg-white px-2 text-sm font-medium text-emerald-600 hover:bg-emerald-50"
+                  >
+                    カレンダー選択
+                  </button>
+                </div>
                 <button
                   onClick={() => {
                     onEditClick()

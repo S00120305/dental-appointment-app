@@ -123,6 +123,13 @@ export default function AppointmentsPage() {
   const [detailPanelOpen, setDetailPanelOpen] = useState(false)
   const [detailAppointment, setDetailAppointment] = useState<AppointmentWithRelations | null>(null)
 
+  // Calendar Select Mode (次回予約 → カレンダー選択)
+  const [calendarSelectMode, setCalendarSelectMode] = useState<{
+    patientId: string
+    patientName: string
+    staffId?: string
+  } | null>(null)
+
   // Unit filter (mobile)
   const [filteredUnit, setFilteredUnit] = useState<number | null>(null)
 
@@ -138,6 +145,16 @@ export default function AppointmentsPage() {
       }
     }
   }, [appointments, detailAppointment])
+
+  // Escape key to cancel calendar select mode
+  useEffect(() => {
+    if (!calendarSelectMode) return
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setCalendarSelectMode(null)
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [calendarSelectMode])
 
   // Resources
   const resources: CalendarResource[] = useMemo(() => {
@@ -244,6 +261,21 @@ export default function AppointmentsPage() {
     const endTimeStr = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`
     const unit = parseInt(resourceId) || 1
 
+    // Calendar select mode: skip SlotActionMenu, open AppointmentModal directly
+    if (calendarSelectMode) {
+      setSelectedAppointment(null)
+      setDefaultModalDate(dateStr)
+      setDefaultModalTime(timeStr)
+      setDefaultModalUnit(unit)
+      setDefaultModalDuration(undefined)
+      setDefaultModalPatientId(calendarSelectMode.patientId)
+      setDefaultModalBookingTypeId(undefined)
+      setDefaultModalStaffId(calendarSelectMode.staffId)
+      setCalendarSelectMode(null)
+      setModalOpen(true)
+      return
+    }
+
     const lastEvent = window.event as MouseEvent | TouchEvent | null
     let x = window.innerWidth / 2
     let y = window.innerHeight / 3
@@ -265,7 +297,7 @@ export default function AppointmentsPage() {
       endTime: endTimeStr,
       unit,
     })
-  }, [])
+  }, [calendarSelectMode])
 
   const handleSlotActionAppointment = useCallback(() => {
     setSelectedAppointment(null)
@@ -306,10 +338,17 @@ export default function AppointmentsPage() {
 
   // Detail panel → new appointment via available slot search
   const handleDetailNewAppointment = useCallback((patientId: string, patientName: string, lastStaffId?: string) => {
+    setCalendarSelectMode(null)
     setSlotSearchPatientId(patientId)
     setSlotSearchPatientName(patientName)
     setDefaultModalStaffId(lastStaffId)
     setSlotSearchOpen(true)
+  }, [])
+
+  // Detail panel → calendar select mode
+  const handleDetailCalendarSelect = useCallback((patientId: string, patientName: string, lastStaffId?: string) => {
+    setCalendarSelectMode({ patientId, patientName, staffId: lastStaffId })
+    setActiveView('calendar')
   }, [])
 
   // Detail panel → jump to date
@@ -404,6 +443,7 @@ export default function AppointmentsPage() {
   }
 
   function handleNewAppointment() {
+    setCalendarSelectMode(null)
     setSelectedAppointment(null)
     setDefaultModalDate(selectedDate)
     setDefaultModalTime('')
@@ -604,6 +644,20 @@ export default function AppointmentsPage() {
                     <div className="text-gray-400">読み込み中...</div>
                   </div>
                 )}
+                {calendarSelectMode && (
+                  <div className="sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-emerald-200 bg-emerald-50 px-4 py-2">
+                    <span className="text-sm font-medium text-emerald-800">
+                      <span className="mr-1.5">&#x1F5B1;</span>
+                      <span className="font-bold">{calendarSelectMode.patientName}</span> の予約 ─ カレンダー上で予約枠をクリック
+                    </span>
+                    <button
+                      onClick={() => setCalendarSelectMode(null)}
+                      className="min-h-[44px] rounded-md border border-emerald-300 bg-white px-3 text-sm font-medium text-emerald-700 hover:bg-emerald-100"
+                    >
+                      キャンセル
+                    </button>
+                  </div>
+                )}
                 <CalendarView
                   appointments={appointments}
                   blockedSlots={blockedSlots}
@@ -629,7 +683,7 @@ export default function AppointmentsPage() {
 
       {/* 空き枠検索フローティングボタン */}
       <button
-        onClick={() => setSlotSearchOpen(true)}
+        onClick={() => { setCalendarSelectMode(null); setSlotSearchOpen(true) }}
         className="fixed bottom-20 right-4 z-30 flex min-h-[48px] items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg hover:bg-emerald-700 active:bg-emerald-800 safe-area-bottom"
       >
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -692,6 +746,7 @@ export default function AppointmentsPage() {
           onStatusChange={updateStatus}
           onEditClick={handleDetailEditClick}
           onNewAppointment={handleDetailNewAppointment}
+          onCalendarSelect={handleDetailCalendarSelect}
           onJumpToDate={handleJumpToDate}
         />
       )}
