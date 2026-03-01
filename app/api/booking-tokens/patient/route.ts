@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
+import { toPatientDisplayName, toPatientStaffName } from '@/lib/utils/patient-display'
 
 // GET: 患者のトークン一覧（公開API、診察券番号+電話番号で認証）
 export async function GET(request: NextRequest) {
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
       .from('booking_tokens')
       .select(`
         id, token, duration_minutes, status, expires_at,
-        booking_type:booking_types!booking_type_id(id, display_name),
+        booking_type:booking_types!booking_type_id(id, display_name, category, is_web_bookable),
         staff:users!staff_id(id, name)
       `)
       .eq('patient_id', patient.id)
@@ -71,16 +72,16 @@ export async function GET(request: NextRequest) {
       patient_name: patient.name,
       tokens: (tokens || []).map(t => {
         const bt = t.booking_type && !Array.isArray(t.booking_type)
-          ? (t.booking_type as { id: string; display_name: string })
+          ? (t.booking_type as { id: string; display_name: string; category: string | null; is_web_bookable: boolean })
           : null
         const staff = t.staff && !Array.isArray(t.staff)
           ? (t.staff as { id: string; name: string })
           : null
         return {
           token: t.token,
-          booking_type_name: bt?.display_name || '',
+          booking_type_name: bt ? toPatientDisplayName(bt.display_name, bt.category, bt.is_web_bookable) : '',
           duration_minutes: t.duration_minutes,
-          staff_name: staff?.name || null,
+          staff_name: staff ? toPatientStaffName(staff.name) : null,
           expires_at: t.expires_at,
         }
       }),

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
+import { toPatientDisplayName, toPatientStaffName } from '@/lib/utils/patient-display'
 
 // GET: トークン情報取得（公開API）
 export async function GET(
@@ -26,7 +27,7 @@ export async function GET(
         id, token, patient_id, booking_type_id, duration_minutes,
         staff_id, unit_number, status, expires_at, used_at, appointment_id,
         patient:patients!patient_id(id, name),
-        booking_type:booking_types!booking_type_id(id, display_name, internal_name, duration_minutes, is_active),
+        booking_type:booking_types!booking_type_id(id, display_name, internal_name, duration_minutes, is_active, category, is_web_bookable),
         staff:users!staff_id(id, name)
       `)
       .eq('token', token)
@@ -69,7 +70,7 @@ export async function GET(
 
     // 予約種別情報
     const bookingType = data.booking_type && !Array.isArray(data.booking_type)
-      ? (data.booking_type as { id: string; display_name: string; internal_name: string; duration_minutes: number; is_active: boolean })
+      ? (data.booking_type as { id: string; display_name: string; internal_name: string; duration_minutes: number; is_active: boolean; category: string | null; is_web_bookable: boolean })
       : null
 
     // スタッフ情報
@@ -77,14 +78,20 @@ export async function GET(
       ? (data.staff as { id: string; name: string })
       : null
 
+    // 患者向け表示名に変換
+    const patientDisplayName = bookingType
+      ? toPatientDisplayName(bookingType.display_name, bookingType.category, bookingType.is_web_bookable)
+      : ''
+    const patientStaffName = staff ? toPatientStaffName(staff.name) : null
+
     return NextResponse.json({
       token: data.token,
       patient_name: patient?.name || '',
       booking_type_id: data.booking_type_id,
-      booking_type_name: bookingType?.display_name || '',
+      booking_type_name: patientDisplayName,
       duration_minutes: data.duration_minutes,
       staff_id: data.staff_id,
-      staff_name: staff?.name || null,
+      staff_name: patientStaffName,
       unit_number: data.unit_number,
       expires_at: data.expires_at,
     })

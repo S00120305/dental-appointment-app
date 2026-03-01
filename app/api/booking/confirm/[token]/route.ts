@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
+import { toPatientDisplayName } from '@/lib/utils/patient-display'
 
 // GET: 予約確認情報取得（公開API）
 export async function GET(
@@ -30,7 +31,7 @@ export async function GET(
       .select(`
         id, start_time, duration_minutes, status, booking_source, booking_type_id,
         patient:patients!patient_id(name),
-        booking_type:booking_types!left(display_name, duration_minutes)
+        booking_type:booking_types!left(display_name, duration_minutes, category, is_web_bookable)
       `)
       .eq('booking_token', token)
       .eq('is_deleted', false)
@@ -46,8 +47,13 @@ export async function GET(
       : null
     // 予約種別
     const bookingType = data.booking_type && !Array.isArray(data.booking_type)
-      ? (data.booking_type as { display_name: string; duration_minutes: number })
+      ? (data.booking_type as { display_name: string; duration_minutes: number; category: string | null; is_web_bookable: boolean })
       : null
+
+    // 患者向け表示名に変換
+    const patientDisplayName = bookingType
+      ? toPatientDisplayName(bookingType.display_name, bookingType.category, bookingType.is_web_bookable)
+      : ''
 
     return NextResponse.json({
       appointment: {
@@ -55,7 +61,7 @@ export async function GET(
         duration_minutes: data.duration_minutes,
         status: data.status,
         patient_name: patient?.name || '',
-        booking_type_name: bookingType?.display_name || '',
+        booking_type_name: patientDisplayName,
         booking_type_id: data.booking_type_id || '',
       },
     })

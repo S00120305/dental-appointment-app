@@ -191,7 +191,7 @@ export default function BookingConfirmPage({
                 style={{ borderColor: '#E8E0D0' }}
               />
               <div className="flex justify-between">
-                <span>予約種別</span>
+                <span>ご予約内容</span>
                 <span style={{ color: '#333333' }}>
                   {appointment.booking_type_name}
                 </span>

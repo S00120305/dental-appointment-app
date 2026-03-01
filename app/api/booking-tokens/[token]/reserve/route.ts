@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import { sendNotification } from '@/lib/notifications'
+import { toPatientDisplayName } from '@/lib/utils/patient-display'
 
 // POST: トークン予約確定（公開API）
 export async function POST(
@@ -38,7 +39,7 @@ export async function POST(
         id, token, patient_id, booking_type_id, duration_minutes,
         staff_id, unit_number, status, expires_at,
         patient:patients!patient_id(id, name, email, line_user_id, preferred_notification),
-        booking_type:booking_types!booking_type_id(id, display_name, duration_minutes)
+        booking_type:booking_types!booking_type_id(id, display_name, duration_minutes, category, is_web_bookable)
       `)
       .eq('token', token)
       .single()
@@ -79,7 +80,7 @@ export async function POST(
 
     // Phase 3: unit_type フィルタ
     const btForType = tokenData.booking_type && !Array.isArray(tokenData.booking_type)
-      ? (tokenData.booking_type as { id: string; display_name: string; duration_minutes: number })
+      ? (tokenData.booking_type as { id: string; display_name: string; duration_minutes: number; category: string | null; is_web_bookable: boolean })
       : null
     if (btForType) {
       const { data: btTypeData } = await supabase
@@ -186,7 +187,7 @@ export async function POST(
     // 予約作成（即時確定）
     const bookingToken = crypto.randomUUID()
     const bookingType = tokenData.booking_type && !Array.isArray(tokenData.booking_type)
-      ? (tokenData.booking_type as { id: string; display_name: string; duration_minutes: number })
+      ? (tokenData.booking_type as { id: string; display_name: string; duration_minutes: number; category: string | null; is_web_bookable: boolean })
       : null
 
     const { data: appointment, error: appointmentError } = await supabase
@@ -238,14 +239,16 @@ export async function POST(
 
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://appo.oralcare-kanazawa.clinic'
         const confirmUrl = `${appUrl}/booking/confirm/${bookingToken}`
-        const displayName = bookingType?.display_name || ''
+        const patientDisplayName = bookingType
+          ? toPatientDisplayName(bookingType.display_name, bookingType.category, bookingType.is_web_bookable)
+          : '診療'
         const dateFormatted = formatDateJP(date)
 
         let message: string
         if (patient.preferred_notification === 'line' && patient.line_user_id) {
-          message = `🦷 金澤オーラルケアクリニック\n\nご予約ありがとうございます。\n\n📅 ${dateFormatted} ${time}〜\n📋 ${displayName}（${durationMinutes}分）\n\n▼ 予約の確認\n${confirmUrl}\n\n※変更・キャンセルは前日18:00まで`
+          message = `🦷 金澤オーラルケアクリニック\n\nご予約ありがとうございます。\n\n📅 ${dateFormatted} ${time}〜\n📋 ${patientDisplayName}（${durationMinutes}分）\n\n▼ 予約の確認\n${confirmUrl}\n\n※変更・キャンセルは前日18:00まで`
         } else {
-          message = `${patient.name}様\n\nご予約ありがとうございます。\n\n■ ご予約内容\n日時: ${dateFormatted} ${time}〜\n内容: ${displayName}（${durationMinutes}分）\n\n■ 予約の確認・変更\n${confirmUrl}\n\n※ 変更・キャンセルは前日18:00まで${clinicPhone ? `\n※ お電話: ${clinicPhone}` : ''}\n\n金澤オーラルケアクリニック\n〒921-8148 石川県金沢市額新保2-272番地`
+          message = `${patient.name}様\n\nご予約ありがとうございます。\n\n■ ご予約内容\n日時: ${dateFormatted} ${time}〜\n内容: ${patientDisplayName}（${durationMinutes}分）\n\n■ 予約の確認・変更\n${confirmUrl}\n\n※ 変更・キャンセルは前日18:00まで${clinicPhone ? `\n※ お電話: ${clinicPhone}` : ''}\n\n金澤オーラルケアクリニック\n〒921-8148 石川県金沢市額新保2-272番地`
         }
 
         await sendNotification(

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { getSessionUser, recordLog } from '@/lib/log'
 import { sendNotification } from '@/lib/notifications'
+import { toPatientDisplayName } from '@/lib/utils/patient-display'
 
 // POST: トークン作成（認証必須）
 export async function POST(request: NextRequest) {
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
     // 予約種別の存在確認
     const { data: bookingType, error: typeError } = await supabase
       .from('booking_types')
-      .select('id, display_name, is_active')
+      .select('id, display_name, is_active, category, is_web_bookable')
       .eq('id', booking_type_id)
       .single()
 
@@ -131,10 +132,12 @@ export async function POST(request: NextRequest) {
         let message: string
         const preferredChannel = send_method === 'line' ? 'line' : 'email'
 
+        const patientDisplayName = toPatientDisplayName(bookingType.display_name, bookingType.category, bookingType.is_web_bookable)
+
         if (preferredChannel === 'line') {
-          message = `🦷 金澤オーラルケアクリニック\n\n次回のご予約のご案内です。\n\n📋 ${bookingType.display_name}（${duration_minutes}分）\n📆 有効期限: ${expiresFormatted}まで\n\n▼ ご都合のよい日時をお選びください\n${tokenUrl}\n\n※ ご不明な点はお電話ください${clinicPhone ? `\n${clinicPhone}` : ''}`
+          message = `🦷 金澤オーラルケアクリニック\n\n次回のご予約のご案内です。\n\n📋 ${patientDisplayName}（${duration_minutes}分）\n📆 有効期限: ${expiresFormatted}まで\n\n▼ ご都合のよい日時をお選びください\n${tokenUrl}\n\n※ ご不明な点はお電話ください${clinicPhone ? `\n${clinicPhone}` : ''}`
         } else {
-          message = `${patient.name}様\n\n次回のご予約のご案内です。\n下記リンクからご都合のよい日時をお選びください。\n\n■ 予約内容\n内容: ${bookingType.display_name}（${duration_minutes}分）\n有効期限: ${expiresFormatted}まで\n\n■ ご予約はこちら\n${tokenUrl}\n\n金澤オーラルケアクリニック\n〒921-8148 石川県金沢市額新保2-272番地${clinicPhone ? `\nTEL: ${clinicPhone}` : ''}`
+          message = `${patient.name}様\n\n次回のご予約のご案内です。\n下記リンクからご都合のよい日時をお選びください。\n\n■ 予約内容\n内容: ${patientDisplayName}（${duration_minutes}分）\n有効期限: ${expiresFormatted}まで\n\n■ ご予約はこちら\n${tokenUrl}\n\n金澤オーラルケアクリニック\n〒921-8148 石川県金沢市額新保2-272番地${clinicPhone ? `\nTEL: ${clinicPhone}` : ''}`
         }
 
         sendResult = await sendNotification(

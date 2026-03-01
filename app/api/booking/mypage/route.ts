@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
+import { toPatientDisplayName } from '@/lib/utils/patient-display'
 
 // POST: マイページ認証（診察券番号＋電話番号）
 export async function POST(request: NextRequest) {
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
       .from('appointments')
       .select(`
         id, start_time, duration_minutes, status, appointment_type, booking_token,
-        booking_type:booking_types!left(display_name)
+        booking_type:booking_types!left(display_name, category, is_web_bookable)
       `)
       .eq('patient_id', patient.id)
       .eq('is_deleted', false)
@@ -62,7 +63,8 @@ export async function POST(request: NextRequest) {
     // 過去の予約（直近5件、completed のみ）
     const { data: pastAppointments } = await supabase
       .from('appointments')
-      .select('id, start_time, duration_minutes, status, appointment_type')
+      .select(`id, start_time, duration_minutes, status, appointment_type,
+        booking_type:booking_types!left(display_name, category, is_web_bookable)`)
       .eq('patient_id', patient.id)
       .eq('is_deleted', false)
       .eq('status', 'completed')
@@ -75,7 +77,7 @@ export async function POST(request: NextRequest) {
       .from('booking_tokens')
       .select(`
         token, duration_minutes, expires_at,
-        booking_type:booking_types!left(display_name)
+        booking_type:booking_types!left(display_name, category, is_web_bookable)
       `)
       .eq('patient_id', patient.id)
       .eq('status', 'unused')
@@ -114,14 +116,17 @@ export async function POST(request: NextRequest) {
     // レスポンス構築
     const upcoming = (upcomingAppointments || []).map(a => {
       const bt = a.booking_type && !Array.isArray(a.booking_type)
-        ? (a.booking_type as { display_name: string })
+        ? (a.booking_type as { display_name: string; category: string | null; is_web_bookable: boolean })
         : null
+      const displayName = bt
+        ? toPatientDisplayName(bt.display_name, bt.category, bt.is_web_bookable)
+        : a.appointment_type
       return {
         id: a.id,
         start_time: a.start_time,
         duration_minutes: a.duration_minutes,
         status: a.status,
-        appointment_type: bt?.display_name || a.appointment_type,
+        appointment_type: displayName,
         booking_token: a.booking_token || tokenMap.get(a.id) || null,
         can_change: isWithinDeadline(a.start_time, cancelDeadlineTime),
       }
@@ -129,22 +134,30 @@ export async function POST(request: NextRequest) {
 
     const tokens = (unusedTokens || []).map(t => {
       const bt = t.booking_type && !Array.isArray(t.booking_type)
-        ? (t.booking_type as { display_name: string })
+        ? (t.booking_type as { display_name: string; category: string | null; is_web_bookable: boolean })
         : null
       return {
         token: t.token,
-        booking_type_name: bt?.display_name || '',
+        booking_type_name: bt ? toPatientDisplayName(bt.display_name, bt.category, bt.is_web_bookable) : '',
         duration_minutes: t.duration_minutes,
         expires_at: t.expires_at,
       }
     })
 
-    const past = (pastAppointments || []).map(a => ({
-      id: a.id,
-      start_time: a.start_time,
-      duration_minutes: a.duration_minutes,
-      appointment_type: a.appointment_type,
-    }))
+    const past = (pastAppointments || []).map(a => {
+      const bt = a.booking_type && !Array.isArray(a.booking_type)
+        ? (a.booking_type as { display_name: string; category: string | null; is_web_bookable: boolean })
+        : null
+      const displayName = bt
+        ? toPatientDisplayName(bt.display_name, bt.category, bt.is_web_bookable)
+        : a.appointment_type
+      return {
+        id: a.id,
+        start_time: a.start_time,
+        duration_minutes: a.duration_minutes,
+        appointment_type: displayName,
+      }
+    })
 
     return NextResponse.json({
       patient: { name: patient.name },
