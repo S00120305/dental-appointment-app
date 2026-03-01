@@ -162,6 +162,8 @@ export default function PatientDetailPanel({
       if (e.key === 'Escape') onClose()
     }
     function handleClickOutside(e: MouseEvent | TouchEvent) {
+      // TokenCreateModal が開いている時はパネルを閉じない
+      if (tokenModalOpen) return
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
         onClose()
       }
@@ -178,7 +180,7 @@ export default function PatientDetailPanel({
       document.removeEventListener('touchstart', handleClickOutside)
       clearTimeout(timer)
     }
-  }, [isOpen, onClose])
+  }, [isOpen, onClose, tokenModalOpen])
 
   // Status change handler
   async function handleStatusChange(newStatus: AppointmentStatus) {
