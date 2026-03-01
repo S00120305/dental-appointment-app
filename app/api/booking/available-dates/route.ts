@@ -50,7 +50,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'この予約種別はWeb予約できません' }, { status: 400 })
     }
 
-    const durationMinutes = bookingType.duration_minutes
+    // duration パラメータがあればそちらを優先（トークン予約で所要時間変更時）
+    const durationParam = searchParams.get('duration')
+    const durationMinutes = (durationParam && parseInt(durationParam) >= 10) ? parseInt(durationParam) : bookingType.duration_minutes
     const btUnitType: string = bookingType.unit_type || 'any'
 
     // 設定取得

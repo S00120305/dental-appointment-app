@@ -85,7 +85,7 @@ export default function TokenBookingPage({ params }: { params: Promise<{ token: 
   useEffect(() => {
     if (!tokenInfo) return
     setDatesLoading(true)
-    fetch(`/api/booking/available-dates?type_id=${tokenInfo.booking_type_id}&month=${currentMonth}&source=token`)
+    fetch(`/api/booking/available-dates?type_id=${tokenInfo.booking_type_id}&month=${currentMonth}&source=token&duration=${tokenInfo.duration_minutes}`)
       .then(res => res.json())
       .then(data => {
         setDates(data.dates || [])
@@ -99,7 +99,7 @@ export default function TokenBookingPage({ params }: { params: Promise<{ token: 
     if (!tokenInfo || !selectedDate) return
     setSlotsLoading(true)
     setSelectedTime(null)
-    fetch(`/api/booking/available-slots?type_id=${tokenInfo.booking_type_id}&date=${selectedDate}&source=token`)
+    fetch(`/api/booking/available-slots?type_id=${tokenInfo.booking_type_id}&date=${selectedDate}&source=token&duration=${tokenInfo.duration_minutes}`)
       .then(res => res.json())
       .then(data => {
         setSlots(data.slots || [])
