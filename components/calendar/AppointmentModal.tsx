@@ -29,6 +29,7 @@ type AppointmentModalProps = {
   defaultDuration?: number // minutes
   defaultPatientId?: string
   defaultBookingTypeId?: string
+  defaultStaffId?: string
   isHoliday?: (dateStr: string) => boolean
   getHolidayLabel?: (dateStr: string) => string | null
   getStaffHolidayMap?: (dateStr: string) => Record<string, StaffHolidayInfo>
@@ -90,6 +91,7 @@ export default function AppointmentModal({
   defaultDuration,
   defaultPatientId,
   defaultBookingTypeId,
+  defaultStaffId,
   isHoliday,
   getHolidayLabel,
   getStaffHolidayMap,
@@ -192,7 +194,7 @@ export default function AppointmentModal({
       setForm({
         patient_id: '',
         unit_number: defaultUnitNumber || 1,
-        staff_id: '',
+        staff_id: defaultStaffId || '',
         date: today,
         time: defaultStartTime || '09:00',
         duration_minutes: defaultDuration || 30,
@@ -208,7 +210,7 @@ export default function AppointmentModal({
       setSlideEnabled(false)
       setUseCustomType(false)
     }
-  }, [isOpen, appointment, defaultDate, defaultUnitNumber, defaultStartTime, defaultDuration])
+  }, [isOpen, appointment, defaultDate, defaultUnitNumber, defaultStartTime, defaultDuration, defaultStaffId])
 
   // Set default booking type when types are loaded
   useEffect(() => {
@@ -230,11 +232,11 @@ export default function AppointmentModal({
     if (selectedPatient?.id === defaultPatientId) return
     async function loadPatient() {
       try {
-        const res = await fetch(`/api/patients?search=${encodeURIComponent(defaultPatientId!)}`)
+        const res = await fetch(`/api/patients/${defaultPatientId}/detail`)
         const data = await res.json()
-        if (res.ok && data.patients?.length > 0) {
-          const p = data.patients[0]
-          setSelectedPatient(p)
+        if (res.ok && data.patient) {
+          const p = data.patient
+          setSelectedPatient({ id: p.id, chart_number: p.chart_number, name: p.name, name_kana: p.name_kana })
           setForm(prev => ({ ...prev, patient_id: p.id }))
           setPatientQuery(`${p.chart_number} ${p.name}`)
         }

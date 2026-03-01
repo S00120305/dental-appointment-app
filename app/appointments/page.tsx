@@ -117,6 +117,7 @@ export default function AppointmentsPage() {
   const [slotSearchPatientName, setSlotSearchPatientName] = useState<string | undefined>()
   const [defaultModalPatientId, setDefaultModalPatientId] = useState<string | undefined>()
   const [defaultModalBookingTypeId, setDefaultModalBookingTypeId] = useState<string | undefined>()
+  const [defaultModalStaffId, setDefaultModalStaffId] = useState<string | undefined>()
 
   // Patient Detail Panel
   const [detailPanelOpen, setDetailPanelOpen] = useState(false)
@@ -274,6 +275,7 @@ export default function AppointmentsPage() {
     setDefaultModalDuration(undefined)
     setDefaultModalPatientId(undefined)
     setDefaultModalBookingTypeId(undefined)
+    setDefaultModalStaffId(undefined)
     setModalOpen(true)
   }, [slotActionMenu])
 
@@ -303,9 +305,10 @@ export default function AppointmentsPage() {
   }, [detailAppointment])
 
   // Detail panel → new appointment via available slot search
-  const handleDetailNewAppointment = useCallback((patientId: string, patientName: string) => {
+  const handleDetailNewAppointment = useCallback((patientId: string, patientName: string, lastStaffId?: string) => {
     setSlotSearchPatientId(patientId)
     setSlotSearchPatientName(patientName)
+    setDefaultModalStaffId(lastStaffId)
     setSlotSearchOpen(true)
   }, [])
 
@@ -408,6 +411,7 @@ export default function AppointmentsPage() {
     setDefaultModalDuration(undefined)
     setDefaultModalPatientId(undefined)
     setDefaultModalBookingTypeId(undefined)
+    setDefaultModalStaffId(undefined)
     setModalOpen(true)
   }
 
@@ -673,6 +677,7 @@ export default function AppointmentsPage() {
         defaultDuration={defaultModalDuration}
         defaultPatientId={defaultModalPatientId}
         defaultBookingTypeId={defaultModalBookingTypeId}
+        defaultStaffId={defaultModalStaffId}
         isHoliday={isHoliday}
         getHolidayLabel={getHolidayLabel}
         getStaffHolidayMap={getStaffHolidayMap}

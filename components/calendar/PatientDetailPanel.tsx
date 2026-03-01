@@ -57,7 +57,7 @@ type Props = {
   appointment: AppointmentWithRelations
   onStatusChange: (id: string, newStatus: AppointmentStatus) => Promise<void>
   onEditClick: () => void
-  onNewAppointment: (patientId: string, patientName: string) => void
+  onNewAppointment: (patientId: string, patientName: string, lastStaffId?: string) => void
   onJumpToDate: (date: string) => void
 }
 
@@ -240,18 +240,18 @@ export default function PatientDetailPanel({
         className="w-full max-w-5xl mx-4 rounded-lg bg-white shadow-xl overflow-hidden max-h-[90vh] flex flex-col"
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
-          <div className="flex items-center gap-2 min-w-0">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-2">
+          <div className="flex items-center gap-1.5 min-w-0">
             {loadingDetail ? (
               <div className="h-6 w-32 animate-pulse rounded bg-gray-200" />
             ) : patient ? (
               <>
-                <span className="inline-flex items-center rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+                <span className="inline-flex items-center rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-800">
                   {patient.chart_number}
                 </span>
                 <span className="font-bold text-gray-900 truncate">{patient.name}</span>
                 {patient.name_kana && (
-                  <span className="text-sm text-gray-400">{patient.name_kana}</span>
+                  <span className="text-xs text-gray-400">{patient.name_kana}</span>
                 )}
                 {getPatientTagIcons(patient).map((tag, i) => (
                   <span
@@ -264,7 +264,12 @@ export default function PatientDetailPanel({
                   </span>
                 ))}
                 {patient.birth_date && (
-                  <span className="text-sm text-gray-500">{calcAge(patient.birth_date)}歳</span>
+                  <span className="text-xs text-gray-500">{calcAge(patient.birth_date)}歳</span>
+                )}
+                {patient.phone && (
+                  <a href={`tel:${patient.phone}`} className="ml-1 text-xs text-emerald-600 hover:underline">
+                    {patient.phone}
+                  </a>
                 )}
               </>
             ) : null}
@@ -281,38 +286,27 @@ export default function PatientDetailPanel({
         <div className="flex-1 overflow-y-auto">
           <div className="grid grid-cols-1 md:grid-cols-5 divide-y md:divide-y-0 md:divide-x divide-gray-200">
             {/* Left Column (3/5) */}
-            <div className="md:col-span-3 p-4 space-y-4">
-              {/* Phone */}
-              {patient?.phone && (
-                <div>
-                  <a href={`tel:${patient.phone}`} className="text-sm text-emerald-600 hover:underline">
-                    {'\u{1F4DE}'} {patient.phone}
-                  </a>
-                </div>
-              )}
-
+            <div className="md:col-span-3 p-3 space-y-2">
               {/* Current Appointment */}
-              <div className="rounded-lg border border-gray-200 p-3 space-y-2">
-                <h3 className="text-sm font-bold text-gray-700">今回の予約</h3>
-                <div className="text-sm text-gray-900">
-                  {startDate.getMonth() + 1}/{startDate.getDate()}({dayOfWeek}){' '}
-                  {startDate.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}〜
-                  {endDate.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
-                </div>
-                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
-                  <span>{appointment.appointment_type}</span>
-                  {appointment.staff?.name && <span>/ {appointment.staff.name}</span>}
-                  <span>/ 診察室{appointment.unit_number}</span>
-                  <span className={`text-xs rounded-full px-2 py-0.5 ${hasCompletedPast ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-700'}`}>
+              <div className="rounded-md border border-gray-200 px-3 py-2">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-gray-900">
+                  <span className="font-medium">
+                    {startDate.getMonth() + 1}/{startDate.getDate()}({dayOfWeek}){' '}
+                    {startDate.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}〜
+                    {endDate.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  <span className="text-gray-600">{appointment.appointment_type}</span>
+                  {appointment.staff?.name && <span className="text-gray-500">/ {appointment.staff.name}</span>}
+                  <span className="text-gray-500">/ 診{appointment.unit_number}</span>
+                  <span className={`text-xs rounded-full px-1.5 py-0.5 ${hasCompletedPast ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-700'}`}>
                     {hasCompletedPast ? '再診' : '初診'}
                   </span>
                 </div>
-
                 {/* Lab order info */}
                 {appointment.lab_order && (
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-sm">{'\uD83E\uDDB7'}</span>
-                    <span className="text-sm">{appointment.lab_order.item_type || '技工物'}</span>
+                  <div className="flex items-center gap-1.5 mt-1 text-sm">
+                    <span>{'\uD83E\uDDB7'}</span>
+                    <span>{appointment.lab_order.item_type || '技工物'}</span>
                     {appointment.lab_order.tooth_info && (
                       <span className="text-xs text-gray-500">({appointment.lab_order.tooth_info})</span>
                     )}
@@ -322,88 +316,88 @@ export default function PatientDetailPanel({
               </div>
 
               {/* Patient Memo */}
-              <div className="rounded-lg border border-gray-200 p-3">
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-sm font-bold text-gray-700">患者メモ</h3>
+              <div className="rounded-md border border-gray-200 px-3 py-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-gray-500">患者メモ</h3>
                   {!patientMemoEditing && (
                     <button
                       onClick={() => setPatientMemoEditing(true)}
-                      className="text-xs text-emerald-600 hover:underline min-h-[44px] px-2"
+                      className="text-xs text-emerald-600 hover:underline min-h-[36px] px-1"
                     >
                       編集
                     </button>
                   )}
                 </div>
                 {patientMemoEditing ? (
-                  <div className="space-y-2">
+                  <div className="mt-1 space-y-1.5">
                     <textarea
                       value={patientMemo}
                       onChange={(e) => setPatientMemo(e.target.value)}
-                      rows={3}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                      rows={2}
+                      className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
                     />
                     <div className="flex gap-2 justify-end">
                       <button
                         onClick={() => { setPatientMemoEditing(false); setPatientMemo(patient?.memo || '') }}
-                        className="min-h-[44px] rounded-md border border-gray-300 px-3 text-sm text-gray-600 hover:bg-gray-50"
+                        className="min-h-[36px] rounded-md border border-gray-300 px-3 text-xs text-gray-600 hover:bg-gray-50"
                       >
                         キャンセル
                       </button>
                       <button
                         onClick={savePatientMemo}
                         disabled={patientMemoSaving}
-                        className="min-h-[44px] rounded-md bg-emerald-600 px-3 text-sm text-white hover:bg-emerald-700 disabled:opacity-50"
+                        className="min-h-[36px] rounded-md bg-emerald-600 px-3 text-xs text-white hover:bg-emerald-700 disabled:opacity-50"
                       >
                         {patientMemoSaving ? '保存中...' : '保存'}
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap line-clamp-3">
                     {patientMemo || <span className="text-gray-400">メモなし</span>}
                   </p>
                 )}
               </div>
 
               {/* Appointment Memo */}
-              <div className="rounded-lg border border-emerald-100 bg-emerald-50/30 p-3">
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-sm font-bold text-gray-700">予約メモ（今回のみ）</h3>
+              <div className="rounded-md border border-emerald-100 bg-emerald-50/30 px-3 py-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-gray-500">予約メモ</h3>
                   {!apptMemoEditing && (
                     <button
                       onClick={() => setApptMemoEditing(true)}
-                      className="text-xs text-emerald-600 hover:underline min-h-[44px] px-2"
+                      className="text-xs text-emerald-600 hover:underline min-h-[36px] px-1"
                     >
                       編集
                     </button>
                   )}
                 </div>
                 {apptMemoEditing ? (
-                  <div className="space-y-2">
+                  <div className="mt-1 space-y-1.5">
                     <textarea
                       value={apptMemo}
                       onChange={(e) => setApptMemo(e.target.value)}
                       rows={2}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                      className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
                     />
                     <div className="flex gap-2 justify-end">
                       <button
                         onClick={() => { setApptMemoEditing(false); setApptMemo(appointment.memo || '') }}
-                        className="min-h-[44px] rounded-md border border-gray-300 px-3 text-sm text-gray-600 hover:bg-gray-50"
+                        className="min-h-[36px] rounded-md border border-gray-300 px-3 text-xs text-gray-600 hover:bg-gray-50"
                       >
                         キャンセル
                       </button>
                       <button
                         onClick={saveApptMemo}
                         disabled={apptMemoSaving}
-                        className="min-h-[44px] rounded-md bg-emerald-600 px-3 text-sm text-white hover:bg-emerald-700 disabled:opacity-50"
+                        className="min-h-[36px] rounded-md bg-emerald-600 px-3 text-xs text-white hover:bg-emerald-700 disabled:opacity-50"
                       >
                         {apptMemoSaving ? '保存中...' : '保存'}
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap line-clamp-2">
                     {apptMemo || <span className="text-gray-400">メモなし</span>}
                   </p>
                 )}
@@ -411,13 +405,13 @@ export default function PatientDetailPanel({
 
               {/* Status Buttons */}
               {currentStatus !== 'cancelled' && currentStatus !== 'no_show' ? (
-                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
                   <div className="flex items-center justify-between gap-2">
                     <button
                       type="button"
                       disabled={!prevStatus || statusChanging}
                       onClick={() => prevStatus && handleStatusChange(prevStatus)}
-                      className="min-h-[44px] rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="min-h-[40px] rounded-md border border-gray-300 bg-white px-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       ◀ 戻す
                     </button>
@@ -426,7 +420,7 @@ export default function PatientDetailPanel({
                       type="button"
                       disabled={!nextStatus || statusChanging}
                       onClick={() => nextStatus && handleStatusChange(nextStatus)}
-                      className="min-h-[44px] rounded-md px-3 text-sm font-medium text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="min-h-[40px] rounded-md px-2.5 text-sm font-medium text-white disabled:opacity-30 disabled:cursor-not-allowed"
                       style={{
                         backgroundColor: nextStatus ? (STATUS_TEXT[nextStatus] || '#374151') : '#9ca3af',
                       }}
@@ -434,12 +428,12 @@ export default function PatientDetailPanel({
                       {nextStatus ? `${STATUS_LABELS[nextStatus]}にする ▶` : '完了'}
                     </button>
                   </div>
-                  <div className="mt-2 flex gap-2">
+                  <div className="mt-1.5 flex gap-1.5">
                     <button
                       type="button"
                       disabled={statusChanging}
                       onClick={() => handleStatusChange('cancelled')}
-                      className="flex-1 min-h-[44px] rounded-md border border-red-300 bg-white px-3 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                      className="flex-1 min-h-[36px] rounded-md border border-red-300 bg-white px-2 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
                     >
                       キャンセル
                     </button>
@@ -447,14 +441,14 @@ export default function PatientDetailPanel({
                       type="button"
                       disabled={statusChanging}
                       onClick={() => handleStatusChange('no_show')}
-                      className="flex-1 min-h-[44px] rounded-md border border-yellow-400 bg-white px-3 text-sm font-medium text-yellow-700 hover:bg-yellow-50 disabled:opacity-50"
+                      className="flex-1 min-h-[36px] rounded-md border border-yellow-400 bg-white px-2 text-xs font-medium text-yellow-700 hover:bg-yellow-50 disabled:opacity-50"
                     >
                       無断キャンセル
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className={`rounded-lg border p-3 text-center ${
+                <div className={`rounded-md border px-3 py-2 text-center ${
                   currentStatus === 'no_show' ? 'border-yellow-200 bg-yellow-50' : 'border-red-200 bg-red-50'
                 }`}>
                   <StatusBadge status={currentStatus} size="lg" />
@@ -462,21 +456,23 @@ export default function PatientDetailPanel({
                     type="button"
                     disabled={statusChanging}
                     onClick={() => handleStatusChange('scheduled')}
-                    className="mt-2 w-full min-h-[44px] rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    className="mt-1.5 w-full min-h-[40px] rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                   >
                     未来院に戻す
                   </button>
                 </div>
               )}
 
-              {/* Action Buttons */}
-              <div className="flex gap-2">
+              {/* Action Buttons — single row */}
+              <div className="flex gap-1.5">
                 <button
                   onClick={() => {
-                    onNewAppointment(patientId, patient?.name || appointment.patient?.name || '')
+                    const completedPast = pastAppointments.find(a => a.status === 'completed' && a.staff?.id)
+                    const lastStaffId = completedPast?.staff?.id || appointment.staff_id || undefined
+                    onNewAppointment(patientId, patient?.name || appointment.patient?.name || '', lastStaffId)
                     onClose()
                   }}
-                  className="flex-1 min-h-[44px] rounded-md border border-emerald-300 bg-white px-3 text-sm font-medium text-emerald-600 hover:bg-emerald-50"
+                  className="flex-1 min-h-[40px] rounded-md border border-emerald-300 bg-white px-2 text-sm font-medium text-emerald-600 hover:bg-emerald-50"
                 >
                   次回予約
                 </button>
@@ -485,26 +481,27 @@ export default function PatientDetailPanel({
                     onEditClick()
                     onClose()
                   }}
-                  className="flex-1 min-h-[44px] rounded-md border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="flex-1 min-h-[40px] rounded-md border border-gray-300 bg-white px-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
                   予約変更
                 </button>
+                <button
+                  onClick={() => setTokenModalOpen(true)}
+                  className="flex-1 min-h-[40px] rounded-md bg-amber-500 px-2 text-sm font-bold text-white shadow-sm hover:bg-amber-600 active:bg-amber-700"
+                >
+                  <svg className="mr-1 inline-block h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+                  </svg>
+                  案内作成
+                </button>
               </div>
-              <button
-                onClick={() => setTokenModalOpen(true)}
-                className="w-full min-h-[44px] rounded-md bg-amber-500 px-3 text-sm font-bold text-white shadow-sm hover:bg-amber-600 active:bg-amber-700"
-              >
-                <svg className="mr-1.5 inline-block h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-                </svg>
-                次回予約案内を作成
-              </button>
             </div>
 
             {/* Right Column (2/5) */}
-            <div className="md:col-span-2 p-4 space-y-4">
+            <div className="md:col-span-2 p-3 space-y-2">
               <h3 className="text-sm font-bold text-gray-700">{'\u{1F4CB}'} 予約一覧</h3>
 
+              <div className="max-h-[45vh] overflow-y-auto">
               {loadingAppointments && futureAppointments.length === 0 && pastAppointments.length === 0 ? (
                 <div className="space-y-2">
                   {[...Array(3)].map((_, i) => (
@@ -563,6 +560,7 @@ export default function PatientDetailPanel({
                   )}
                 </>
               )}
+              </div>
 
               {/* Stats */}
               {stats && (

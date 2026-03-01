@@ -119,9 +119,17 @@ export default function TokenCreateModal({ isOpen, onClose, patientId, patientNa
   const durationOptions = Array.from({ length: 24 }, (_, i) => (i + 1) * 5)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-md max-h-[90vh] overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      onMouseDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+    >
+      <div className="fixed inset-0 bg-black/40" onMouseDown={onClose} />
+      <div
+        className="relative z-10 w-full max-w-md max-h-[90vh] overflow-y-auto rounded-lg bg-white p-6 shadow-xl"
+        onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+      >
         {result ? (
           /* 作成完了 */
           <>

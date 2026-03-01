@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
     // 休診日を取得
     const { data: holidaysData } = await supabase
       .from('clinic_holidays')
-      .select('holiday_type, date, day_of_week')
+      .select('holiday_type, specific_date, day_of_week')
       .eq('is_active', true)
 
     const weeklyClosedDays = new Set<number>()
@@ -120,8 +120,8 @@ export async function GET(request: NextRequest) {
       for (const h of holidaysData) {
         if (h.holiday_type === 'weekly' && h.day_of_week !== null) {
           weeklyClosedDays.add(h.day_of_week)
-        } else if (h.date) {
-          specificHolidays.add(h.date)
+        } else if ((h.holiday_type === 'specific' || h.holiday_type === 'national') && h.specific_date) {
+          specificHolidays.add(h.specific_date)
         }
       }
     }
