@@ -65,7 +65,6 @@ export default function CalendarView({
 }: CalendarViewProps) {
   const calendarRef = useRef<FullCalendar>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const emptyColStyleRef = useRef<HTMLStyleElement>(null)
 
   // Build staff index map for default color assignment
   const staffIndexMap = useMemo(() => {
@@ -228,40 +227,66 @@ export default function CalendarView({
     }
   }, [initialDate])
 
-  // 予約のないリソースカラムを狭く表示（<col>要素を!importantで上書き）
+  // 予約のないリソースカラムを狭く表示
+  // table-layout: fixed + <col> width 直接操作 + MutationObserver で再描画追従
   useEffect(() => {
     const el = containerRef.current
-    const styleEl = emptyColStyleRef.current
-    if (!el || !styleEl) return
+    if (!el) return
 
-    const apply = () => {
-      // ヘッダー行からリソースの並び順とカラム位置を取得
-      const headerCells = el.querySelectorAll('th[data-resource-id]')
-      if (headerCells.length === 0) {
-        styleEl.textContent = ''
-        return
-      }
-      const headerRow = headerCells[0]?.parentElement
-      if (!headerRow) return
+    const applyColumnWidths = () => {
+      // ヘッダーテーブルからリソース順を取得
+      const headerTable = el.querySelector('.fc-col-header') as HTMLTableElement | null
+      if (!headerTable) return
 
-      const allCells = Array.from(headerRow.children)
-      const axisOffset = allCells.findIndex(c => c.hasAttribute('data-resource-id'))
-      if (axisOffset < 0) return
+      const headerCells = headerTable.querySelectorAll('th[data-resource-id]')
+      if (headerCells.length === 0) return
 
-      const rules: string[] = []
-      headerCells.forEach((cell, i) => {
+      // リソースIDの順序を取得
+      const resourceIds: string[] = []
+      headerCells.forEach(cell => {
         const rid = cell.getAttribute('data-resource-id')
-        if (rid && emptyResourceIds.has(rid)) {
-          const nth = axisOffset + i + 1 // CSS :nth-child は1始まり
-          rules.push(`.calendar-container colgroup col:nth-child(${nth}) { width: 60px !important; min-width: 60px !important; }`)
-        }
+        if (rid) resourceIds.push(rid)
       })
-      styleEl.textContent = rules.join('\n')
+
+      // ヘッダーテーブルとボディテーブルの両方に適用
+      const tables = el.querySelectorAll('.fc-col-header, .fc-scrollgrid-sync-table')
+      tables.forEach(table => {
+        const htmlTable = table as HTMLElement
+        htmlTable.style.tableLayout = 'fixed'
+
+        const cols = table.querySelectorAll('colgroup col')
+        // col要素数 - リソース数 = 軸カラムのオフセット
+        const colOffset = cols.length - resourceIds.length
+        if (colOffset < 0) return
+
+        resourceIds.forEach((rid, i) => {
+          const col = cols[colOffset + i] as HTMLElement
+          if (!col) return
+          if (emptyResourceIds.has(rid)) {
+            col.style.width = '60px'
+          } else {
+            col.style.width = ''
+          }
+        })
+      })
     }
 
-    // FullCalendar の描画完了を待つ
-    requestAnimationFrame(apply)
-    return () => { if (styleEl) styleEl.textContent = '' }
+    // 初回適用（FullCalendar描画完了を待つ）
+    const timer = setTimeout(applyColumnWidths, 150)
+
+    // FullCalendar再描画時にも再適用（日付変更・イベント更新等）
+    let debounceTimer: ReturnType<typeof setTimeout>
+    const observer = new MutationObserver(() => {
+      clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(applyColumnWidths, 50)
+    })
+    observer.observe(el, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] })
+
+    return () => {
+      clearTimeout(timer)
+      clearTimeout(debounceTimer)
+      observer.disconnect()
+    }
   }, [emptyResourceIds])
 
   const handleDateSelect = useCallback((info: DateSelectArg) => {
@@ -317,7 +342,6 @@ export default function CalendarView({
 
   return (
     <div className="calendar-container" ref={containerRef}>
-      <style ref={emptyColStyleRef} />
       <FullCalendar
         ref={calendarRef}
         plugins={[resourceTimeGridPlugin, interactionPlugin]}
