@@ -65,6 +65,7 @@ export default function CalendarView({
 }: CalendarViewProps) {
   const calendarRef = useRef<FullCalendar>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const emptyColStyleRef = useRef<HTMLStyleElement>(null)
 
   // Build staff index map for default color assignment
   const staffIndexMap = useMemo(() => {
@@ -227,18 +228,40 @@ export default function CalendarView({
     }
   }, [initialDate])
 
-  // 予約のないリソースカラムを狭く表示
+  // 予約のないリソースカラムを狭く表示（<col>要素を!importantで上書き）
   useEffect(() => {
     const el = containerRef.current
-    if (!el) return
-    el.querySelectorAll('[data-resource-id]').forEach((cell) => {
-      const resourceId = cell.getAttribute('data-resource-id')
-      if (resourceId && emptyResourceIds.has(resourceId)) {
-        cell.classList.add('fc-resource-empty')
-      } else {
-        cell.classList.remove('fc-resource-empty')
+    const styleEl = emptyColStyleRef.current
+    if (!el || !styleEl) return
+
+    const apply = () => {
+      // ヘッダー行からリソースの並び順とカラム位置を取得
+      const headerCells = el.querySelectorAll('th[data-resource-id]')
+      if (headerCells.length === 0) {
+        styleEl.textContent = ''
+        return
       }
-    })
+      const headerRow = headerCells[0]?.parentElement
+      if (!headerRow) return
+
+      const allCells = Array.from(headerRow.children)
+      const axisOffset = allCells.findIndex(c => c.hasAttribute('data-resource-id'))
+      if (axisOffset < 0) return
+
+      const rules: string[] = []
+      headerCells.forEach((cell, i) => {
+        const rid = cell.getAttribute('data-resource-id')
+        if (rid && emptyResourceIds.has(rid)) {
+          const nth = axisOffset + i + 1 // CSS :nth-child は1始まり
+          rules.push(`.calendar-container colgroup col:nth-child(${nth}) { width: 60px !important; min-width: 60px !important; }`)
+        }
+      })
+      styleEl.textContent = rules.join('\n')
+    }
+
+    // FullCalendar の描画完了を待つ
+    requestAnimationFrame(apply)
+    return () => { if (styleEl) styleEl.textContent = '' }
   }, [emptyResourceIds])
 
   const handleDateSelect = useCallback((info: DateSelectArg) => {
@@ -294,6 +317,7 @@ export default function CalendarView({
 
   return (
     <div className="calendar-container" ref={containerRef}>
+      <style ref={emptyColStyleRef} />
       <FullCalendar
         ref={calendarRef}
         plugins={[resourceTimeGridPlugin, interactionPlugin]}
