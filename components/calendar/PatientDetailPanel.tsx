@@ -501,124 +501,6 @@ export default function PatientDetailPanel({
                 </div>
               )}
 
-              {/* Action Buttons — split buttons */}
-              <div className="flex gap-1.5" ref={menuRef}>
-                {/* 次回予約 split button */}
-                <div className="relative flex flex-1 min-w-0">
-                  <button
-                    onClick={() => {
-                      const { pName, lastStaffId } = getPatientContext()
-                      onNewAppointment(patientId, pName, lastStaffId)
-                      onClose()
-                    }}
-                    className="flex-1 min-h-[40px] rounded-l-md border border-emerald-300 bg-white px-2 text-sm font-medium text-emerald-600 hover:bg-emerald-50"
-                  >
-                    次回予約
-                  </button>
-                  <button
-                    onClick={() => setOpenMenu(openMenu === 'next' ? null : 'next')}
-                    className="min-w-[44px] min-h-[40px] rounded-r-md border border-l-0 border-emerald-300 bg-white px-1 text-sm text-emerald-600 hover:bg-emerald-50 flex items-center justify-center"
-                  >
-                    ▾
-                  </button>
-                  {openMenu === 'next' && (
-                    <div className="absolute left-0 top-full mt-1 z-50 w-full min-w-[160px] rounded-md border border-gray-200 bg-white shadow-lg">
-                      <button
-                        onClick={() => {
-                          setOpenMenu(null)
-                          const { pName, lastStaffId } = getPatientContext()
-                          onNewAppointment(patientId, pName, lastStaffId)
-                          onClose()
-                        }}
-                        className="w-full text-left px-3 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center"
-                      >
-                        空き枠検索
-                      </button>
-                      <button
-                        onClick={() => {
-                          setOpenMenu(null)
-                          const { pName, lastStaffId } = getPatientContext()
-                          onCalendarSelect(patientId, pName, lastStaffId)
-                          onClose()
-                        }}
-                        className="w-full text-left px-3 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 border-t border-gray-100 flex items-center"
-                      >
-                        カレンダーで選択
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* 予約変更 split button */}
-                <div className="relative flex flex-1 min-w-0">
-                  <button
-                    onClick={() => {
-                      onEditClick()
-                      onClose()
-                    }}
-                    className="flex-1 min-h-[40px] rounded-l-md border border-gray-300 bg-white px-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    予約変更
-                  </button>
-                  <button
-                    onClick={() => setOpenMenu(openMenu === 'edit' ? null : 'edit')}
-                    className="min-w-[44px] min-h-[40px] rounded-r-md border border-l-0 border-gray-300 bg-white px-1 text-sm text-gray-500 hover:bg-gray-50 flex items-center justify-center"
-                  >
-                    ▾
-                  </button>
-                  {openMenu === 'edit' && (
-                    <div className="absolute left-0 top-full mt-1 z-50 w-full min-w-[180px] rounded-md border border-gray-200 bg-white shadow-lg">
-                      <button
-                        onClick={() => {
-                          setOpenMenu(null)
-                          onEditClick()
-                          onClose()
-                        }}
-                        className="w-full text-left px-3 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center"
-                      >
-                        内容を編集
-                      </button>
-                      <button
-                        onClick={() => {
-                          setOpenMenu(null)
-                          const { pName, lastStaffId } = getPatientContext()
-                          onEditSlotSearch(appointment.id, patientId, pName, lastStaffId)
-                          onClose()
-                        }}
-                        className="w-full text-left px-3 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 border-t border-gray-100 flex items-center"
-                      >
-                        空き枠で日時変更
-                      </button>
-                      <button
-                        onClick={() => {
-                          setOpenMenu(null)
-                          const { pName, lastStaffId } = getPatientContext()
-                          onEditCalendarSelect(appointment.id, patientId, pName, lastStaffId)
-                          onClose()
-                        }}
-                        className="w-full text-left px-3 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 border-t border-gray-100 flex items-center"
-                      >
-                        カレンダーで日時変更
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* 案内作成 */}
-                <button
-                  onClick={() => {
-                    const { lastStaffId } = getPatientContext()
-                    setLastStaffIdForToken(lastStaffId)
-                    setTokenModalOpen(true)
-                  }}
-                  className="flex-1 min-h-[40px] rounded-md bg-amber-500 px-2 text-sm font-bold text-white shadow-sm hover:bg-amber-600 active:bg-amber-700"
-                >
-                  <svg className="mr-1 inline-block h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-                  </svg>
-                  案内作成
-                </button>
-              </div>
             </div>
 
             {/* Right Column (2/5) */}
@@ -711,11 +593,128 @@ export default function PatientDetailPanel({
           </div>
         </div>
 
-        {/* Mobile close button */}
-        <div className="flex-shrink-0 border-t border-gray-200 p-3 sm:hidden">
+        {/* Footer: Action Buttons + Mobile Close */}
+        <div className="flex-shrink-0 border-t border-gray-200 bg-white px-3 py-2 space-y-2">
+          <div className="flex gap-1.5" ref={menuRef}>
+            {/* 次回予約 split button */}
+            <div className="relative flex flex-1 min-w-0">
+              <button
+                onClick={() => {
+                  const { pName, lastStaffId } = getPatientContext()
+                  onNewAppointment(patientId, pName, lastStaffId)
+                  onClose()
+                }}
+                className="flex-1 min-h-[40px] rounded-l-md border border-emerald-300 bg-white px-2 text-sm font-medium text-emerald-600 hover:bg-emerald-50"
+              >
+                次回予約
+              </button>
+              <button
+                onClick={() => setOpenMenu(openMenu === 'next' ? null : 'next')}
+                className="min-w-[44px] min-h-[40px] rounded-r-md border border-l-0 border-emerald-300 bg-white px-1 text-sm text-emerald-600 hover:bg-emerald-50 flex items-center justify-center"
+              >
+                ▾
+              </button>
+              {openMenu === 'next' && (
+                <div className="absolute left-0 bottom-full mb-1 z-50 w-full min-w-[160px] rounded-md border border-gray-200 bg-white shadow-lg">
+                  <button
+                    onClick={() => {
+                      setOpenMenu(null)
+                      const { pName, lastStaffId } = getPatientContext()
+                      onNewAppointment(patientId, pName, lastStaffId)
+                      onClose()
+                    }}
+                    className="w-full text-left px-3 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center"
+                  >
+                    空き枠検索
+                  </button>
+                  <button
+                    onClick={() => {
+                      setOpenMenu(null)
+                      const { pName, lastStaffId } = getPatientContext()
+                      onCalendarSelect(patientId, pName, lastStaffId)
+                      onClose()
+                    }}
+                    className="w-full text-left px-3 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 border-t border-gray-100 flex items-center"
+                  >
+                    カレンダーで選択
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 予約変更 split button */}
+            <div className="relative flex flex-1 min-w-0">
+              <button
+                onClick={() => {
+                  onEditClick()
+                  onClose()
+                }}
+                className="flex-1 min-h-[40px] rounded-l-md border border-gray-300 bg-white px-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                予約変更
+              </button>
+              <button
+                onClick={() => setOpenMenu(openMenu === 'edit' ? null : 'edit')}
+                className="min-w-[44px] min-h-[40px] rounded-r-md border border-l-0 border-gray-300 bg-white px-1 text-sm text-gray-500 hover:bg-gray-50 flex items-center justify-center"
+              >
+                ▾
+              </button>
+              {openMenu === 'edit' && (
+                <div className="absolute left-0 bottom-full mb-1 z-50 w-full min-w-[180px] rounded-md border border-gray-200 bg-white shadow-lg">
+                  <button
+                    onClick={() => {
+                      setOpenMenu(null)
+                      onEditClick()
+                      onClose()
+                    }}
+                    className="w-full text-left px-3 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 flex items-center"
+                  >
+                    内容を編集
+                  </button>
+                  <button
+                    onClick={() => {
+                      setOpenMenu(null)
+                      const { pName, lastStaffId } = getPatientContext()
+                      onEditSlotSearch(appointment.id, patientId, pName, lastStaffId)
+                      onClose()
+                    }}
+                    className="w-full text-left px-3 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 border-t border-gray-100 flex items-center"
+                  >
+                    空き枠で日時変更
+                  </button>
+                  <button
+                    onClick={() => {
+                      setOpenMenu(null)
+                      const { pName, lastStaffId } = getPatientContext()
+                      onEditCalendarSelect(appointment.id, patientId, pName, lastStaffId)
+                      onClose()
+                    }}
+                    className="w-full text-left px-3 min-h-[44px] text-sm text-gray-700 hover:bg-gray-50 border-t border-gray-100 flex items-center"
+                  >
+                    カレンダーで日時変更
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 案内作成 */}
+            <button
+              onClick={() => {
+                const { lastStaffId } = getPatientContext()
+                setLastStaffIdForToken(lastStaffId)
+                setTokenModalOpen(true)
+              }}
+              className="flex-1 min-h-[40px] rounded-md bg-amber-500 px-2 text-sm font-bold text-white shadow-sm hover:bg-amber-600 active:bg-amber-700"
+            >
+              <svg className="mr-1 inline-block h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+              </svg>
+              案内作成
+            </button>
+          </div>
           <button
             onClick={onClose}
-            className="w-full min-h-[44px] rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="w-full min-h-[44px] rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 sm:hidden"
           >
             閉じる
           </button>
