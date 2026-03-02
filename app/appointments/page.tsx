@@ -693,7 +693,7 @@ export default function AppointmentsPage() {
             />
           </div>
         ) : (
-          <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden relative">
+          <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-y-auto relative max-h-[calc(100dvh-12rem)]">
             {settingsLoading ? (
               <div className="p-4 space-y-3">
                 <div className="flex gap-2">

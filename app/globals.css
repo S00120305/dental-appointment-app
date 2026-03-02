@@ -68,6 +68,13 @@ body {
   font-size: 0.875rem;
 }
 
+/* 予約が入っていないリソースカラムを狭く表示 */
+th.fc-resource-empty,
+td.fc-resource-empty {
+  width: 60px !important;
+  min-width: 60px !important;
+}
+
 /* 時間ラベル（縦軸） */
 .fc .fc-timegrid-slot-label-cushion {
   font-size: 0.75rem;

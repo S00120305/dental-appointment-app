@@ -64,6 +64,7 @@ export default function CalendarView({
   onStatusClick,
 }: CalendarViewProps) {
   const calendarRef = useRef<FullCalendar>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   // Build staff index map for default color assignment
   const staffIndexMap = useMemo(() => {
@@ -195,6 +196,17 @@ export default function CalendarView({
     [...appointmentEvents, ...blockedEvents, ...backgroundEvents],
   [appointmentEvents, blockedEvents, backgroundEvents])
 
+  // 予約が入っていないリソースを検出
+  const emptyResourceIds = useMemo(() => {
+    const resourcesWithAppointments = new Set<string>()
+    for (const event of appointmentEvents) {
+      if (event.resourceId) resourcesWithAppointments.add(event.resourceId)
+    }
+    return new Set(
+      resources.filter(r => !resourcesWithAppointments.has(r.id)).map(r => r.id)
+    )
+  }, [appointmentEvents, resources])
+
   // Sync view type
   useEffect(() => {
     const api = calendarRef.current?.getApi()
@@ -214,6 +226,20 @@ export default function CalendarView({
       }
     }
   }, [initialDate])
+
+  // 予約のないリソースカラムを狭く表示
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    el.querySelectorAll('[data-resource-id]').forEach((cell) => {
+      const resourceId = cell.getAttribute('data-resource-id')
+      if (resourceId && emptyResourceIds.has(resourceId)) {
+        cell.classList.add('fc-resource-empty')
+      } else {
+        cell.classList.remove('fc-resource-empty')
+      }
+    })
+  }, [emptyResourceIds])
 
   const handleDateSelect = useCallback((info: DateSelectArg) => {
     onDateSelect(info.start, info.end, info.resource?.id || '1')
@@ -267,7 +293,7 @@ export default function CalendarView({
   }, [onStatusClick])
 
   return (
-    <div className="calendar-container">
+    <div className="calendar-container" ref={containerRef}>
       <FullCalendar
         ref={calendarRef}
         plugins={[resourceTimeGridPlugin, interactionPlugin]}
