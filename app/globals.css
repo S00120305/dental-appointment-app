@@ -54,7 +54,14 @@ body {
   font-family: inherit;
 }
 
-/* リソースヘッダー（ユニット名）横軸に並ぶ */
+/* リソースヘッダー（ユニット名）横軸に並ぶ - ページスクロール時に固定 */
+.fc .fc-col-header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: white;
+}
+
 .fc .fc-col-header-cell {
   padding: 8px 4px;
   font-weight: 600;

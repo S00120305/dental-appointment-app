@@ -596,23 +596,13 @@ export default function PatientDetailPanel({
         {/* Footer: Action Buttons + Mobile Close */}
         <div className="flex-shrink-0 border-t border-gray-200 bg-white px-3 py-2 space-y-2">
           <div className="flex gap-1.5" ref={menuRef}>
-            {/* 次回予約 split button */}
+            {/* 次回予約 dropdown button */}
             <div className="relative flex flex-1 min-w-0">
               <button
-                onClick={() => {
-                  const { pName, lastStaffId } = getPatientContext()
-                  onNewAppointment(patientId, pName, lastStaffId)
-                  onClose()
-                }}
-                className="flex-1 min-h-[40px] rounded-l-md border border-emerald-300 bg-white px-2 text-sm font-medium text-emerald-600 hover:bg-emerald-50"
-              >
-                次回予約
-              </button>
-              <button
                 onClick={() => setOpenMenu(openMenu === 'next' ? null : 'next')}
-                className="min-w-[44px] min-h-[40px] rounded-r-md border border-l-0 border-emerald-300 bg-white px-1 text-sm text-emerald-600 hover:bg-emerald-50 flex items-center justify-center"
+                className="flex-1 min-h-[40px] rounded-md border border-emerald-300 bg-white px-2 text-sm font-medium text-emerald-600 hover:bg-emerald-50 flex items-center justify-center gap-1"
               >
-                ▾
+                次回予約 <span className="text-xs">▾</span>
               </button>
               {openMenu === 'next' && (
                 <div className="absolute left-0 bottom-full mb-1 z-50 w-full min-w-[160px] rounded-md border border-gray-200 bg-white shadow-lg">
@@ -642,22 +632,13 @@ export default function PatientDetailPanel({
               )}
             </div>
 
-            {/* 予約変更 split button */}
+            {/* 予約変更 dropdown button */}
             <div className="relative flex flex-1 min-w-0">
               <button
-                onClick={() => {
-                  onEditClick()
-                  onClose()
-                }}
-                className="flex-1 min-h-[40px] rounded-l-md border border-gray-300 bg-white px-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                予約変更
-              </button>
-              <button
                 onClick={() => setOpenMenu(openMenu === 'edit' ? null : 'edit')}
-                className="min-w-[44px] min-h-[40px] rounded-r-md border border-l-0 border-gray-300 bg-white px-1 text-sm text-gray-500 hover:bg-gray-50 flex items-center justify-center"
+                className="flex-1 min-h-[40px] rounded-md border border-gray-300 bg-white px-2 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-1"
               >
-                ▾
+                予約変更 <span className="text-xs">▾</span>
               </button>
               {openMenu === 'edit' && (
                 <div className="absolute left-0 bottom-full mb-1 z-50 w-full min-w-[180px] rounded-md border border-gray-200 bg-white shadow-lg">

@@ -547,7 +547,7 @@ async function checkOverlap(
 
       // 重複判定: 新規の開始 < 既存の終了 AND 新規の終了 > 既存の開始
       if (newStart < existEnd && newEnd > existStart) {
-        const timeStr = existStart.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+        const timeStr = existStart.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })
         return `診察室${unitNumber}の${timeStr}に既存の予約があります`
       }
     }
