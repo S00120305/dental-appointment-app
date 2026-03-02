@@ -72,15 +72,30 @@ export default function CalendarView({
     return map
   }, [staffList])
 
-  // Compute slide_to map: appointment id → true if another appointment references it as slide_from_id
-  const slideToSet = useMemo(() => {
-    const set = new Set<string>()
+  // Auto-detect slides: same patient + same day + different unit
+  const slideInfo = useMemo(() => {
+    const slideSet = new Set<string>()
+    const partnerUnits = new Map<string, number[]>()
+    const groups = new Map<string, typeof appointments>()
+
     for (const appt of appointments) {
-      if (appt.slide_from_id) {
-        set.add(appt.slide_from_id)
+      if (appt.status === 'cancelled' || appt.status === 'no_show') continue
+      const date = appt.start_time.slice(0, 10)
+      const key = `${appt.patient_id}:${date}`
+      if (!groups.has(key)) groups.set(key, [])
+      groups.get(key)!.push(appt)
+    }
+
+    for (const group of groups.values()) {
+      const units = new Set(group.map(a => a.unit_number))
+      if (units.size > 1) {
+        for (const appt of group) {
+          slideSet.add(appt.id)
+          partnerUnits.set(appt.id, group.filter(a => a.id !== appt.id).map(a => a.unit_number))
+        }
       }
     }
-    return set
+    return { slideSet, partnerUnits }
   }, [appointments])
 
   // 予約イベント（予約データ・スタッフ色・スライド情報に依存）
@@ -117,12 +132,12 @@ export default function CalendarView({
           caution_level: appt.patient?.caution_level || 0,
           is_infection_alert: appt.patient?.is_infection_alert || false,
           appointment_tag_icons: (appt.tags || []).map(t => t.icon).filter(Boolean).join(''),
-          has_slide_from: !!appt.slide_from_id,
-          has_slide_to: slideToSet.has(appt.id),
+          is_slide: slideInfo.slideSet.has(appt.id),
+          slide_partner_units: slideInfo.partnerUnits.get(appt.id) || [],
         },
       }
     }),
-  [appointments, staffColors, staffIndexMap, slideToSet])
+  [appointments, staffColors, staffIndexMap, slideInfo])
 
   // ブロック枠イベント（ブロック枠・リソースに依存）
   const blockedEvents = useMemo(() =>

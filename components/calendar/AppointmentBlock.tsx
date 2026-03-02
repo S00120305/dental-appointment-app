@@ -76,8 +76,8 @@ const AppointmentBlock = memo(function AppointmentBlock({ eventInfo, onStatusCli
   const status = (extendedProps.status || 'scheduled') as AppointmentStatus
   const labOrderStatus = extendedProps.lab_order_status as string | undefined
   const isInfectionAlert = extendedProps.is_infection_alert as boolean | undefined
-  const hasSlideFrom = extendedProps.has_slide_from as boolean | undefined
-  const hasSlideTo = extendedProps.has_slide_to as boolean | undefined
+  const isSlide = extendedProps.is_slide as boolean | undefined
+  const slidePartnerUnits = (extendedProps.slide_partner_units as number[]) || []
 
   const tagIcons = getPatientTagIconString({
     is_vip: extendedProps.is_vip as boolean | undefined,
@@ -114,13 +114,20 @@ const AppointmentBlock = memo(function AppointmentBlock({ eventInfo, onStatusCli
           {statusIcon}
         </span>
         {labOrderStatus && <span className="mr-0.5">{'\uD83E\uDDB7'}</span>}
-        {hasSlideFrom && <span className="mr-0.5 text-blue-500" title="スライド先">{'\u21E8'}</span>}
+        {isSlide && (
+          <span
+            className="mr-0.5 inline-flex items-center rounded bg-blue-100 text-blue-600"
+            style={{ fontSize: 'var(--fc-event-tag-size)', padding: '0 2px' }}
+            title={`スライド: 診${slidePartnerUnits.join(',')}`}
+          >
+            {'\u21C4'}{slidePartnerUnits.length === 1 ? slidePartnerUnits[0] : ''}
+          </span>
+        )}
         {status === 'cancelled' || status === 'no_show' ? (
           <span className="line-through">{patientName}</span>
         ) : (
           patientName
         )}
-        {hasSlideTo && <span className="ml-0.5 text-blue-500" title="スライド元">{'\u21E8'}</span>}
         {tagIcons && (
           <>
             {' '}
