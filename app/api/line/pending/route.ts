@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { getSessionUser, recordLog } from '@/lib/log'
+import { requireAuth } from '@/lib/auth/require-auth'
 
 // GET: 未紐付けのLINEユーザー一覧
 export async function GET() {
@@ -13,7 +14,7 @@ export async function GET() {
       .order('created_at', { ascending: false })
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('DB error:', error.message); return NextResponse.json({ error: 'データベースエラーが発生しました' }, { status: 500 })
     }
 
     return NextResponse.json({ pending_links: data || [] })
@@ -24,6 +25,9 @@ export async function GET() {
 
 // POST: LINEアカウントを患者に紐付け
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth()
+  if (auth instanceof NextResponse) return auth
+
   try {
     const supabase = createServerClient()
     const body = await request.json()

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { getSessionUser, recordLog } from '@/lib/log'
+import { requireAuth } from '@/lib/auth/require-auth'
 
 // GET: 全設定取得
 export async function GET() {
@@ -13,7 +14,7 @@ export async function GET() {
       .order('key', { ascending: true })
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('DB error:', error.message); return NextResponse.json({ error: 'データベースエラーが発生しました' }, { status: 500 })
     }
 
     // key-value マップに変換
@@ -30,6 +31,9 @@ export async function GET() {
 
 // PUT: 設定更新（UPSERT）
 export async function PUT(request: NextRequest) {
+  const auth = await requireAuth()
+  if (auth instanceof NextResponse) return auth
+
   try {
     const supabase = createServerClient()
     const body = await request.json()
@@ -53,7 +57,7 @@ export async function PUT(request: NextRequest) {
       .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('DB error:', error.message); return NextResponse.json({ error: 'データベースエラーが発生しました' }, { status: 500 })
     }
 
     // ログ記録

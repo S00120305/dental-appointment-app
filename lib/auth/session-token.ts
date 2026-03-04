@@ -16,8 +16,9 @@ interface SessionPayload {
 }
 
 function getSecret(): string {
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!secret) throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
+  // 専用の署名キーを優先。未設定時はservice_role_keyにフォールバック
+  const secret = process.env.SESSION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!secret) throw new Error('SESSION_SECRET or SUPABASE_SERVICE_ROLE_KEY is not set')
   return secret
 }
 

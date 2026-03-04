@@ -61,7 +61,7 @@ export default function AppointmentsPage() {
   const { data: pendingData } = useSWR<{ count: number }>(
     '/api/appointments?status=pending&booking_source=web&count_only=true',
     (url: string) => fetch(url).then(r => r.json()),
-    { refreshInterval: 30000 }
+    { refreshInterval: 60000, dedupingInterval: 60000 }
   )
   const pendingCount = pendingData?.count || 0
 
@@ -681,7 +681,7 @@ export default function AppointmentsPage() {
             />
           </div>
         ) : (
-          <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-y-auto relative max-h-[calc(100dvh-12rem)]">
+          <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-y-auto relative max-h-[calc(100dvh-9.5rem)]">
             {settingsLoading ? (
               <div className="p-4 space-y-3">
                 <div className="flex gap-2">

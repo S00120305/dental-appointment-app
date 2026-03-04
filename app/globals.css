@@ -76,14 +76,14 @@ body {
 /* 予約ブロック内のカスタムコンテンツ */
 .fc-event {
   cursor: pointer;
-  border-radius: 6px !important;
+  border-radius: 2px !important;
   border: none !important;
   overflow: hidden;
   touch-action: manipulation;
 }
 
 .fc-event .fc-event-main {
-  padding: 3px 6px 2px;
+  padding: 1px 4px 1px;
   overflow: hidden;
 }
 

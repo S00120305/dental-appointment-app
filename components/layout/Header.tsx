@@ -2,11 +2,20 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import useSWR from 'swr'
 import { useAuth } from '@/hooks/useAuth'
 
 export default function Header() {
   const router = useRouter()
   const { session, logout } = useAuth()
+
+  // 承認待ちWeb予約件数
+  const { data: pendingData } = useSWR<{ count: number }>(
+    session ? '/api/appointments?status=pending&booking_source=web&count_only=true' : null,
+    (url: string) => fetch(url).then(r => r.json()),
+    { refreshInterval: 60000, dedupingInterval: 60000 }
+  )
+  const pendingCount = pendingData?.count || 0
 
   const handleLogout = async () => {
     await logout()
@@ -24,6 +33,20 @@ export default function Header() {
         </div>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          {/* 承認待ちバッジ */}
+          {pendingCount > 0 && (
+            <Link
+              href="/appointments/pending"
+              className="flex items-center gap-1.5 rounded-lg bg-amber-50 border border-amber-200 px-2 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 sm:px-3 sm:text-sm"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+              </span>
+              承認待ち {pendingCount}
+            </Link>
+          )}
+
           {/* バックアップ */}
           <Link
             href="/settings/backup"

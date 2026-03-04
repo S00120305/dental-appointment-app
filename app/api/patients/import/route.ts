@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { getSessionUser, recordLog } from '@/lib/log'
+import { requireAuth } from '@/lib/auth/require-auth'
 
 type ImportRow = {
   chart_number: string
@@ -18,6 +19,9 @@ type ImportRow = {
 
 // POST: CSV一括インポート（UPSERT）
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth()
+  if (auth instanceof NextResponse) return auth
+
   try {
     const supabase = createServerClient()
     const body = await request.json()
@@ -72,7 +76,8 @@ export async function POST(request: NextRequest) {
           .eq('id', existing.id)
 
         if (error) {
-          errors.push({ row: i + 1, message: error.message })
+          console.error(`Import update error (row ${i + 1}):`, error.message)
+          errors.push({ row: i + 1, message: 'データベースエラー' })
         } else {
           updated++
         }
@@ -95,7 +100,8 @@ export async function POST(request: NextRequest) {
         const { error } = await supabase.from('patients').insert(insertData)
 
         if (error) {
-          errors.push({ row: i + 1, message: error.message })
+          console.error(`Import insert error (row ${i + 1}):`, error.message)
+          errors.push({ row: i + 1, message: 'データベースエラー' })
         } else {
           inserted++
         }

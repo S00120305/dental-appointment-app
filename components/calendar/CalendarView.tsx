@@ -137,6 +137,8 @@ export default function CalendarView({
           caution_level: appt.patient?.caution_level || 0,
           is_infection_alert: appt.patient?.is_infection_alert || false,
           appointment_tag_icons: (appt.tags || []).map(t => t.icon).filter(Boolean).join(''),
+          appointment_tags: JSON.stringify((appt.tags || []).map(t => ({ name: t.name, color: t.color, icon: t.icon }))),
+          memo: appt.memo || null,
           is_slide: slideInfo.slideSet.has(appt.id),
           slide_partner_units: slideInfo.partnerUnits.get(appt.id) || [],
         },

@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       .lte('holiday_date', `${year}-${m}-${String(lastDay).padStart(2, '0')}`)
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('DB error:', error.message); return NextResponse.json({ error: 'データベースエラーが発生しました' }, { status: 500 })
     }
 
     // スタッフ別集計

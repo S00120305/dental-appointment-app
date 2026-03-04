@@ -15,7 +15,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <Header />
         <Navigation />
         {/* メインコンテンツ: デスクトップではサイドバー分のマージン、モバイルではボトムナビ分のパディング */}
-        <main className="pb-24 lg:ml-56 lg:pb-0">
+        <main className="pb-12 lg:ml-56 lg:pb-0">
           {children}
         </main>
       </div>

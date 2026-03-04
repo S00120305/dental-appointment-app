@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       .lte('start_time', rangeEnd)
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('DB error:', error.message); return NextResponse.json({ error: 'データベースエラーが発生しました' }, { status: 500 })
     }
 
     const appointments = data || []

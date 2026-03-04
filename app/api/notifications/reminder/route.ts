@@ -8,11 +8,14 @@ import { formatPatientName } from '@/lib/utils/patient-name'
 // 翌日の予約に対してリマインド通知を送信する
 // Vercel Cron Jobs から毎日 JST 18:00 (UTC 09:00) に呼び出される
 export async function POST(request: NextRequest) {
-  // CRON_SECRET で認証
+  // CRON_SECRET で認証（未設定時も拒否）
   const authHeader = request.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret) {
+    return NextResponse.json({ error: 'CRON_SECRET is not configured' }, { status: 500 })
+  }
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -39,7 +42,7 @@ export async function POST(request: NextRequest) {
       .lte('start_time', dayEnd)
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('DB error:', error.message); return NextResponse.json({ error: 'データベースエラーが発生しました' }, { status: 500 })
     }
 
     if (!appointments || appointments.length === 0) {

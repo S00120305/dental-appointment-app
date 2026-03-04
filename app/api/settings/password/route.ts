@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcrypt'
 import { createServerClient } from '@/lib/supabase/server'
+import { requireAuth } from '@/lib/auth/require-auth'
 
-// PUT: マスターパスワード変更（管理者のみ）
+// PUT: マスターパスワード変更（認証必須）
 export async function PUT(request: NextRequest) {
+  const auth = await requireAuth()
+  if (auth instanceof NextResponse) return auth
+
   try {
     const { currentPassword, newPassword } = await request.json()
 

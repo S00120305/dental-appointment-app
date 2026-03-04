@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     ])
 
     if (currentResult.error) {
-      return NextResponse.json({ error: currentResult.error.message }, { status: 500 })
+      console.error('DB error:', currentResult.error.message); return NextResponse.json({ error: 'データベースエラーが発生しました' }, { status: 500 })
     }
 
     const appointments = currentResult.data || []

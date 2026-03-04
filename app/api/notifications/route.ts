@@ -7,11 +7,14 @@ import { renderTemplate, DEFAULT_SMS_TEMPLATE, DEFAULT_EMAIL_TEMPLATE, DEFAULT_E
 
 // POST: リマインド通知送信（cron から呼ばれる）
 export async function POST(request: NextRequest) {
-  // 認証チェック
+  // 認証チェック（CRON_SECRET 未設定時も拒否）
   const authHeader = request.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret) {
+    return NextResponse.json({ error: 'CRON_SECRET is not configured' }, { status: 500 })
+  }
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -58,7 +61,7 @@ export async function POST(request: NextRequest) {
       .lte('start_time', dayEnd)
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('DB error:', error.message); return NextResponse.json({ error: 'データベースエラーが発生しました' }, { status: 500 })
     }
 
     if (!appointments || appointments.length === 0) {

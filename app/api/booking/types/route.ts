@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       .order('sort_order', { ascending: true })
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('DB error:', error.message); return NextResponse.json({ error: 'データベースエラーが発生しました' }, { status: 500 })
     }
 
     return NextResponse.json({ booking_types: data })

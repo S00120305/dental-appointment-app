@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { getSessionUser, recordLog } from '@/lib/log'
 import { formatPatientName } from '@/lib/utils/patient-name'
+import { requireAuth } from '@/lib/auth/require-auth'
 
 /** visible_units 設定を取得してパースする */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -77,7 +78,7 @@ export async function GET(request: NextRequest) {
         .single()
 
       if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        console.error('DB error:', error.message); return NextResponse.json({ error: 'データベースエラーが発生しました' }, { status: 500 })
       }
       return NextResponse.json({ appointment: transformAppointment(data as Record<string, unknown>) })
     }
@@ -132,7 +133,7 @@ export async function GET(request: NextRequest) {
         .eq('booking_source', bookingSource || 'web')
 
       if (countError) {
-        return NextResponse.json({ error: countError.message }, { status: 500 })
+        console.error('DB error:', countError.message); return NextResponse.json({ error: 'データベースエラーが発生しました' }, { status: 500 })
       }
       return NextResponse.json({ count: count || 0 })
     }
@@ -140,7 +141,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('DB error:', error.message); return NextResponse.json({ error: 'データベースエラーが発生しました' }, { status: 500 })
     }
 
     const appointments = (data || []).map(d => transformAppointment(d as Record<string, unknown>))
@@ -165,6 +166,9 @@ const selectQueryPost = `
 
 // POST: 新規予約作成
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth()
+  if (auth instanceof NextResponse) return auth
+
   try {
     const supabase = createServerClient()
     const body = await request.json()
@@ -231,14 +235,15 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('DB error:', error.message); return NextResponse.json({ error: 'データベースエラーが発生しました' }, { status: 500 })
     }
 
     // タグ紐付け
     if (tag_ids?.length && data?.id) {
-      await supabase
+      const { error: tagError } = await supabase
         .from('appointment_tag_links')
         .insert(tag_ids.map((tag_id: string) => ({ appointment_id: data.id, tag_id })))
+      if (tagError) console.error('Tag insertion failed:', tagError.message)
     }
 
     // タグ付きで再取得
@@ -275,6 +280,9 @@ export async function POST(request: NextRequest) {
 
 // PUT: 予約編集
 export async function PUT(request: NextRequest) {
+  const auth = await requireAuth()
+  if (auth instanceof NextResponse) return auth
+
   try {
     const supabase = createServerClient()
     const body = await request.json()
@@ -362,10 +370,11 @@ export async function PUT(request: NextRequest) {
 
     // キャンセル/無断キャンセル時、この予約をスライド元として参照している予約のslide_from_idをクリア
     if (status === 'cancelled' || status === 'no_show') {
-      await supabase
+      const { error: slideError } = await supabase
         .from('appointments')
         .update({ slide_from_id: null })
         .eq('slide_from_id', id)
+      if (slideError) console.error('Slide ref cleanup failed:', slideError.message)
     }
 
     const { data, error } = await supabase
@@ -376,16 +385,18 @@ export async function PUT(request: NextRequest) {
       .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('DB error:', error.message); return NextResponse.json({ error: 'データベースエラーが発生しました' }, { status: 500 })
     }
 
     // タグ同期（tag_ids が渡された場合のみ、全置換）
     if (tag_ids !== undefined) {
-      await supabase.from('appointment_tag_links').delete().eq('appointment_id', id)
+      const { error: delErr } = await supabase.from('appointment_tag_links').delete().eq('appointment_id', id)
+      if (delErr) console.error('Tag delete failed:', delErr.message)
       if (tag_ids.length) {
-        await supabase
+        const { error: insErr } = await supabase
           .from('appointment_tag_links')
           .insert(tag_ids.map((tag_id: string) => ({ appointment_id: id, tag_id })))
+        if (insErr) console.error('Tag insert failed:', insErr.message)
       }
     }
 
@@ -427,28 +438,8 @@ export async function PUT(request: NextRequest) {
       })
     }
 
-    // 予約日変更時: 紐付く lab_orders.set_date を同期更新
-    // start_time が実際に変わった場合のみ（ステータス変更等では更新しない）
-    if (start_time && existing && responseData) {
-      const oldDate = existing.start_time ? new Date(existing.start_time).toISOString().split('T')[0] : null
-      const newDate = new Date(start_time).toISOString().split('T')[0]
-      const startTimeChanged = oldDate !== newDate
-
-      if (startTimeChanged) {
-        const effectiveLabOrderId = lab_order_id !== undefined ? (lab_order_id || null) : existing.lab_order_id
-        if (effectiveLabOrderId) {
-          try {
-            await supabase
-              .from('lab_orders')
-              .update({ set_date: newDate, updated_at: new Date().toISOString() })
-              .eq('id', effectiveLabOrderId)
-          } catch {
-            // set_date 更新失敗でも予約変更自体は成功させる
-            console.error('Failed to update lab_order set_date')
-          }
-        }
-      }
-    }
+    // NOTE: lab_orders への書き込みは禁止（App A が管理）
+    // set_date の同期が必要な場合は App A 側で対応する
 
     return NextResponse.json({ appointment: transformAppointment(responseData as Record<string, unknown>) })
   } catch {
@@ -458,6 +449,9 @@ export async function PUT(request: NextRequest) {
 
 // DELETE: 論理削除
 export async function DELETE(request: NextRequest) {
+  const auth = await requireAuth()
+  if (auth instanceof NextResponse) return auth
+
   try {
     const supabase = createServerClient()
     const { searchParams } = new URL(request.url)
@@ -484,7 +478,7 @@ export async function DELETE(request: NextRequest) {
       .eq('id', id)
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('DB error:', error.message); return NextResponse.json({ error: 'データベースエラーが発生しました' }, { status: 500 })
     }
 
     // ログ記録

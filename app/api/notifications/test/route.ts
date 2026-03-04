@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendEmail } from '@/lib/notifications/email'
 import { sendLineMessage } from '@/lib/notifications/line'
+import { requireAuth } from '@/lib/auth/require-auth'
 
 // POST /api/notifications/test
-// 通知送信のテスト用エンドポイント
+// 通知送信のテスト用エンドポイント（認証必須）
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth()
+  if (auth instanceof NextResponse) return auth
+
   try {
     const body = await request.json()
     const { channel, to, message } = body
