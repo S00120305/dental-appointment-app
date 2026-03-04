@@ -70,6 +70,26 @@ export const STATUS_BORDER_COLOR: Record<string, string> = {
   no_show: '#fbbf24',    // 黄
 }
 
+// ステータス漢字1文字ラベル（カレンダーブロック用）
+export const STATUS_SHORT_LABELS: Record<AppointmentStatus, string> = {
+  pending: '待',
+  scheduled: '未',
+  checked_in: '受',
+  completed: '完',
+  cancelled: 'キ',
+  no_show: '無',
+}
+
+// ステータスバッジ背景色（カレンダーブロック用）
+export const STATUS_BADGE_BG: Record<AppointmentStatus, string> = {
+  pending: '#f59e0b',
+  scheduled: '#9ca3af',
+  checked_in: '#3b82f6',
+  completed: '#22c55e',
+  cancelled: '#ef4444',
+  no_show: '#ef4444',
+}
+
 // ステータス遷移フロー（メインフロー: scheduled → checked_in → completed）
 export const STATUS_FLOW: AppointmentStatus[] = ['scheduled', 'checked_in', 'completed']
 

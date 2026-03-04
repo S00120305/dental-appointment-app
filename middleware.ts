@@ -24,7 +24,7 @@ export function middleware(request: NextRequest) {
   }
 
   // 旧ページから /appointments へリダイレクト
-  if (pathname === '/today' || pathname === '/calendar') {
+  if (pathname === '/today' || pathname === '/calendar' || pathname === '/dashboard') {
     return NextResponse.redirect(new URL('/appointments', request.url))
   }
 

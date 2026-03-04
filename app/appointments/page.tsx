@@ -11,6 +11,8 @@ import BlockedSlotModal from '@/components/calendar/BlockedSlotModal'
 import SlotActionMenu from '@/components/calendar/SlotActionMenu'
 import AvailableSlotSearch from '@/components/calendar/AvailableSlotSearch'
 import PatientDetailPanel from '@/components/calendar/PatientDetailPanel'
+import CalendarStatsBar from '@/components/calendar/CalendarStatsBar'
+import MiniCalendarPopover from '@/components/calendar/MiniCalendarPopover'
 import Button from '@/components/ui/Button'
 import Skeleton from '@/components/ui/Skeleton'
 import { useAppointments } from '@/hooks/useAppointments'
@@ -533,126 +535,123 @@ export default function AppointmentsPage() {
     setSelectedDate(formatDateLocal(new Date()))
   }
 
-  const dateObj = new Date(selectedDate + 'T00:00:00')
-  const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][dateObj.getDay()]
-
   return (
     <AppLayout>
       <div className="p-2 sm:p-4">
-        {/* 上部コントロール */}
-        <div className="mb-2 flex flex-wrap items-center gap-2">
-          {/* 日付ナビゲーション */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => handleDateChange(-1)}
-              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-gray-300 bg-white hover:bg-gray-50"
-            >
-              <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="rounded-md border border-gray-300 px-2 py-2 text-sm"
-            />
-            <button
-              onClick={() => handleDateChange(1)}
-              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-gray-300 bg-white hover:bg-gray-50"
-            >
-              <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-            <button
-              onClick={handleGoToday}
-              className="min-h-[44px] rounded-md border border-gray-300 bg-white px-3 text-sm hover:bg-gray-50"
-            >
-              今日
-            </button>
-          </div>
-
-          {/* 日付表示 */}
-          <span className="text-sm font-medium text-gray-700">
-            {dateObj.getFullYear()}/{dateObj.getMonth() + 1}/{dateObj.getDate()}（{dayOfWeek}）
-            {isHoliday(selectedDate) && (
-              <span className="ml-1 inline-flex items-center rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700">
-                休診
-              </span>
-            )}
-          </span>
-
-          {/* ビュー切替: リスト / カレンダー */}
-          <div className="flex rounded-md border border-gray-300">
-            <button
-              onClick={() => setActiveView('list')}
-              className={`min-h-[44px] px-3 text-sm ${
-                activeView === 'list'
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50'
-              } rounded-l-md`}
-            >
-              リスト
-            </button>
-            <button
-              onClick={() => setActiveView('calendar')}
-              className={`min-h-[44px] px-3 text-sm ${
-                activeView === 'calendar'
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50'
-              } rounded-r-md border-l border-gray-300`}
-            >
-              カレンダー
-            </button>
-          </div>
-
-          {/* 承認待ちタブ */}
-          <Link
-            href="/appointments/pending"
-            className="flex min-h-[44px] items-center gap-1 rounded-md border border-amber-400 bg-white px-3 text-sm font-medium text-amber-700 hover:bg-amber-50"
+        {/* Row 1: 日付 & アクション */}
+        <div className="mb-1 flex items-center gap-1.5">
+          <button
+            onClick={() => handleDateChange(-1)}
+            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-gray-300 bg-white hover:bg-gray-50"
           >
-            承認待ち
-            {pendingCount > 0 && (
-              <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-xs font-bold text-white">
-                {pendingCount}
-              </span>
-            )}
-          </Link>
-
-          {/* 日/週 切替 (カレンダー表示時のみ) */}
-          {activeView === 'calendar' && (
-            <div className="flex rounded-md border border-gray-300">
-              <button
-                onClick={() => setCalendarViewType('resourceTimeGridDay')}
-                className={`min-h-[44px] px-3 text-sm ${
-                  calendarViewType === 'resourceTimeGridDay'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
-                } rounded-l-md`}
-              >
-                日
-              </button>
-              <button
-                onClick={() => setCalendarViewType('resourceTimeGridWeek')}
-                className={`min-h-[44px] px-3 text-sm ${
-                  calendarViewType === 'resourceTimeGridWeek'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
-                } rounded-r-md border-l border-gray-300`}
-              >
-                週
-              </button>
-            </div>
+            <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <MiniCalendarPopover
+            selectedDate={selectedDate}
+            onDateSelect={setSelectedDate}
+            isHoliday={isHoliday}
+          />
+          <button
+            onClick={() => handleDateChange(1)}
+            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-gray-300 bg-white hover:bg-gray-50"
+          >
+            <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+          <button
+            onClick={handleGoToday}
+            className="min-h-[44px] rounded-md border border-gray-300 bg-white px-3 text-sm hover:bg-gray-50"
+          >
+            今日
+          </button>
+          {isHoliday(selectedDate) && (
+            <span className="inline-flex items-center rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700">
+              休診
+            </span>
           )}
 
-          {/* 新規予約ボタン */}
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-1.5">
+            {pendingCount > 0 && (
+              <Link
+                href="/appointments/pending"
+                className="flex min-h-[44px] items-center gap-1 rounded-md border border-amber-400 bg-white px-3 text-sm font-medium text-amber-700 hover:bg-amber-50"
+              >
+                承認待ち
+                <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-xs font-bold text-white">
+                  {pendingCount}
+                </span>
+              </Link>
+            )}
             <Button onClick={handleNewAppointment}>新規予約</Button>
           </div>
         </div>
 
-        {/* ユニットフィルター（モバイル/タブレット、カレンダー表示時のみ） */}
+        {/* Row 2: 統計 & 表示切替 */}
+        <div className="mb-2 flex items-center gap-2">
+          <CalendarStatsBar
+            appointments={appointments}
+            selectedDate={selectedDate}
+            totalUnits={visibleUnits.length}
+            pendingCount={pendingCount}
+          />
+
+          <div className="ml-auto flex items-center gap-1.5">
+            {/* リスト / カレンダー切替 */}
+            <div className="flex rounded-md border border-gray-300">
+              <button
+                onClick={() => setActiveView('list')}
+                className={`min-h-[36px] px-2.5 text-xs ${
+                  activeView === 'list'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                } rounded-l-md`}
+              >
+                リスト
+              </button>
+              <button
+                onClick={() => setActiveView('calendar')}
+                className={`min-h-[36px] px-2.5 text-xs ${
+                  activeView === 'calendar'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                } rounded-r-md border-l border-gray-300`}
+              >
+                カレンダー
+              </button>
+            </div>
+
+            {/* 日/週 切替 */}
+            {activeView === 'calendar' && (
+              <div className="flex rounded-md border border-gray-300">
+                <button
+                  onClick={() => setCalendarViewType('resourceTimeGridDay')}
+                  className={`min-h-[36px] px-2.5 text-xs ${
+                    calendarViewType === 'resourceTimeGridDay'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-white text-gray-700 hover:bg-gray-50'
+                  } rounded-l-md`}
+                >
+                  日
+                </button>
+                <button
+                  onClick={() => setCalendarViewType('resourceTimeGridWeek')}
+                  className={`min-h-[36px] px-2.5 text-xs ${
+                    calendarViewType === 'resourceTimeGridWeek'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-white text-gray-700 hover:bg-gray-50'
+                  } rounded-r-md border-l border-gray-300`}
+                >
+                  週
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ユニットフィルター（モバイル、カレンダー表示時のみ） */}
         {activeView === 'calendar' && (
           <div className="mb-2 flex gap-1 overflow-x-auto sm:hidden">
             <button

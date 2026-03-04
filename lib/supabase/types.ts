@@ -96,7 +96,7 @@ export type SlideRef = {
 
 // JOIN済みの予約データ（API レスポンス用）
 export type AppointmentWithRelations = Appointment & {
-  patient: Pick<Patient, 'id' | 'chart_number' | 'last_name' | 'first_name' | 'last_name_kana' | 'first_name_kana' | 'phone' | 'is_vip' | 'caution_level' | 'is_infection_alert'> | null
+  patient: Pick<Patient, 'id' | 'chart_number' | 'last_name' | 'first_name' | 'last_name_kana' | 'first_name_kana' | 'phone' | 'date_of_birth' | 'is_vip' | 'caution_level' | 'is_infection_alert'> | null
   staff: { id: string; name: string } | null
   lab_order?: {
     id: string

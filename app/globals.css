@@ -33,9 +33,9 @@ body {
 
 /* レスポンシブフォントサイズ（予約ブロック） */
 :root {
-  --fc-event-name-size: 13px;
-  --fc-event-detail-size: 11px;
-  --fc-event-tag-size: 10px;
+  --fc-event-name-size: 12px;
+  --fc-event-detail-size: 10px;
+  --fc-event-tag-size: 9px;
 }
 @media (max-width: 768px) {
   :root {

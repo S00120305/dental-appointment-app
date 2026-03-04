@@ -114,7 +114,7 @@ export default function PinPage() {
 
       // 認証成功
       setPinSession(data.user.id, data.user.name, !!data.user.isAdmin)
-      router.push('/dashboard')
+      router.push('/appointments')
     } catch {
       setError('通信エラーが発生しました')
       setPin('')
