@@ -105,7 +105,7 @@ export default function MiniCalendarPopover({ selectedDate, onDateSelect, isHoli
     <div className="relative" ref={containerRef}>
       <button
         onClick={() => setOpen(!open)}
-        className="min-h-[44px] rounded-md border border-gray-300 bg-white px-3 text-sm font-medium hover:bg-gray-50"
+        className="h-8 rounded border border-gray-300 bg-white px-2 text-xs font-medium hover:bg-gray-50"
       >
         {selectedDateObj.getFullYear()}/{selectedDateObj.getMonth() + 1}/{selectedDateObj.getDate()}（{dayOfWeek}）
       </button>

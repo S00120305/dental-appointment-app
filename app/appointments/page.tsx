@@ -13,7 +13,6 @@ import AvailableSlotSearch from '@/components/calendar/AvailableSlotSearch'
 import PatientDetailPanel from '@/components/calendar/PatientDetailPanel'
 import CalendarStatsBar from '@/components/calendar/CalendarStatsBar'
 import MiniCalendarPopover from '@/components/calendar/MiniCalendarPopover'
-import Button from '@/components/ui/Button'
 import Skeleton from '@/components/ui/Skeleton'
 import { useAppointments } from '@/hooks/useAppointments'
 import { useSettings } from '@/hooks/useSettings'
@@ -539,12 +538,12 @@ export default function AppointmentsPage() {
     <AppLayout>
       <div className="p-2 sm:p-4">
         {/* Row 1: 日付 & アクション */}
-        <div className="mb-1 flex items-center gap-1.5">
+        <div className="mb-0.5 flex items-center gap-1">
           <button
             onClick={() => handleDateChange(-1)}
-            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-gray-300 bg-white hover:bg-gray-50"
+            className="flex h-8 w-8 items-center justify-center rounded border border-gray-300 bg-white hover:bg-gray-50"
           >
-            <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
@@ -555,15 +554,15 @@ export default function AppointmentsPage() {
           />
           <button
             onClick={() => handleDateChange(1)}
-            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-gray-300 bg-white hover:bg-gray-50"
+            className="flex h-8 w-8 items-center justify-center rounded border border-gray-300 bg-white hover:bg-gray-50"
           >
-            <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
           </button>
           <button
             onClick={handleGoToday}
-            className="min-h-[44px] rounded-md border border-gray-300 bg-white px-3 text-sm hover:bg-gray-50"
+            className="h-8 rounded border border-gray-300 bg-white px-2 text-xs hover:bg-gray-50"
           >
             今日
           </button>
@@ -573,11 +572,11 @@ export default function AppointmentsPage() {
             </span>
           )}
 
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="ml-auto flex items-center gap-1">
             {pendingCount > 0 && (
               <Link
                 href="/appointments/pending"
-                className="flex min-h-[44px] items-center gap-1 rounded-md border border-amber-400 bg-white px-3 text-sm font-medium text-amber-700 hover:bg-amber-50"
+                className="flex h-8 items-center gap-1 rounded border border-amber-400 bg-white px-2 text-xs font-medium text-amber-700 hover:bg-amber-50"
               >
                 承認待ち
                 <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-xs font-bold text-white">
@@ -585,12 +584,17 @@ export default function AppointmentsPage() {
                 </span>
               </Link>
             )}
-            <Button onClick={handleNewAppointment}>新規予約</Button>
+            <button
+              onClick={handleNewAppointment}
+              className="h-8 rounded-md bg-emerald-600 px-3 text-xs font-medium text-white hover:bg-emerald-700"
+            >
+              新規予約
+            </button>
           </div>
         </div>
 
         {/* Row 2: 統計 & 表示切替 */}
-        <div className="mb-2 flex items-center gap-2">
+        <div className="mb-1.5 flex items-center gap-1.5">
           <CalendarStatsBar
             appointments={appointments}
             selectedDate={selectedDate}
@@ -598,26 +602,26 @@ export default function AppointmentsPage() {
             pendingCount={pendingCount}
           />
 
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="ml-auto flex items-center gap-1">
             {/* リスト / カレンダー切替 */}
-            <div className="flex rounded-md border border-gray-300">
+            <div className="flex rounded border border-gray-300">
               <button
                 onClick={() => setActiveView('list')}
-                className={`min-h-[36px] px-2.5 text-xs ${
+                className={`h-6 px-2 text-[11px] ${
                   activeView === 'list'
                     ? 'bg-emerald-600 text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-50'
-                } rounded-l-md`}
+                } rounded-l`}
               >
                 リスト
               </button>
               <button
                 onClick={() => setActiveView('calendar')}
-                className={`min-h-[36px] px-2.5 text-xs ${
+                className={`h-6 px-2 text-[11px] ${
                   activeView === 'calendar'
                     ? 'bg-emerald-600 text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-50'
-                } rounded-r-md border-l border-gray-300`}
+                } rounded-r border-l border-gray-300`}
               >
                 カレンダー
               </button>
@@ -625,24 +629,24 @@ export default function AppointmentsPage() {
 
             {/* 日/週 切替 */}
             {activeView === 'calendar' && (
-              <div className="flex rounded-md border border-gray-300">
+              <div className="flex rounded border border-gray-300">
                 <button
                   onClick={() => setCalendarViewType('resourceTimeGridDay')}
-                  className={`min-h-[36px] px-2.5 text-xs ${
+                  className={`h-6 px-2 text-[11px] ${
                     calendarViewType === 'resourceTimeGridDay'
                       ? 'bg-emerald-600 text-white'
                       : 'bg-white text-gray-700 hover:bg-gray-50'
-                  } rounded-l-md`}
+                  } rounded-l`}
                 >
                   日
                 </button>
                 <button
                   onClick={() => setCalendarViewType('resourceTimeGridWeek')}
-                  className={`min-h-[36px] px-2.5 text-xs ${
+                  className={`h-6 px-2 text-[11px] ${
                     calendarViewType === 'resourceTimeGridWeek'
                       ? 'bg-emerald-600 text-white'
                       : 'bg-white text-gray-700 hover:bg-gray-50'
-                  } rounded-r-md border-l border-gray-300`}
+                  } rounded-r border-l border-gray-300`}
                 >
                   週
                 </button>
