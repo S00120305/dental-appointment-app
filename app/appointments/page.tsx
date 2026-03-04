@@ -537,13 +537,14 @@ export default function AppointmentsPage() {
   return (
     <AppLayout>
       <div className="p-2 sm:p-4">
-        {/* Row 1: 日付 & アクション */}
-        <div className="mb-0.5 flex items-center gap-1">
+        {/* ツールバー（1行） */}
+        <div className="mb-1.5 flex items-center gap-1">
+          {/* 日付ナビ */}
           <button
             onClick={() => handleDateChange(-1)}
-            className="flex h-8 w-8 items-center justify-center rounded border border-gray-300 bg-white hover:bg-gray-50"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-gray-300 bg-white hover:bg-gray-50"
           >
-            <svg className="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="h-3.5 w-3.5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
@@ -554,104 +555,88 @@ export default function AppointmentsPage() {
           />
           <button
             onClick={() => handleDateChange(1)}
-            className="flex h-8 w-8 items-center justify-center rounded border border-gray-300 bg-white hover:bg-gray-50"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-gray-300 bg-white hover:bg-gray-50"
           >
-            <svg className="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="h-3.5 w-3.5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
           </button>
           <button
             onClick={handleGoToday}
-            className="h-8 rounded border border-gray-300 bg-white px-2 text-xs hover:bg-gray-50"
+            className="h-7 shrink-0 rounded border border-gray-300 bg-white px-1.5 text-[11px] hover:bg-gray-50"
           >
             今日
           </button>
           {isHoliday(selectedDate) && (
-            <span className="inline-flex items-center rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700">
+            <span className="shrink-0 rounded bg-red-100 px-1 py-0.5 text-[10px] font-medium text-red-700">
               休診
             </span>
           )}
 
-          <div className="ml-auto flex items-center gap-1">
-            {pendingCount > 0 && (
-              <Link
-                href="/appointments/pending"
-                className="flex h-8 items-center gap-1 rounded border border-amber-400 bg-white px-2 text-xs font-medium text-amber-700 hover:bg-amber-50"
-              >
-                承認待ち
-                <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-xs font-bold text-white">
-                  {pendingCount}
-                </span>
-              </Link>
-            )}
-            <button
-              onClick={handleNewAppointment}
-              className="h-8 rounded-md bg-emerald-600 px-3 text-xs font-medium text-white hover:bg-emerald-700"
-            >
-              新規予約
-            </button>
+          {/* 統計（中央寄せ、溢れたら省略） */}
+          <div className="min-w-0 flex-1">
+            <CalendarStatsBar
+              appointments={appointments}
+              selectedDate={selectedDate}
+              totalUnits={visibleUnits.length}
+              pendingCount={pendingCount}
+            />
           </div>
-        </div>
 
-        {/* Row 2: 統計 & 表示切替 */}
-        <div className="mb-1.5 flex items-center gap-1.5">
-          <CalendarStatsBar
-            appointments={appointments}
-            selectedDate={selectedDate}
-            totalUnits={visibleUnits.length}
-            pendingCount={pendingCount}
-          />
-
-          <div className="ml-auto flex items-center gap-1">
-            {/* リスト / カレンダー切替 */}
+          {/* 表示切替 + アクション */}
+          <div className="flex shrink-0 items-center gap-1">
             <div className="flex rounded border border-gray-300">
               <button
                 onClick={() => setActiveView('list')}
-                className={`h-6 px-2 text-[11px] ${
+                className={`h-6 px-1.5 text-[10px] ${
                   activeView === 'list'
                     ? 'bg-emerald-600 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
                 } rounded-l`}
               >
                 リスト
               </button>
               <button
                 onClick={() => setActiveView('calendar')}
-                className={`h-6 px-2 text-[11px] ${
+                className={`h-6 px-1.5 text-[10px] ${
                   activeView === 'calendar'
                     ? 'bg-emerald-600 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
                 } rounded-r border-l border-gray-300`}
               >
                 カレンダー
               </button>
             </div>
-
-            {/* 日/週 切替 */}
             {activeView === 'calendar' && (
               <div className="flex rounded border border-gray-300">
                 <button
                   onClick={() => setCalendarViewType('resourceTimeGridDay')}
-                  className={`h-6 px-2 text-[11px] ${
+                  className={`h-6 px-1.5 text-[10px] ${
                     calendarViewType === 'resourceTimeGridDay'
                       ? 'bg-emerald-600 text-white'
-                      : 'bg-white text-gray-700 hover:bg-gray-50'
+                      : 'bg-white text-gray-600 hover:bg-gray-50'
                   } rounded-l`}
                 >
                   日
                 </button>
                 <button
                   onClick={() => setCalendarViewType('resourceTimeGridWeek')}
-                  className={`h-6 px-2 text-[11px] ${
+                  className={`h-6 px-1.5 text-[10px] ${
                     calendarViewType === 'resourceTimeGridWeek'
                       ? 'bg-emerald-600 text-white'
-                      : 'bg-white text-gray-700 hover:bg-gray-50'
+                      : 'bg-white text-gray-600 hover:bg-gray-50'
                   } rounded-r border-l border-gray-300`}
                 >
                   週
                 </button>
               </div>
             )}
+            <button
+              onClick={handleNewAppointment}
+              className="h-7 rounded bg-emerald-600 px-2 text-[11px] font-medium text-white hover:bg-emerald-700"
+            >
+              +予約
+            </button>
           </div>
         </div>
 
